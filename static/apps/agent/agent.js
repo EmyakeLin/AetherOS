@@ -1469,93 +1469,101 @@ registerApp('agent', {
                         }
                     }
 
-                    // 当前轮次和迭代计数
+                    // 一轮对话 = 用户输入 → 所有模型输出 → 直到下一条用户输入
                     let currentRound = 0;
                     let currentIteration = 0;
-                    let lastAssistantEl = null;
-                    let lastToolsContainer = null;
+                    let roundSegments = [];  // 本轮的内容段：{type: 'text', content} 或 {type: 'tool_calls', calls}
+                    let lastProcessedContent = '';
 
-                    for (const msg of msgs) {
-                        // 跳过 tool 消息，它们会在 assistant 消息的 tool_calls 中处理
-                        if (msg.role === 'tool') continue;
+                    function flushRound() {
+                        if (roundSegments.length === 0) return;
+                        currentRound++;
+                        currentIteration = 0;
 
-                        // 渲染消息
-                        addMessage(msg.role, msg.content, true);
+                        // 创建用户消息头（Eos 图标）
+                        showWelcome(false);
+                        const row = document.createElement('div');
+                        row.className = 'msg-row assistant-row';
+                        row.innerHTML = `
+                            <div class="msg-avatar assistant-avatar">E</div>
+                            <div class="msg-body">
+                                <div class="msg-role-label">Eos Agent</div>
+                                <div class="msg-content">
+                                    <div class="msg-text"></div>
+                                </div>
+                            </div>
+                        `;
+                        messagesEl.appendChild(row);
+                        const textContainer = row.querySelector('.msg-text');
 
-                        // 如果是 assistant 消息且包含 tool_calls，渲染工具调用面板
-                        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
-                            currentRound++;
-                            currentIteration = 0;
-
-                            // 获取当前 assistant 消息元素
-                            lastAssistantEl = messagesEl.querySelector('.assistant-row:last-child');
-                            if (lastAssistantEl) {
-                                const msgContent = lastAssistantEl.querySelector('.msg-content');
-                                if (msgContent) {
-                                    // 获取 msg-tools 容器
-                                    lastToolsContainer = msgContent.querySelector('.msg-tools');
-                                }
-                            }
-
-                            // 为每个 tool_call 渲染工具调用面板
-                            for (const tc of msg.tool_calls) {
-                                currentIteration++;
-                                const toolName = tc.function?.name || tc.name || 'unknown';
-                                const toolArgs = tc.function?.arguments || tc.arguments || {};
-                                const toolResult = toolResults[tc.id];
+                        // 按顺序渲染每个段
+                        for (const segment of roundSegments) {
+                            if (segment.type === 'text' && segment.content) {
+                                const span = document.createElement('span');
+                                span.innerHTML = formatContent(segment.content);
+                                textContainer.appendChild(span);
+                            } else if (segment.type === 'tool_calls' && segment.calls.length > 0) {
+                                // 只显示最新的一个工具面板
+                                const lastTc = segment.calls[segment.calls.length - 1];
+                                const toolName = lastTc.function?.name || lastTc.name || 'unknown';
+                                const toolArgs = lastTc.function?.arguments || lastTc.arguments || {};
+                                const toolResult = toolResults[lastTc.id];
                                 const resultContent = toolResult?.content || '';
                                 const isError = resultContent.startsWith('错误:') || resultContent.startsWith('Error:');
 
-                                // 添加到右侧工具调用面板
-                                addToolEntry(toolName, toolArgs, isError ? 'error' : 'done', `R${currentRound}-${currentIteration}`);
+                                // 添加所有工具调用到右侧面板
+                                for (const tc of segment.calls) {
+                                    currentIteration++;
+                                    const tcName = tc.function?.name || tc.name || 'unknown';
+                                    const tcArgs = tc.function?.arguments || tc.arguments || {};
+                                    const tcResult = toolResults[tc.id];
+                                    const tcResultContent = tcResult?.content || '';
+                                    const tcIsError = tcResultContent.startsWith('错误:') || tcResultContent.startsWith('Error:');
+                                    addToolEntry(tcName, tcArgs, tcIsError ? 'error' : 'done', `R${currentRound}-${currentIteration}`);
+                                }
 
-                                // 在消息中添加工具调用面板
-                                if (lastToolsContainer) {
-                                    const toolIndicator = document.createElement('div');
-                                    toolIndicator.className = 'tool-call-indicator completed';
-                                    toolIndicator.innerHTML = `
-                                        <div class="tool-call-content">
-                                            <span class="tool-call-icon">⚡</span>
-                                            <span class="tool-call-text">Function Calling — 工具调用结束</span>
-                                            <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
-                                            <span class="tool-call-time"></span>
-                                            <span class="tool-call-count">Round ${currentIteration}</span>
-                                        </div>
-                                    `;
-                                    toolIndicator.addEventListener('click', () => {
-                                        // 打开工具调用详情模态框
-                                        const argsParsed = typeof toolArgs === 'string' ? JSON.parse(toolArgs) : toolArgs;
-                                        const overlay = document.createElement('div');
-                                        overlay.className = 'tool-modal-overlay';
-                                        overlay.innerHTML = `
-                                            <div class="tool-modal">
-                                                <div class="tool-modal-header">
-                                                    <span class="tool-modal-title">工具调用详情</span>
-                                                    <span class="tool-modal-count">Round ${currentIteration}</span>
-                                                    <button class="tool-modal-close">×</button>
+                                // 添加工具面板到文本位置
+                                const toolIndicator = document.createElement('div');
+                                toolIndicator.className = 'tool-call-indicator completed';
+                                toolIndicator.innerHTML = `
+                                    <div class="tool-call-content">
+                                        <span class="tool-call-icon">⚡</span>
+                                        <span class="tool-call-text">Function Calling — 工具调用结束</span>
+                                        <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
+                                        <span class="tool-call-time"></span>
+                                        <span class="tool-call-count">Round ${currentIteration}</span>
+                                    </div>
+                                `;
+                                toolIndicator.addEventListener('click', () => {
+                                    const argsParsed = typeof toolArgs === 'string' ? JSON.parse(toolArgs) : toolArgs;
+                                    const overlay = document.createElement('div');
+                                    overlay.className = 'tool-modal-overlay';
+                                    overlay.innerHTML = `
+                                        <div class="tool-modal">
+                                            <div class="tool-modal-header">
+                                                <span class="tool-modal-title">工具调用详情</span>
+                                                <span class="tool-modal-count">Round ${currentIteration}</span>
+                                                <button class="tool-modal-close">×</button>
+                                            </div>
+                                            <div class="tool-modal-body">
+                                                <div class="tool-modal-col">
+                                                    <div class="tool-modal-col-title">参数</div>
+                                                    <pre class="tool-modal-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</pre>
                                                 </div>
-                                                <div class="tool-modal-body">
-                                                    <div class="tool-modal-col">
-                                                        <div class="tool-modal-col-title">参数</div>
-                                                        <pre class="tool-modal-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</pre>
-                                                    </div>
-                                                    <div class="tool-modal-col">
-                                                        <div class="tool-modal-col-title">${isError ? '错误' : '返回值'}</div>
-                                                        <pre class="tool-modal-content ${isError ? 'error' : ''}">${escapeHtml(resultContent)}</pre>
-                                                    </div>
+                                                <div class="tool-modal-col">
+                                                    <div class="tool-modal-col-title">${isError ? '错误' : '返回值'}</div>
+                                                    <pre class="tool-modal-content ${isError ? 'error' : ''}">${escapeHtml(resultContent)}</pre>
                                                 </div>
                                             </div>
-                                        `;
-                                        overlay.addEventListener('click', (e) => {
-                                            if (e.target === overlay) overlay.remove();
-                                        });
-                                        overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
-                                        document.body.appendChild(overlay);
+                                        </div>
+                                    `;
+                                    overlay.addEventListener('click', (e) => {
+                                        if (e.target === overlay) overlay.remove();
                                     });
-
-                                    // 将工具面板插入到工具容器中
-                                    lastToolsContainer.appendChild(toolIndicator);
-                                }
+                                    overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
+                                    document.body.appendChild(overlay);
+                                });
+                                textContainer.appendChild(toolIndicator);
 
                                 _toolCallHistory.push({
                                     name: toolName,
@@ -1568,7 +1576,44 @@ registerApp('agent', {
                                 });
                             }
                         }
+
+                        // 智能滚动
+                        const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
+                        if (isAtBottom) {
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+                        }
+
+                        roundSegments = [];
                     }
+
+                    for (const msg of msgs) {
+                        if (msg.role === 'user') {
+                            flushRound();
+                            addMessage('user', msg.content, true);
+                            lastProcessedContent = '';
+                        } else if (msg.role === 'assistant') {
+                            if (msg.content === lastProcessedContent) continue;
+                            lastProcessedContent = msg.content || '';
+
+                            // 添加文本段
+                            if (msg.content) {
+                                roundSegments.push({ type: 'text', content: msg.content });
+                            }
+                            // 添加工具调用段（合并连续的工具调用）
+                            if (msg.tool_calls && msg.tool_calls.length > 0) {
+                                const lastSegment = roundSegments[roundSegments.length - 1];
+                                if (lastSegment && lastSegment.type === 'tool_calls') {
+                                    // 合并到上一个工具调用段
+                                    lastSegment.calls.push(...msg.tool_calls);
+                                } else {
+                                    // 创建新的工具调用段
+                                    roundSegments.push({ type: 'tool_calls', calls: msg.tool_calls });
+                                }
+                            }
+                        }
+                    }
+
+                    flushRound();
                 }
                 const session = sessionCache.find(s => s.id === sessionId);
                 if (session) updateSessionTitle(session.title);
@@ -1844,20 +1889,24 @@ registerApp('agent', {
                             <div class="msg-role-label">Eos Agent</div>
                             <div class="msg-content">
                                 <div class="msg-text"></div>
-                                <div class="msg-tools"></div>
                             </div>
                         </div>
                     `;
                     messagesEl.appendChild(_currentAssistantEl);
                     _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                     _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
-                    _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
                     _assistantContent = '';
                     _pendingText = '';
                 }
 
-                // 将工具调用指示器插入到工具容器中
-                _assistantToolEl.appendChild(_toolIndicatorEl);
+                // 将工具调用指示器插入到 msg-text 容器中（在当前文本之后）
+                _assistantTextEl.appendChild(_toolIndicatorEl);
+
+                // 智能滚动
+                const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
+                if (isAtBottom) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
             }
 
             // 清除旧的定时器
@@ -2077,14 +2126,29 @@ registerApp('agent', {
 
             const contentEl = document.createElement('div');
             contentEl.className = 'msg-content';
-            contentEl.innerHTML = formatContent(content);
+
+            // 为 assistant 消息添加 .msg-text 容器
+            if (role === 'assistant') {
+                const textEl = document.createElement('div');
+                textEl.className = 'msg-text';
+                textEl.innerHTML = formatContent(content);
+                contentEl.appendChild(textEl);
+            } else {
+                contentEl.innerHTML = formatContent(content);
+            }
 
             body.appendChild(label);
             body.appendChild(contentEl);
             row.appendChild(avatar);
             row.appendChild(body);
             messagesEl.appendChild(row);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            // 智能滚动：仅当用户在底部时才自动滚动
+            const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
+            if (isAtBottom) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
             messages.push({ role, content });
 
             if (!skipPersist && role !== 'system') {
@@ -2117,26 +2181,29 @@ registerApp('agent', {
                         <div class="msg-role-label">Eos Agent</div>
                         <div class="msg-content">
                             <div class="msg-text"></div>
-                            <div class="msg-tools"></div>
                         </div>
                     </div>
                 `;
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
-                _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
                 _assistantContent = '';
                 _pendingText = '';
             }
 
-            // 创建 thinking 指示器（作为 msg-tools 的子元素，在文本之上）
+            // 创建 thinking 指示器（作为 msg-text 的子元素）
             _thinkingEl = document.createElement('div');
             _thinkingEl.className = 'thinking-indicator';
             _thinkingEl.innerHTML = `
                 <div class="thinking-dots"><span></span><span></span><span></span></div>
             `;
-            _assistantToolEl.appendChild(_thinkingEl);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            _assistantTextEl.appendChild(_thinkingEl);
+
+            // 智能滚动
+            const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
+            if (isAtBottom) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         }
 
         function removeThinkingIndicator() {
@@ -2150,7 +2217,6 @@ registerApp('agent', {
         let _assistantContent = '';
         let _assistantContentEl = null;
         let _assistantTextEl = null;   // 文本容器
-        let _assistantToolEl = null;   // 工具面板容器
         let _pendingText = '';         // 待渲染的文本缓冲区
 
         function flushPendingText() {
@@ -2178,14 +2244,12 @@ registerApp('agent', {
                         <div class="msg-role-label">Eos Agent</div>
                         <div class="msg-content">
                             <div class="msg-text streaming-cursor"></div>
-                            <div class="msg-tools"></div>
                         </div>
                     </div>
                 `;
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
-                _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
                 _assistantContent = '';
                 _pendingText = '';
             }
@@ -2203,7 +2267,12 @@ registerApp('agent', {
             }
             streamingSpan.innerHTML = formatContent(_pendingText);
             streamingSpan.classList.add('streaming-cursor');
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            // 智能滚动：仅当用户在底部时才自动滚动
+            const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
+            if (isAtBottom) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         }
 
         function finishAssistantMessage() {
@@ -2226,7 +2295,6 @@ registerApp('agent', {
                 _assistantContent = '';
                 _assistantContentEl = null;
                 _assistantTextEl = null;
-                _assistantToolEl = null;
                 _pendingText = '';
                 // 不设置 _toolIndicatorEl = null，保留工具面板引用
             }
