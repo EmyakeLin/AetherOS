@@ -82,6 +82,17 @@ class CustomAgentEngine:
                     if response.get("content"):
                         yield {"type": "text", "content": response["content"]}
 
+                    # 构建 assistant 消息（保留 reasoning_content 供 DeepSeek 等模型回传）
+                    assistant_msg = {
+                        "role": "assistant",
+                        "content": response.get("content") or None,
+                        "tool_calls": [],
+                    }
+                    if response.get("reasoning_content"):
+                        assistant_msg["reasoning_content"] = response["reasoning_content"]
+
+                    tool_result_msgs = []
+
                     for tc in response["tool_calls"]:
                         # ── 中断检查点（工具执行前） ──
                         if self._interrupted:
@@ -109,34 +120,32 @@ class CustomAgentEngine:
                                 "name": tool_name,
                                 "result": str(result)[:2000],
                             }
-
-                            # 添加工具结果到消息
-                            messages.append({
-                                "role": "assistant",
-                                "content": None,
-                                "tool_calls": [{
-                                    "id": call_id,
-                                    "type": "function",
-                                    "function": {"name": tool_name, "arguments": json.dumps(tool_args)}
-                                }]
-                            })
-                            messages.append({
+                            tool_result_msgs.append({
                                 "role": "tool",
                                 "tool_call_id": call_id,
-                                "content": str(result)
+                                "content": str(result),
                             })
-
                         except Exception as e:
                             yield {
                                 "type": "tool_result",
                                 "name": tool_name,
                                 "error": str(e),
                             }
-                            messages.append({
+                            tool_result_msgs.append({
                                 "role": "tool",
                                 "tool_call_id": call_id,
-                                "content": f"错误: {e}"
+                                "content": f"错误: {e}",
                             })
+
+                        assistant_msg["tool_calls"].append({
+                            "id": call_id,
+                            "type": "function",
+                            "function": {"name": tool_name, "arguments": json.dumps(tool_args)}
+                        })
+
+                    # 一次性添加 assistant 消息和所有工具结果
+                    messages.append(assistant_msg)
+                    messages.extend(tool_result_msgs)
 
                     # 继续循环，让 LLM 处理工具结果
                     continue
@@ -145,7 +154,11 @@ class CustomAgentEngine:
                     # 纯文本响应 = 最终答案
                     content = response.get("content", "")
                     if content:
-                        self.context.add_message("assistant", content)
+                        # 存储时保留 reasoning_content（DeepSeek 等模型需要回传）
+                        ctx_msg = {"role": "assistant", "content": content}
+                        if response.get("reasoning_content"):
+                            ctx_msg["reasoning_content"] = response["reasoning_content"]
+                        self.context.messages.append(ctx_msg)
                         yield {"type": "text", "content": content, "call_id": call_id, "model": self.model, "latency": latency, "tokens": tokens}
 
                     # 计算 token

@@ -341,6 +341,11 @@ class LLMService:
         choice = response.choices[0]
         result = {"content": "", "tool_calls": [], "usage": {}}
 
+        # reasoning_content（DeepSeek 等思考模型必须回传）
+        rc = getattr(choice.message, 'reasoning_content', None)
+        if rc:
+            result["reasoning_content"] = rc
+
         if choice.message.content:
             result["content"] = choice.message.content
 
