@@ -96,3 +96,9 @@ coverage.xml
 # Distribution
 *.tar.gz
 *.whl
+
+# Development files
+dev*
+development_files/
+docs/dev*
+docx/
