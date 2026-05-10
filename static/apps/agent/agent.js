@@ -1703,12 +1703,13 @@ registerApp('agent', {
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
-                _currentTextEl = null;
             }
 
-            // 移除当前文本容器的 streaming-cursor
-            if (_currentTextEl) {
-                _currentTextEl.classList.remove('streaming-cursor');
+            // 移除当前文本容器的 streaming-cursor 和 current 类
+            const currentTextEl = _assistantContentEl.querySelector('.assistant-text.current');
+            if (currentTextEl) {
+                currentTextEl.classList.remove('current');
+                currentTextEl.classList.remove('streaming-cursor');
             }
 
             // 如果已经存在工具调用指示器，更新它
@@ -1735,12 +1736,8 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-                // 插入到当前文本容器之后
-                if (_currentTextEl) {
-                    _currentTextEl.after(_toolIndicatorEl);
-                } else {
-                    _assistantContentEl.appendChild(_toolIndicatorEl);
-                }
+                // 插入到消息内容末尾
+                _assistantContentEl.appendChild(_toolIndicatorEl);
             }
 
             // 清除旧的定时器
@@ -2012,7 +2009,6 @@ registerApp('agent', {
         let _currentAssistantEl = null;
         let _assistantContent = '';
         let _assistantContentEl = null;
-        let _currentTextEl = null;
 
         function appendAssistantText(text) {
             if (!_currentAssistantEl) {
@@ -2028,28 +2024,31 @@ registerApp('agent', {
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
-                _currentTextEl = null;
             }
 
-            // 如果没有当前文本容器，创建一个
-            if (!_currentTextEl) {
-                _currentTextEl = document.createElement('div');
-                _currentTextEl.className = 'assistant-text';
-                _assistantContentEl.appendChild(_currentTextEl);
+            // 查找或创建当前文本容器
+            let textEl = _assistantContentEl.querySelector('.assistant-text.current');
+            if (!textEl) {
+                textEl = document.createElement('div');
+                textEl.className = 'assistant-text current';
+                _assistantContentEl.appendChild(textEl);
                 _assistantContent = '';
             }
 
             _assistantContent += text;
-            _currentTextEl.innerHTML = formatContent(_assistantContent);
-            _currentTextEl.classList.add('streaming-cursor');
+            textEl.innerHTML = formatContent(_assistantContent);
+            textEl.classList.add('streaming-cursor');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function finishAssistantMessage() {
             if (_currentAssistantEl) {
-                // 移除所有流式光标
+                // 移除所有流式光标和 current 类
                 _assistantContentEl.querySelectorAll('.streaming-cursor').forEach(el => {
                     el.classList.remove('streaming-cursor');
+                });
+                _assistantContentEl.querySelectorAll('.assistant-text.current').forEach(el => {
+                    el.classList.remove('current');
                 });
                 const content = _assistantContent || _assistantContentEl.textContent;
                 messages.push({ role: 'assistant', content });
@@ -2057,7 +2056,6 @@ registerApp('agent', {
                 _currentAssistantEl = null;
                 _assistantContent = '';
                 _assistantContentEl = null;
-                _currentTextEl = null;
                 _toolIndicatorEl = null;
             }
         }
