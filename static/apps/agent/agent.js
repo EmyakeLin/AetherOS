@@ -2023,13 +2023,24 @@ registerApp('agent', {
                 _assistantContent = '';
             }
 
-            // 查找或创建当前文本容器
-            let textEl = _assistantContentEl.querySelector('.assistant-text.current');
-            if (!textEl) {
+            // 查找或创建文本容器
+            let textEl = null;
+            if (_toolIndicatorEl) {
+                // 如果有工具调用指示器，在指示器之后创建新的文本容器
                 textEl = document.createElement('div');
-                textEl.className = 'assistant-text current';
-                _assistantContentEl.appendChild(textEl);
-                _assistantContent = '';
+                textEl.className = 'assistant-text';
+                _toolIndicatorEl.after(textEl);
+                _toolIndicatorEl = null; // 重置指示器引用
+                _assistantContent = ''; // 重置内容
+            } else {
+                // 查找最后一个文本容器
+                textEl = _assistantContentEl.querySelector('.assistant-text:last-child');
+                if (!textEl) {
+                    // 如果没有文本容器，创建一个
+                    textEl = document.createElement('div');
+                    textEl.className = 'assistant-text';
+                    _assistantContentEl.appendChild(textEl);
+                }
             }
 
             _assistantContent += text;
