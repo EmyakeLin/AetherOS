@@ -545,8 +545,16 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                             "type": "info",
                             "message": f"已配置: model={engine.model}"
                         }))
+                    elif msg_type == "session_id":
+                        # 设置当前 session ID
+                        session_id = data.get("session_id")
+                        if session_id:
+                            engine.session_id = session_id
                     elif msg_type == "message":
                         content = data.get("content", "")
+                        session_id = data.get("session_id")
+                        if session_id:
+                            engine.session_id = session_id
                         if content:
                             await msg_queue.put(content)
             except WebSocketDisconnect:
