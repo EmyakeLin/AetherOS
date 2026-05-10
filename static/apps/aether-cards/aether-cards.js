@@ -21,6 +21,8 @@ registerApp('aether-cards', {
     title: 'Aether Cards',
     icon: '🃏',
     options: { w: 1000, h: 700 },
+    getState: (win) => ({ currentBoardId: win._cardsBoardId || localStorage.getItem('cards-current-board') || 'board-default' }),
+    setState: async (state, win, os) => { if (state.currentBoardId) { win._cardsBoardId = state.currentBoardId; localStorage.setItem('cards-current-board', state.currentBoardId); } },
     factory: (container, win, os) => {
 
         // ── 状态 ──
@@ -2843,6 +2845,7 @@ registerApp('aether-cards', {
             await saveChatHistory();
             currentBoardId = boardId;
             localStorage.setItem('cards-current-board', boardId);
+            win._cardsBoardId = boardId;
             const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [boardId]);
             boardNameEl.textContent = res.rows?.[0]?.title || '工作板';
             await load();
