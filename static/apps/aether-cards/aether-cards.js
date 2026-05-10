@@ -135,7 +135,7 @@ registerApp('aether-cards', {
         function smartScroll(el) {
             if (!el) return;
             const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-            if (atBottom) smartScroll(el);
+            if (atBottom) el.scrollTop = el.scrollHeight;
         }
 
         // ═══════════════════════════════════════
@@ -363,7 +363,13 @@ registerApp('aether-cards', {
                 .card-title-text:focus{border-color:var(--accent);background:var(--bg-base);}
                 .card-act-btn{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:3px;}
                 .card-act-btn:hover{color:var(--accent);background:var(--bg-hover);}
-                .card-body{flex:1;padding:8px;overflow:hidden;font-size:11px;font-family:var(--font-mono);color:var(--text-secondary);line-height:1.5;white-space:pre-wrap;word-break:break-all;}
+                .card-body{flex:1;padding:8px;overflow:hidden;font-size:11px;font-family:var(--font-mono);color:var(--text-secondary);line-height:1.5;word-break:break-word;}
+                .card-body h2,.card-body h3{font-size:12px;font-weight:600;margin:4px 0 2px;color:var(--text-primary);}
+                .card-body p{margin:2px 0;}
+                .card-body strong{font-weight:600;color:var(--text-primary);}
+                .card-body em{font-style:italic;}
+                .card-body code{font-size:10px;background:var(--bg-elevated);padding:1px 3px;border-radius:2px;}
+                .card-body ul,.card-body ol{padding-left:14px;margin:2px 0;}
                 .card-cover{width:100%;object-fit:cover;flex-shrink:0;}
                 .card-images-strip{display:flex;gap:2px;padding:2px 6px 4px;border-top:1px solid var(--border);overflow-x:auto;flex-shrink:0;}
                 .card-images-strip img{width:24px;height:24px;object-fit:cover;border-radius:3px;border:1px solid var(--border);}
@@ -416,8 +422,16 @@ registerApp('aether-cards', {
                 .windowed-chat-panel{position:absolute;top:0;right:0;width:150px;height:100%;background:var(--bg-surface);border-left:1px solid var(--border);border-radius:0 8px 8px 0;display:flex;flex-direction:column;z-index:10;transform:translateX(100%);transition:transform 0.3s ease;box-shadow:-4px 0 12px rgba(0,0,0,0.2);}
                 .windowed-chat-panel.left{right:auto;left:0;border-left:none;border-right:1px solid var(--border);border-radius:8px 0 0 8px;transform:translateX(-100%);box-shadow:4px 0 12px rgba(0,0,0,0.2);}
                 .windowed-chat-panel.show{transform:translateX(0);}
-                .chat-thinking-chain{margin-bottom:6px;padding-left:10px;border-left:2px solid var(--accent-dim);font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.5;max-height:200px;overflow-y:auto;opacity:0.7;}
+                .chat-thinking-chain{margin-bottom:6px;font-size:11px;line-height:1.5;}
                 .chat-thinking-chain:empty{display:none;}
+                .chat-thinking-label{display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0;color:var(--text-muted);font-size:10px;user-select:none;}
+                .chat-thinking-label:hover{color:var(--accent);}
+                .chat-thinking-label .scan-line{position:relative;overflow:hidden;}
+                .chat-thinking-label .scan-line::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:thinking-scan 2s ease-in-out infinite;}
+                @keyframes thinking-scan{0%{left:-100%;}100%{left:100%;}}
+                .chat-thinking-label.done .scan-line::after{animation:none;}
+                .chat-thinking-body{padding-left:10px;border-left:2px solid var(--accent-dim);color:var(--text-muted);font-style:italic;max-height:200px;overflow-y:auto;opacity:0.7;display:none;}
+                .chat-thinking-body.expanded{display:block;}
                 .rich-toolbar .cards-tb-btn{padding:3px 6px;font-size:11px;}
                 .rich-toolbar .cards-tb-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
                 #cards-detail-editor h2{font-size:18px;font-weight:600;margin:12px 0 6px;color:var(--text-primary);}
@@ -709,7 +723,10 @@ registerApp('aether-cards', {
                 if (msg.role === 'assistant' && msg.thinking) {
                     const t = document.createElement('div');
                     t.className = 'chat-thinking-chain';
-                    t.textContent = msg.thinking;
+                    t.innerHTML = `<div class="chat-thinking-label done"><span class="scan-line">Thinking ></span></div><div class="chat-thinking-body">${esc(msg.thinking)}</div>`;
+                    t.querySelector('.chat-thinking-label').addEventListener('click', () => {
+                        t.querySelector('.chat-thinking-body').classList.toggle('expanded');
+                    });
                     d.insertBefore(t, d.querySelector('.chat-msg-content'));
                 }
 
@@ -834,16 +851,22 @@ registerApp('aether-cards', {
                     if (!floatThinkingEl) {
                         floatThinkingEl = document.createElement('div');
                         floatThinkingEl.className = 'chat-thinking-chain';
+                        floatThinkingEl.innerHTML = `<div class="chat-thinking-label"><span class="scan-line">Thinking ></span></div><div class="chat-thinking-body"></div>`;
+                        floatThinkingEl.querySelector('.chat-thinking-label').addEventListener('click', () => {
+                            floatThinkingEl.querySelector('.chat-thinking-body').classList.toggle('expanded');
+                        });
                         aiMsgEl.insertBefore(floatThinkingEl, aiContentEl.parentElement);
                     }
                     floatThinkingText += content;
-                    floatThinkingEl.textContent = floatThinkingText;
+                    floatThinkingEl.querySelector('.chat-thinking-body').textContent = floatThinkingText;
+                    floatThinkingEl.querySelector('.chat-thinking-body').classList.add('expanded');
                     smartScroll(chatMessagesFloat);
                 },
                 onDone: () => {
                     streamDone = true;
                     conv.updated = Date.now();
                     aiMsg.thinking = floatThinkingText;
+                    if (floatThinkingEl) floatThinkingEl.querySelector('.chat-thinking-label')?.classList.add('done');
                     addChatActionsFloat(chatId, conv.messages.length - 1, aiMsgEl);
                 },
                 onError: (msg) => {
@@ -995,11 +1018,14 @@ registerApp('aether-cards', {
 
         // 添加错误消息
         function appendChatErrorFloat(msg) {
-            const d = document.createElement('div');
-            d.className = 'chat-msg-error';
-            d.textContent = '错误: ' + msg;
-            chatMessagesFloat.appendChild(d);
-            smartScroll(chatMessagesFloat);
+            // 在输入框上方显示临时错误提示
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:absolute;bottom:100%;left:0;right:0;margin-bottom:4px;padding:6px 10px;background:var(--accent-warm);color:#fff;font-size:11px;border-radius:var(--radius-sm);text-align:center;opacity:0;transition:opacity 0.2s;z-index:1;';
+            toast.textContent = msg;
+            chatInputWrap.style.position = 'relative';
+            chatInputWrap.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.opacity = '1'; });
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 3000);
         }
 
         // 添加AI回复到卡片
@@ -1202,9 +1228,9 @@ registerApp('aether-cards', {
                 inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="height:${Math.round(card.size.h * 0.45)}px;" loading="lazy">`;
             }
 
-            const preview = card.content ? card.content.slice(0, 200) : '';
+            const preview = card.content ? card.content.slice(0, 500) : '';
             if (preview || !card.coverImage) {
-                inner += `<div class="card-body">${esc(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
+                inner += `<div class="card-body">${markdownToHtml(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
             }
 
             const otherImgs = card.images.filter(i => i !== card.coverImage);
@@ -1468,11 +1494,16 @@ registerApp('aether-cards', {
             if (!_streamThinkingEl) {
                 _streamThinkingEl = document.createElement('div');
                 _streamThinkingEl.className = 'chat-thinking-chain';
+                _streamThinkingEl.innerHTML = `<div class="chat-thinking-label"><span class="scan-line">Thinking ></span></div><div class="chat-thinking-body"></div>`;
+                _streamThinkingEl.querySelector('.chat-thinking-label').addEventListener('click', () => {
+                    _streamThinkingEl.querySelector('.chat-thinking-body').classList.toggle('expanded');
+                });
                 el.appendChild(_streamThinkingEl);
                 _streamThinkingText = '';
             }
             _streamThinkingText += content;
-            _streamThinkingEl.textContent = _streamThinkingText;
+            _streamThinkingEl.querySelector('.chat-thinking-body').textContent = _streamThinkingText;
+            _streamThinkingEl.querySelector('.chat-thinking-body').classList.add('expanded');
             smartScroll(el);
         }
 
@@ -1499,6 +1530,8 @@ registerApp('aether-cards', {
             if (!_currentChatEl) return;
             const txt = _streamRawText || _currentChatEl.querySelector('.chat-msg-content').textContent;
             const thinking = _streamThinkingText || '';
+            // 停止扫描动画
+            if (_streamThinkingEl) _streamThinkingEl.querySelector('.chat-thinking-label')?.classList.add('done');
             addChatActionButtons(cardId, txt, _currentChatEl);
             if (!chatHistory[cardId]) chatHistory[cardId] = [];
             chatHistory[cardId].push({ role: 'assistant', content: txt, thinking });
@@ -1532,7 +1565,10 @@ registerApp('aether-cards', {
                 if (m.role === 'assistant' && m.thinking) {
                     const t = document.createElement('div');
                     t.className = 'chat-thinking-chain';
-                    t.textContent = m.thinking;
+                    t.innerHTML = `<div class="chat-thinking-label done"><span class="scan-line">Thinking ></span></div><div class="chat-thinking-body">${esc(m.thinking)}</div>`;
+                    t.querySelector('.chat-thinking-label').addEventListener('click', () => {
+                        t.querySelector('.chat-thinking-body').classList.toggle('expanded');
+                    });
                     d.insertBefore(t, d.querySelector('.chat-msg-content'));
                 }
                 if (m.role === 'assistant') addChatActionButtons(cardId, m.content, d);
@@ -1860,7 +1896,7 @@ registerApp('aether-cards', {
             cWin.setTitle(card.title || 'Aether Cards');
 
             const otherImgs = card.images.filter(i => i !== card.coverImage);
-            const preview = card.content ? card.content.slice(0, 200) : '';
+            const preview = card.content ? card.content.slice(0, 500) : '';
 
             let inner = `<div class="card-el" style="position:relative;cursor:default;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;border:none;border-radius:0;">`;
             inner += `<div class="card-title-bar">`;
@@ -1872,7 +1908,7 @@ registerApp('aether-cards', {
                 inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="flex:0 0 auto;max-height:45%;object-fit:cover;" loading="lazy">`;
             }
             if (preview || !card.coverImage) {
-                inner += `<div class="card-body">${esc(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
+                inner += `<div class="card-body">${markdownToHtml(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
             }
             if (otherImgs.length > 0) {
                 inner += `<div class="card-images-strip">${otherImgs.slice(0, 5).map(i => `<img src="/aether-cards-images/${esc(i)}" alt="" loading="lazy">`).join('')}${otherImgs.length > 5 ? `<span style="font-size:10px;color:var(--text-muted);padding:0 2px;">+${otherImgs.length - 5}</span>` : ''}</div>`;
@@ -2120,14 +2156,20 @@ registerApp('aether-cards', {
                         if (!thinkingEl) {
                             thinkingEl = document.createElement('div');
                             thinkingEl.className = 'chat-thinking-chain';
+                            thinkingEl.innerHTML = `<div class="chat-thinking-label"><span class="scan-line">Thinking ></span></div><div class="chat-thinking-body"></div>`;
+                            thinkingEl.querySelector('.chat-thinking-label').addEventListener('click', () => {
+                                thinkingEl.querySelector('.chat-thinking-body').classList.toggle('expanded');
+                            });
                             aiDiv.insertBefore(thinkingEl, aiContent);
                         }
                         thinkingText += content;
-                        thinkingEl.textContent = thinkingText;
+                        thinkingEl.querySelector('.chat-thinking-body').textContent = thinkingText;
+                        thinkingEl.querySelector('.chat-thinking-body').classList.add('expanded');
                         smartScroll(msgsEl);
                     },
                     onDone: () => {
                         chatHistory[cardId].push({ role: 'assistant', content: rawText, thinking: thinkingText || '' });
+                        if (thinkingEl) thinkingEl.querySelector('.chat-thinking-label')?.classList.add('done');
                         saveCardChat(cardId);
                         const actDiv = document.createElement('div');
                         actDiv.style.cssText = 'display:flex;gap:2px;margin-top:4px;flex-wrap:wrap;';
@@ -2688,8 +2730,10 @@ registerApp('aether-cards', {
         }
 
         async function updateBoardName() {
-            const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [currentBoardId]);
-            boardNameEl.textContent = res.rows?.[0]?.title || '工作板';
+            try {
+                const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [currentBoardId]);
+                boardNameEl.textContent = res.rows?.[0]?.title || '工作板';
+            } catch (e) { boardNameEl.textContent = '默认工作板'; }
         }
 
         // ═══════════════════════════════════════
@@ -2697,14 +2741,16 @@ registerApp('aether-cards', {
         // ═══════════════════════════════════════
 
         (async () => {
-            await initDB();
-            await Promise.all([load(), loadConfig(), loadChatHistory(), loadRenderLibs()]);
-            await updateBoardName();
-            // 恢复重启后丢失窗口的卡片
-            let restored = false;
-            cards.forEach(c => { if (c.windowed) { c.windowed = false; restored = true; } });
-            applyTransform(); renderCards();
-            if (restored) scheduleSave();
+            try {
+                await initDB();
+                await Promise.allSettled([load(), loadConfig(), loadChatHistory(), loadRenderLibs()]);
+                await updateBoardName();
+                // 恢复重启后丢失窗口的卡片
+                let restored = false;
+                cards.forEach(c => { if (c.windowed) { c.windowed = false; restored = true; } });
+                applyTransform(); renderCards();
+                if (restored) scheduleSave();
+            } catch (e) { console.error('[Cards] Init failed:', e); }
         })();
     }
 });
