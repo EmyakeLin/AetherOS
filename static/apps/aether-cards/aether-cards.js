@@ -2938,11 +2938,13 @@ registerApp('aether-cards', {
                 await initDB();
                 await Promise.allSettled([load(), loadConfig(), loadChatHistory(), loadRenderLibs()]);
                 await updateBoardName();
-                // 恢复重启后丢失窗口的卡片
-                let restored = false;
-                cards.forEach(c => { if (c.windowed) { c.windowed = false; restored = true; } });
                 applyTransform(); renderCards();
-                if (restored) scheduleSave();
+                // 恢复窗口化的卡片
+                const windowedCards = cards.filter(c => c.windowed);
+                for (const c of windowedCards) {
+                    c.windowed = false; // popoutCard 会检查 windowed=false 才执行
+                    popoutCard(c.id);
+                }
             } catch (e) { console.error('[Cards] Init failed:', e); }
         })();
     }
