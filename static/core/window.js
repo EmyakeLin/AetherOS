@@ -173,6 +173,7 @@ class OSWindow {
                 this.snap(this._pendingSnap);
                 this._pendingSnap = null;
             }
+            if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
         });
     }
 
@@ -260,6 +261,7 @@ class OSWindow {
                 resizing = false;
                 this.element.classList.remove('resizing');
                 this._normalGeom = { x: this.x, y: this.y, w: this.w, h: this.h };
+                if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
             }
         });
     }
@@ -270,6 +272,7 @@ class OSWindow {
         this.zIndex = WindowStack.next();
         this.element.style.zIndex = this.zIndex;
         this.element.classList.add('focused');
+        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
     }
 
     unfocus() {
@@ -284,6 +287,7 @@ class OSWindow {
         setTimeout(() => {
             this.element.style.display = 'none';
         }, 340);
+        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
     }
 
     restore() {
@@ -296,6 +300,7 @@ class OSWindow {
         this.w = this._normalGeom.w;
         this.h = this._normalGeom.h;
         this._applyGeom();
+        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
     }
 
     toggleMaximize() {
@@ -348,6 +353,7 @@ class OSWindow {
             };
             this.element.addEventListener('transitionend', onEnd);
         }
+        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
     }
 
     snap(side) {
@@ -366,6 +372,7 @@ class OSWindow {
             this.w = dw / 2; this.h = dh;
         }
         this._applyGeom();
+        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
     }
 
     close() {
