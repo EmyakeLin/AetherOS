@@ -1065,6 +1065,7 @@ registerApp('agent', {
                 padding: 10px 24px;
                 max-width: 820px;
                 width: 100%;
+                height: 40px;
                 margin: 0 auto;
                 background: var(--bg-elevated);
                 border: 1px solid var(--accent-dim);
@@ -1073,6 +1074,7 @@ registerApp('agent', {
                 position: relative;
                 overflow: hidden;
                 transition: all 0.2s;
+                flex-shrink: 0;
             }
             .tool-call-indicator:hover {
                 background: var(--bg-hover);
@@ -1108,7 +1110,7 @@ registerApp('agent', {
                 font-size: 11px;
                 color: var(--text-muted);
             }
-            .tool-call-round {
+            .tool-call-count {
                 font-family: var(--font-mono);
                 font-size: 10px;
                 color: var(--text-muted);
@@ -1131,8 +1133,8 @@ registerApp('agent', {
                 to { transform: translateX(100%); }
             }
 
-            /* ── Tool entry round label ── */
-            .tool-entry-round {
+            /* ── Tool entry count label ── */
+            .tool-entry-count {
                 font-family: var(--font-mono);
                 font-size: 10px;
                 color: var(--text-muted);
@@ -1185,7 +1187,7 @@ registerApp('agent', {
                 font-weight: 600;
                 color: var(--text-primary);
             }
-            .tool-modal-round {
+            .tool-modal-count {
                 font-family: var(--font-mono);
                 font-size: 11px;
                 color: var(--accent);
@@ -1638,17 +1640,16 @@ registerApp('agent', {
                     removeThinkingIndicator();
                     _iterationCount++;
                     _toolStartTime = Date.now();
-                    const roundLabel = `R${_conversationRound}-${_iterationCount}`;
                     _toolCallHistory.push({
                         name: data.name,
                         args: data.arguments,
                         result: null,
                         error: null,
                         time: _toolStartTime,
-                        roundLabel: roundLabel,
+                        iterationCount: _iterationCount,
                     });
-                    showToolIndicator(data.name, roundLabel);
-                    addToolEntry(data.name, data.arguments, 'pending', roundLabel);
+                    showToolIndicator(data.name, _iterationCount);
+                    addToolEntry(data.name, data.arguments, 'pending', `第${_iterationCount}次`);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
@@ -1711,7 +1712,7 @@ registerApp('agent', {
            Tool call indicator
            ══════════════════════════════════════════ */
 
-        function showToolIndicator(toolName, roundLabel) {
+        function showToolIndicator(toolName, iterationCount) {
             if (!_toolIndicatorEl) {
                 _toolIndicatorEl = document.createElement('div');
                 _toolIndicatorEl.className = 'tool-call-indicator';
@@ -1721,15 +1722,15 @@ registerApp('agent', {
             _toolIndicatorEl.innerHTML = `
                 <div class="tool-call-content">
                     <span class="tool-call-icon">⚡</span>
-                    <span class="tool-call-text">Calling Tools — 正在调用工具</span>
+                    <span class="tool-call-text">Function Calling — 正在调用工具</span>
                     <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                     <span class="tool-call-time"></span>
-                    <span class="tool-call-round">${escapeHtml(roundLabel)}</span>
+                    <span class="tool-call-count">第${iterationCount}次调用</span>
                 </div>
                 <div class="tool-call-scan"></div>
             `;
             _toolIndicatorEl.dataset.toolName = toolName;
-            _toolIndicatorEl.dataset.roundLabel = roundLabel;
+            _toolIndicatorEl.dataset.iterationCount = iterationCount;
             // 触发扫描动画
             const scan = _toolIndicatorEl.querySelector('.tool-call-scan');
             scan.style.animation = 'none';
@@ -1750,7 +1751,7 @@ registerApp('agent', {
             }
             if (toolName === '工具调用结束') {
                 const textEl = _toolIndicatorEl.querySelector('.tool-call-text');
-                if (textEl) textEl.textContent = 'Calling Tools — 工具调用结束';
+                if (textEl) textEl.textContent = 'Function Calling — 工具调用结束';
                 _toolIndicatorEl.classList.add('completed');
             }
         }
@@ -1767,7 +1768,7 @@ registerApp('agent', {
 
             // 获取当前工具调用信息
             const toolName = _toolIndicatorEl.dataset.toolName || '';
-            const roundLabel = _toolIndicatorEl.dataset.roundLabel || '';
+            const iterationCount = _toolIndicatorEl.dataset.iterationCount || '';
 
             // 从历史中获取最新的工具调用
             const latestCall = _toolCallHistory[_toolCallHistory.length - 1] || {};
@@ -1782,7 +1783,7 @@ registerApp('agent', {
                 <div class="tool-modal">
                     <div class="tool-modal-header">
                         <span class="tool-modal-title">工具调用详情</span>
-                        <span class="tool-modal-round">${escapeHtml(roundLabel)}</span>
+                        <span class="tool-modal-count">第${escapeHtml(iterationCount)}次调用</span>
                         <button class="tool-modal-close">×</button>
                     </div>
                     <div class="tool-modal-body">
@@ -2004,7 +2005,7 @@ registerApp('agent', {
            Tool entries
            ══════════════════════════════════════════ */
 
-        function addToolEntry(name, args, status, roundLabel) {
+        function addToolEntry(name, args, status, iterationLabel) {
             _toolCount++;
             toolCountEl.textContent = _toolCount;
             const el = document.createElement('div');
@@ -2012,7 +2013,7 @@ registerApp('agent', {
             el.dataset.toolName = name;
             const argsStr = typeof args === 'string' ? args : JSON.stringify(args || {});
             el.innerHTML = `
-                <span class="tool-entry-round">${escapeHtml(roundLabel || '')}</span>
+                <span class="tool-entry-count">${escapeHtml(iterationLabel || '')}</span>
                 <span class="tool-icon">${status === 'pending' ? '⏳' : '✅'}</span>
                 <div class="tool-info">
                     <div class="tool-name">${escapeHtml(name)}</div>
