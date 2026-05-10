@@ -1689,29 +1689,6 @@ registerApp('agent', {
            ══════════════════════════════════════════ */
 
         function showToolIndicator(toolName, iterationCount) {
-            // 如果没有当前 assistant 消息，创建一个
-            if (!_currentAssistantEl) {
-                _currentAssistantEl = document.createElement('div');
-                _currentAssistantEl.className = 'msg-row assistant-row';
-                _currentAssistantEl.innerHTML = `
-                    <div class="msg-avatar assistant-avatar">E</div>
-                    <div class="msg-body">
-                        <div class="msg-role-label">Eos Agent</div>
-                        <div class="msg-content"></div>
-                    </div>
-                `;
-                messagesEl.appendChild(_currentAssistantEl);
-                _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
-                _assistantContent = '';
-            }
-
-            // 移除当前文本容器的 streaming-cursor 和 current 类
-            const currentTextEl = _assistantContentEl.querySelector('.assistant-text.current');
-            if (currentTextEl) {
-                currentTextEl.classList.remove('current');
-                currentTextEl.classList.remove('streaming-cursor');
-            }
-
             // 如果已经存在工具调用指示器，更新它
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
@@ -1736,8 +1713,28 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-                // 插入到消息内容末尾
-                _assistantContentEl.appendChild(_toolIndicatorEl);
+                // 插入到 thinking 指示器的位置，或者消息内容末尾
+                if (_thinkingEl) {
+                    _thinkingEl.replaceWith(_toolIndicatorEl);
+                    _thinkingEl = null;
+                } else if (_currentAssistantEl && _assistantContentEl) {
+                    _assistantContentEl.appendChild(_toolIndicatorEl);
+                } else {
+                    // 创建新的 assistant 消息块
+                    _currentAssistantEl = document.createElement('div');
+                    _currentAssistantEl.className = 'msg-row assistant-row';
+                    _currentAssistantEl.innerHTML = `
+                        <div class="msg-avatar assistant-avatar">E</div>
+                        <div class="msg-body">
+                            <div class="msg-role-label">Eos Agent</div>
+                            <div class="msg-content"></div>
+                        </div>
+                    `;
+                    messagesEl.appendChild(_currentAssistantEl);
+                    _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
+                    _assistantContent = '';
+                    _assistantContentEl.appendChild(_toolIndicatorEl);
+                }
             }
 
             // 清除旧的定时器
