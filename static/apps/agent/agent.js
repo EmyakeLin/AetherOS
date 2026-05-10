@@ -1373,6 +1373,7 @@ registerApp('agent', {
         let _toolCallHistory = [];   // 工具调用历史
         let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
         let _toolStartTime = 0;      // 工具调用开始时间
+        let _toolTimerInterval = null; // 工具调用计时器
 
         // ── Register agent panel in sidebar ──
         os.registerAgentPanel({ id: agentId, name: 'Eos Agent', windowId: win.id });
@@ -1663,6 +1664,7 @@ registerApp('agent', {
                         roundLabel: `R${_conversationRound}-${_iterationInRound}`,
                     });
                     showToolIndicator(data.name, _iterationCount);
+                    startToolTimer();
                     addToolEntry(data.name, data.arguments, 'pending', `R${_conversationRound}-${_iterationInRound}`);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
@@ -1743,6 +1745,13 @@ registerApp('agent', {
                 _assistantContent = '';
             }
 
+            // 移除当前文本容器的 .current 类
+            const currentTextEl = _assistantContentEl.querySelector('.assistant-text.current');
+            if (currentTextEl) {
+                currentTextEl.classList.remove('current');
+                currentTextEl.classList.remove('streaming-cursor');
+            }
+
             // 如果已经存在工具调用指示器，更新它
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
@@ -1771,6 +1780,12 @@ registerApp('agent', {
                 _assistantContentEl.appendChild(_toolIndicatorEl);
             }
 
+            // 清除旧的定时器
+            if (_toolTimerInterval) {
+                clearInterval(_toolTimerInterval);
+                _toolTimerInterval = null;
+            }
+
             // 触发扫描动画
             const settings = loadSettings();
             const scanSpeed = settings.toolScanSpeed || 1.0;
@@ -1778,6 +1793,12 @@ registerApp('agent', {
             scan.style.animation = 'none';
             scan.offsetHeight; // 强制重排
             scan.style.animation = `tool-scan ${scanSpeed}s ease-out`;
+
+            // 动画结束后清理状态
+            scan.addEventListener('animationend', () => {
+                scan.style.animation = '';
+            }, { once: true });
+
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -1792,10 +1813,33 @@ registerApp('agent', {
                 nameEl.textContent = `[${escapeHtml(toolName)}]`;
             }
             if (toolName === '工具调用结束') {
+                // 停止计时器
+                if (_toolTimerInterval) {
+                    clearInterval(_toolTimerInterval);
+                    _toolTimerInterval = null;
+                }
                 const textEl = _toolIndicatorEl.querySelector('.tool-call-text');
                 if (textEl) textEl.textContent = 'Function Calling — 工具调用结束';
                 _toolIndicatorEl.classList.add('completed');
             }
+        }
+
+        function startToolTimer() {
+            if (!_toolIndicatorEl) return;
+            const timeEl = _toolIndicatorEl.querySelector('.tool-call-time');
+            if (!timeEl) return;
+
+            // 清除旧的定时器
+            if (_toolTimerInterval) {
+                clearInterval(_toolTimerInterval);
+            }
+
+            // 启动新的定时器，每 0.1 秒更新一次
+            _toolTimerInterval = setInterval(() => {
+                if (!_toolStartTime) return;
+                const elapsed = ((Date.now() - _toolStartTime) / 1000).toFixed(1);
+                timeEl.textContent = `[${elapsed}s]`;
+            }, 100);
         }
 
         function removeToolIndicator() {
@@ -2016,23 +2060,11 @@ registerApp('agent', {
             }
 
             // 查找或创建文本容器
-            let textEl = null;
-            if (_toolIndicatorEl) {
-                // 如果有工具调用指示器，在指示器之后创建新的文本容器
+            let textEl = _assistantContentEl.querySelector('.assistant-text.current');
+            if (!textEl) {
                 textEl = document.createElement('div');
-                textEl.className = 'assistant-text';
-                _toolIndicatorEl.after(textEl);
-                _toolIndicatorEl = null; // 重置指示器引用
-                _assistantContent = ''; // 重置内容
-            } else {
-                // 查找最后一个文本容器
-                textEl = _assistantContentEl.querySelector('.assistant-text:last-child');
-                if (!textEl) {
-                    // 如果没有文本容器，创建一个
-                    textEl = document.createElement('div');
-                    textEl.className = 'assistant-text';
-                    _assistantContentEl.appendChild(textEl);
-                }
+                textEl.className = 'assistant-text current';
+                _assistantContentEl.appendChild(textEl);
             }
 
             _assistantContent += text;
