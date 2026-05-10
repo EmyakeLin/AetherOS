@@ -1713,14 +1713,14 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-                // 插入到 thinking 指示器的位置，或者消息内容末尾
+                // 移除 thinking 指示器
                 if (_thinkingEl) {
-                    _thinkingEl.replaceWith(_toolIndicatorEl);
+                    _thinkingEl.remove();
                     _thinkingEl = null;
-                } else if (_currentAssistantEl && _assistantContentEl) {
-                    _assistantContentEl.appendChild(_toolIndicatorEl);
-                } else {
-                    // 创建新的 assistant 消息块
+                }
+
+                // 创建或复用 assistant 消息块
+                if (!_currentAssistantEl) {
                     _currentAssistantEl = document.createElement('div');
                     _currentAssistantEl.className = 'msg-row assistant-row';
                     _currentAssistantEl.innerHTML = `
@@ -1733,8 +1733,10 @@ registerApp('agent', {
                     messagesEl.appendChild(_currentAssistantEl);
                     _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                     _assistantContent = '';
-                    _assistantContentEl.appendChild(_toolIndicatorEl);
                 }
+
+                // 将工具调用指示器插入到 assistant 消息块中
+                _assistantContentEl.appendChild(_toolIndicatorEl);
             }
 
             // 清除旧的定时器
