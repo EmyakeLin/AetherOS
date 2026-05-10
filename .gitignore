@@ -98,7 +98,12 @@ coverage.xml
 *.whl
 
 # Development files
-dev*
+dev_*.md
+webos-dev-doc.md
+APP_DEV.md
+LLM_API.md
+hermes-agent-架构分析.md
+Eos Agent System Prompt Manage.md
+Eos Agent Development/
 development_files/
-docs/dev*
-docx/
+docs/
