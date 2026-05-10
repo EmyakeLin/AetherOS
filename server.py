@@ -546,15 +546,36 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                             "message": f"已配置: model={engine.model}"
                         }))
                     elif msg_type == "session_id":
-                        # 设置当前 session ID
+                        # 设置当前 session ID 并加载历史消息
                         session_id = data.get("session_id")
                         if session_id:
                             engine.session_id = session_id
+                            # 从 SQLite 加载历史消息到内存
+                            try:
+                                from storage import get_storage
+                                history = await get_storage().get_messages_as_conversation(session_id)
+                                engine.context.messages = history
+                                # 同步文件上下文状态
+                                engine.file_context = FileContextManager()
+                                await websocket.send_text(json.dumps({
+                                    "type": "info",
+                                    "message": f"已加载 {len(history)} 条历史消息"
+                                }))
+                            except Exception as e:
+                                logger.warning(f"Failed to load history: {e}")
                     elif msg_type == "message":
                         content = data.get("content", "")
                         session_id = data.get("session_id")
-                        if session_id:
+                        if session_id and session_id != engine.session_id:
                             engine.session_id = session_id
+                            # 切换 session 时加载历史消息
+                            try:
+                                from storage import get_storage
+                                history = await get_storage().get_messages_as_conversation(session_id)
+                                engine.context.messages = history
+                                engine.file_context = FileContextManager()
+                            except Exception as e:
+                                logger.warning(f"Failed to load history: {e}")
                         if content:
                             await msg_queue.put(content)
             except WebSocketDisconnect:
