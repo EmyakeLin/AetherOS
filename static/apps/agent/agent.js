@@ -139,6 +139,10 @@ registerApp('agent', {
                             <label class="settings-label">最大迭代次数</label>
                             <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
                         </div>
+                        <div class="settings-field">
+                            <label class="settings-label">工具调用扫描动画速度（秒）</label>
+                            <input id="settings-scan-speed" class="settings-input" type="number" min="0.2" max="5" step="0.1" value="1.0">
+                        </div>
                         <div class="settings-actions">
                             <button id="settings-save-btn" class="settings-save-btn">保存</button>
                             <button id="settings-reset-btn" class="settings-reset-btn">重置</button>
@@ -1062,11 +1066,10 @@ registerApp('agent', {
             .tool-call-indicator {
                 display: flex;
                 align-items: center;
-                padding: 10px 24px;
-                max-width: 820px;
+                padding: 10px 16px;
                 width: 100%;
                 height: 40px;
-                margin: 0 auto;
+                margin: 8px 0;
                 background: var(--bg-elevated);
                 border: 1px solid var(--accent-dim);
                 border-radius: var(--radius-md);
@@ -1075,6 +1078,7 @@ registerApp('agent', {
                 overflow: hidden;
                 transition: all 0.2s;
                 flex-shrink: 0;
+                box-sizing: border-box;
             }
             .tool-call-indicator:hover {
                 background: var(--bg-hover);
@@ -1131,6 +1135,13 @@ registerApp('agent', {
             @keyframes tool-scan {
                 from { transform: translateX(-100%); }
                 to { transform: translateX(100%); }
+            }
+
+            /* ── Assistant text container ── */
+            .assistant-text {
+                line-height: 1.75;
+                color: var(--text-primary);
+                word-break: break-word;
             }
 
             /* ── Tool entry count label ── */
@@ -1357,6 +1368,7 @@ registerApp('agent', {
 
         // Tool call indicator state
         let _conversationRound = 0;  // 对话轮次，会话内累加
+        let _iterationInRound = 0;   // 当前轮次中的迭代次数
         let _iterationCount = 0;     // 当前位置累积的工具调用次数
         let _toolCallHistory = [];   // 工具调用历史
         let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
@@ -1639,6 +1651,7 @@ registerApp('agent', {
                 case 'tool_call':
                     removeThinkingIndicator();
                     _iterationCount++;
+                    _iterationInRound++;
                     _toolStartTime = Date.now();
                     _toolCallHistory.push({
                         name: data.name,
@@ -1647,9 +1660,10 @@ registerApp('agent', {
                         error: null,
                         time: _toolStartTime,
                         iterationCount: _iterationCount,
+                        roundLabel: `R${_conversationRound}-${_iterationInRound}`,
                     });
                     showToolIndicator(data.name, _iterationCount);
-                    addToolEntry(data.name, data.arguments, 'pending', `第${_iterationCount}次`);
+                    addToolEntry(data.name, data.arguments, 'pending', `R${_conversationRound}-${_iterationInRound}`);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
@@ -1713,29 +1727,49 @@ registerApp('agent', {
            ══════════════════════════════════════════ */
 
         function showToolIndicator(toolName, iterationCount) {
-            if (!_toolIndicatorEl) {
-                _toolIndicatorEl = document.createElement('div');
-                _toolIndicatorEl.className = 'tool-call-indicator';
-                _toolIndicatorEl.addEventListener('click', () => openToolModal());
-                messagesEl.appendChild(_toolIndicatorEl);
+            // 如果没有当前 assistant 消息，创建一个
+            if (!_currentAssistantEl) {
+                _currentAssistantEl = document.createElement('div');
+                _currentAssistantEl.className = 'msg-row assistant-row';
+                _currentAssistantEl.innerHTML = `
+                    <div class="msg-avatar assistant-avatar">E</div>
+                    <div class="msg-body">
+                        <div class="msg-role-label">Eos Agent</div>
+                        <div class="msg-content"></div>
+                    </div>
+                `;
+                messagesEl.appendChild(_currentAssistantEl);
+                _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
+                _assistantContent = '';
             }
+
+            // 创建工具调用指示器
+            _toolIndicatorEl = document.createElement('div');
+            _toolIndicatorEl.className = 'tool-call-indicator';
+            _toolIndicatorEl.addEventListener('click', () => openToolModal());
             _toolIndicatorEl.innerHTML = `
                 <div class="tool-call-content">
                     <span class="tool-call-icon">⚡</span>
                     <span class="tool-call-text">Function Calling — 正在调用工具</span>
                     <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                     <span class="tool-call-time"></span>
-                    <span class="tool-call-count">第${iterationCount}次调用</span>
+                    <span class="tool-call-count">Round ${iterationCount}</span>
                 </div>
                 <div class="tool-call-scan"></div>
             `;
             _toolIndicatorEl.dataset.toolName = toolName;
             _toolIndicatorEl.dataset.iterationCount = iterationCount;
+
+            // 插入到消息内容之后
+            _assistantContentEl.appendChild(_toolIndicatorEl);
+
             // 触发扫描动画
+            const settings = loadSettings();
+            const scanSpeed = settings.toolScanSpeed || 1.0;
             const scan = _toolIndicatorEl.querySelector('.tool-call-scan');
             scan.style.animation = 'none';
             scan.offsetHeight; // 强制重排
-            scan.style.animation = 'tool-scan 0.6s ease-out';
+            scan.style.animation = `tool-scan ${scanSpeed}s ease-out`;
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -1783,7 +1817,7 @@ registerApp('agent', {
                 <div class="tool-modal">
                     <div class="tool-modal-header">
                         <span class="tool-modal-title">工具调用详情</span>
-                        <span class="tool-modal-count">第${escapeHtml(iterationCount)}次调用</span>
+                        <span class="tool-modal-count">Round ${escapeHtml(iterationCount)}</span>
                         <button class="tool-modal-close">×</button>
                     </div>
                     <div class="tool-modal-body">
@@ -1965,28 +1999,43 @@ registerApp('agent', {
                     <div class="msg-avatar assistant-avatar">E</div>
                     <div class="msg-body">
                         <div class="msg-role-label">Eos Agent</div>
-                        <div class="msg-content streaming-cursor"></div>
+                        <div class="msg-content"></div>
                     </div>
                 `;
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
             }
+
+            // 创建文本容器（如果需要）
+            let textEl = _assistantContentEl.querySelector('.assistant-text:last-child');
+            if (!textEl || _toolIndicatorEl) {
+                // 如果有工具调用指示器，创建新的文本容器
+                textEl = document.createElement('div');
+                textEl.className = 'assistant-text';
+                _assistantContentEl.appendChild(textEl);
+                _toolIndicatorEl = null; // 重置指示器引用
+            }
+
             _assistantContent += text;
-            _assistantContentEl.innerHTML = formatContent(_assistantContent);
-            _assistantContentEl.classList.add('streaming-cursor');
+            textEl.innerHTML = formatContent(_assistantContent);
+            textEl.classList.add('streaming-cursor');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function finishAssistantMessage() {
             if (_currentAssistantEl) {
+                // 移除所有流式光标
+                _assistantContentEl.querySelectorAll('.streaming-cursor').forEach(el => {
+                    el.classList.remove('streaming-cursor');
+                });
                 const content = _assistantContent || _assistantContentEl.textContent;
-                _assistantContentEl.classList.remove('streaming-cursor');
                 messages.push({ role: 'assistant', content });
                 persistMessage('assistant', content);
                 _currentAssistantEl = null;
                 _assistantContent = '';
                 _assistantContentEl = null;
+                _toolIndicatorEl = null;
             }
         }
 
@@ -2070,6 +2119,7 @@ registerApp('agent', {
             if (!currentSessionId) await createNewSession();
 
             _conversationRound++;
+            _iterationInRound = 0;
             _iterationCount = 0;
             _toolCallHistory = [];
 
@@ -2161,6 +2211,7 @@ registerApp('agent', {
         const settingsModelHint = container.querySelector('#settings-model-hint');
         const settingsSystemPrompt = container.querySelector('#settings-system-prompt');
         const settingsMaxIter = container.querySelector('#settings-max-iter');
+        const settingsScanSpeed = container.querySelector('#settings-scan-speed');
         const settingsSaveBtn = container.querySelector('#settings-save-btn');
         const settingsResetBtn = container.querySelector('#settings-reset-btn');
 
@@ -2169,6 +2220,7 @@ registerApp('agent', {
             model: '',
             systemPrompt: '你是 Eos Agent，一个强大的 AI 编程助手。\n你可以读写文件、执行终端命令、分析代码。\n请用中文回复。',
             maxIterations: 50,
+            toolScanSpeed: 1.0,  // 工具调用扫描动画速度（秒）
         };
 
         function loadSettings() {
@@ -2234,6 +2286,7 @@ registerApp('agent', {
             settingsModel.value = s.model || '';
             settingsSystemPrompt.value = s.systemPrompt || '';
             settingsMaxIter.value = s.maxIterations || 50;
+            settingsScanSpeed.value = s.toolScanSpeed || 1.0;
         }
 
         function readSettingsForm() {
@@ -2241,6 +2294,7 @@ registerApp('agent', {
                 model: settingsModel.value,
                 systemPrompt: settingsSystemPrompt.value,
                 maxIterations: parseInt(settingsMaxIter.value, 10) || 50,
+                toolScanSpeed: parseFloat(settingsScanSpeed.value) || 1.0,
             };
         }
 
