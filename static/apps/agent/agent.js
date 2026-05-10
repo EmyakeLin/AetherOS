@@ -1131,10 +1131,12 @@ registerApp('agent', {
                 height: 100%;
                 background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.2), transparent);
                 pointer-events: none;
+                opacity: 0;
             }
             @keyframes tool-scan {
-                from { transform: translateX(-100%); }
-                to { transform: translateX(100%); }
+                0% { transform: translateX(-100%); opacity: 1; }
+                70% { transform: translateX(0%); opacity: 1; }
+                100% { transform: translateX(0%); opacity: 0.3; }
             }
 
             /* ── Assistant text container ── */
@@ -1283,21 +1285,23 @@ registerApp('agent', {
                 transform: translateX(-100%);
             }
             @keyframes tool-complete-scan {
-                from { transform: translateX(-100%); }
-                to { transform: translateX(100%); }
+                0% { transform: translateX(-100%); }
+                70% { transform: translateX(0%); }
+                100% { transform: translateX(0%); opacity: 0.3; }
             }
             .tool-complete-circle {
                 position: absolute;
                 right: 12px;
                 top: 50%;
                 transform: translateY(-50%) scale(0);
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 border: 2px solid var(--accent);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                background: transparent;
             }
             @keyframes tool-complete-circle-in {
                 from { transform: translateY(-50%) scale(0); }
@@ -1308,15 +1312,13 @@ registerApp('agent', {
                 border-color: #00e676;
             }
             .tool-complete-check {
-                width: 12px;
-                height: 12px;
+                width: 14px;
+                height: 14px;
                 color: white;
-                stroke-dasharray: 20;
-                stroke-dashoffset: 20;
+                opacity: 0;
             }
-            @keyframes tool-complete-check-draw {
-                from { stroke-dashoffset: 20; }
-                to { stroke-dashoffset: 0; }
+            .tool-complete-check.visible {
+                opacity: 1;
             }
             @keyframes tool-complete-fade-out {
                 from { opacity: 1; }
@@ -1792,11 +1794,11 @@ registerApp('agent', {
             const scan = _toolIndicatorEl.querySelector('.tool-call-scan');
             scan.style.animation = 'none';
             scan.offsetHeight; // 强制重排
-            scan.style.animation = `tool-scan ${scanSpeed}s ease-out`;
+            scan.style.animation = `tool-scan ${scanSpeed}s ease-out forwards`;
 
-            // 动画结束后清理状态
+            // 动画结束后保留光效（缓慢浮现）
             scan.addEventListener('animationend', () => {
-                scan.style.animation = '';
+                // 保持最终状态，不清理动画
             }, { once: true });
 
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1922,7 +1924,7 @@ registerApp('agent', {
                 <div class="tool-complete-scan"></div>
                 <div class="tool-complete-circle">
                     <svg class="tool-complete-check" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="6 12 10 16 18 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
             `;
@@ -1932,35 +1934,35 @@ registerApp('agent', {
             const circle = effect.querySelector('.tool-complete-circle');
             const check = effect.querySelector('.tool-complete-check');
 
-            // 0.0s: 亮色扫描开始
-            scan.style.animation = 'tool-complete-scan 0.4s ease-out forwards';
+            // 0.0s: 亮色扫描开始（停留并缓慢浮现）
+            scan.style.animation = 'tool-complete-scan 0.6s ease-out forwards';
 
-            // 0.4s: 扫描到头，圆圈出现
+            // 0.6s: 扫描到头，圆圈出现
             setTimeout(() => {
                 circle.style.animation = 'tool-complete-circle-in 0.2s ease-out forwards';
-            }, 400);
-
-            // 0.6s: 打勾动画
-            setTimeout(() => {
-                check.style.animation = 'tool-complete-check-draw 0.4s ease-out forwards';
             }, 600);
 
-            // 1.0s: 对勾消失，圆圈变绿
+            // 0.8s: 显示对勾
             setTimeout(() => {
-                check.style.opacity = '0';
-                circle.classList.add('done');
-            }, 1000);
+                check.classList.add('visible');
+            }, 800);
 
-            // 1.2s: 实心圆淡化
+            // 1.2s: 对勾消失，圆圈变绿
             setTimeout(() => {
-                circle.style.animation = 'tool-complete-fade-out 0.3s ease-out forwards';
+                check.classList.remove('visible');
+                circle.classList.add('done');
             }, 1200);
 
-            // 1.5s: 清理
+            // 1.5s: 实心圆淡化
+            setTimeout(() => {
+                circle.style.animation = 'tool-complete-fade-out 0.3s ease-out forwards';
+            }, 1500);
+
+            // 1.8s: 清理
             setTimeout(() => {
                 clearInterval(tracker);
                 effect.remove();
-            }, 1500);
+            }, 1800);
         }
 
         /* ══════════════════════════════════════════
