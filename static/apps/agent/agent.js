@@ -2122,9 +2122,14 @@ registerApp('agent', {
             sendBtn.disabled = !inputEl.value.trim() && !active;
         }
 
+        let _sending = false;
+
         async function sendMessage() {
+            if (_sending) return;
             const text = inputEl.value.trim();
             if (!text) return;
+
+            _sending = true;
 
             if (!currentSessionId) await createNewSession();
 
@@ -2149,6 +2154,8 @@ registerApp('agent', {
             } else {
                 addMessage('assistant', 'Agent 引擎未连接。请确保后端服务正在运行。', true);
             }
+
+            _sending = false;
         }
 
         function sendInterrupt() {
