@@ -6,6 +6,8 @@
 registerApp('agent', {
     title: 'Agent',
     icon: '🤖',
+    getState: (win) => ({ currentSessionId: win._agentSessionId || null }),
+    setState: async (state, win, os) => { if (state.currentSessionId) win._agentSessionId = state.currentSessionId; },
     factory: (container, win, os) => {
         const agentId = 'agent-' + Date.now();
 

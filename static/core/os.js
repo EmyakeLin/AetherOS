@@ -84,6 +84,9 @@ class AetherOS {
 
         // Unified LLM client
         this.llm = new LLMClient(this);
+
+        // Layout persistence
+        this._layoutSaveTimer = null;
     }
 
     // ═══════════════════════════════════════
@@ -123,8 +126,8 @@ class AetherOS {
         this._initDesktop();
         this._initKeyboard();
 
-        // Auto-open terminal for demo
-        // this.openApp('terminal');
+        // Restore saved layout (or do nothing if empty)
+        await this._restoreLayout();
     }
 
     _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -981,6 +984,7 @@ class AetherOS {
             }
         }
 
+        this._saveLayoutDebounced();
         return win;
     }
 
@@ -1009,6 +1013,199 @@ class AetherOS {
             });
             if (this.focusedId === id) this.focusedId = null;
             this._updateDockIndicators();
+            this._saveLayoutDebounced();
+            // Save app state one final time before close
+            const reg = AppRegistry[win.appId];
+            if (reg?.getState) this._saveAppState(win);
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // LAYOUT PERSISTENCE
+    // ═══════════════════════════════════════
+
+    _LAYOUT_KEY = 'aetheros-layout';
+    _APP_STATE_DB = 'app_state';
+
+    _saveLayoutDebounced() {
+        clearTimeout(this._layoutSaveTimer);
+        this._layoutSaveTimer = setTimeout(() => this._saveLayout(), 500);
+    }
+
+    _saveLayout() {
+        const layout = {
+            version: 1,
+            timestamp: Date.now(),
+            windows: [],
+            focusedAppId: null
+        };
+
+        const sorted = [...this.windows.values()].sort((a, b) => a.zIndex - b.zIndex);
+        for (const win of sorted) {
+            layout.windows.push({
+                appId: win.appId,
+                x: win.x, y: win.y, w: win.w, h: win.h,
+                state: win.state,
+                zIndex: win.zIndex,
+                snapSide: win.snapSide,
+                normalGeom: { ...win._normalGeom }
+            });
+        }
+
+        if (this.focusedId) {
+            const focusedWin = this.windows.get(this.focusedId);
+            if (focusedWin) layout.focusedAppId = focusedWin.appId;
+        }
+
+        try {
+            localStorage.setItem(this._LAYOUT_KEY, JSON.stringify(layout));
+        } catch (e) {
+            console.warn('Failed to save layout:', e);
+        }
+
+        // Also save app states (fire-and-forget)
+        for (const [id, win] of this.windows) {
+            this._saveAppState(win);
+        }
+    }
+
+    async _restoreLayout() {
+        try {
+            const raw = localStorage.getItem(this._LAYOUT_KEY);
+            if (!raw) return;
+            const layout = JSON.parse(raw);
+            if (!layout.version || !layout.windows?.length) return;
+
+            const sorted = layout.windows.sort((a, b) => a.zIndex - b.zIndex);
+
+            for (const entry of sorted) {
+                if (!AppRegistry[entry.appId] && !AppManifests[entry.appId]) continue;
+
+                const contentEl = document.createElement('div');
+                contentEl.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;';
+
+                const win = new OSWindow(entry.appId, '', contentEl, {
+                    x: entry.x, y: entry.y, w: entry.w, h: entry.h
+                });
+
+                // Restore state properties
+                win.state = entry.state;
+                win.zIndex = entry.zIndex;
+                win.snapSide = entry.snapSide;
+                win._normalGeom = entry.normalGeom;
+
+                // Apply visual state
+                win.element.style.zIndex = win.zIndex;
+                if (win.state === 'minimized') {
+                    win.element.style.display = 'none';
+                } else if (win.state === 'maximized') {
+                    const desktop = document.getElementById('desktop');
+                    win.x = 0; win.y = 0;
+                    win.w = desktop.clientWidth; win.h = desktop.clientHeight;
+                    win._applyGeom();
+                    win.element.classList.add('snap-to-full');
+                }
+
+                win.mount(document.getElementById('window-stack'));
+                this.windows.set(win.id, win);
+
+                // Load app and restore title/icon
+                let reg = AppRegistry[entry.appId];
+                if (!reg && AppManifests[entry.appId]) {
+                    await this._loadAppScript(AppManifests[entry.appId]);
+                    reg = AppRegistry[entry.appId];
+                }
+                if (reg) {
+                    win.setTitle(reg.title);
+                    const iconEl = win.element.querySelector('.window-title-icon');
+                    if (iconEl) {
+                        const manifest = AppManifests[entry.appId];
+                        const iconPath = manifest && manifest.icon;
+                        if (iconPath) iconEl.innerHTML = `<img src="${iconPath}" alt="">`;
+                        else iconEl.textContent = (manifest && manifest.emoji) || reg.icon || '';
+                    }
+
+                    if (reg.factory) {
+                        try {
+                            reg.factory(contentEl, win, this);
+                        } catch (e) {
+                            console.error(`Failed to restore app "${entry.appId}":`, e);
+                        }
+                    }
+                }
+
+                // Async restore app internal state
+                this._restoreAppState(win).catch(e =>
+                    console.warn(`Failed to restore state for ${entry.appId}:`, e)
+                );
+            }
+
+            // Restore focus last
+            if (layout.focusedAppId) {
+                const focusWin = [...this.windows.values()].find(w => w.appId === layout.focusedAppId);
+                if (focusWin) this.focusWindow(focusWin.id);
+            }
+
+            this._updateDockIndicators();
+        } catch (e) {
+            console.warn('Layout restore failed:', e);
+        }
+    }
+
+    async _saveAppState(win) {
+        const reg = AppRegistry[win.appId];
+        if (!reg?.getState) return;
+
+        try {
+            const state = await reg.getState(win);
+            if (state === undefined || state === null) return;
+
+            await this.api('POST', `/api/db/${this._APP_STATE_DB}/execute`, {
+                sql: `CREATE TABLE IF NOT EXISTS app_state (
+                    app_instance TEXT PRIMARY KEY,
+                    app_id TEXT NOT NULL,
+                    state_json TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )`,
+                params: []
+            });
+
+            await this.api('POST', `/api/db/${this._APP_STATE_DB}/execute`, {
+                sql: `INSERT OR REPLACE INTO app_state (app_instance, app_id, state_json, updated_at)
+                      VALUES (?, ?, ?, ?)`,
+                params: [win.appId, win.appId, JSON.stringify(state), Date.now()]
+            });
+        } catch (e) {
+            console.warn(`Save app state failed for ${win.appId}:`, e);
+        }
+    }
+
+    async _restoreAppState(win) {
+        const reg = AppRegistry[win.appId];
+        if (!reg?.setState) return;
+
+        try {
+            await this.api('POST', `/api/db/${this._APP_STATE_DB}/execute`, {
+                sql: `CREATE TABLE IF NOT EXISTS app_state (
+                    app_instance TEXT PRIMARY KEY,
+                    app_id TEXT NOT NULL,
+                    state_json TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )`,
+                params: []
+            });
+
+            const result = await this.api('POST', `/api/db/${this._APP_STATE_DB}/query`, {
+                sql: `SELECT state_json FROM app_state WHERE app_instance = ?`,
+                params: [win.appId]
+            });
+
+            if (result.rows?.length > 0) {
+                const state = JSON.parse(result.rows[0].state_json);
+                await reg.setState(state, win, this);
+            }
+        } catch (e) {
+            console.warn(`Restore app state failed for ${win.appId}:`, e);
         }
     }
 

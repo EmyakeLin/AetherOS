@@ -6,6 +6,8 @@
 registerApp('files', {
     title: '文件管理器',
     icon: '📁',
+    getState: (win) => win._filesState || null,
+    setState: async (state, win, os) => { win._filesState = state; },
     factory: (container, win, os) => {
         let currentPath = '';
         let viewMode = 'list'; // 'list' | 'icon'

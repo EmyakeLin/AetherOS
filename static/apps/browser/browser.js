@@ -6,6 +6,8 @@
 registerApp('browser', {
     title: '浏览器',
     icon: '🌐',
+    getState: (win) => win._browserState || null,
+    setState: async (state, win, os) => { win._browserState = state; },
     factory: (container, win, os) => {
         const history = [];
         let historyIdx = -1;
