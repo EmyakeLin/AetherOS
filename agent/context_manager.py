@@ -322,9 +322,13 @@ class ContextManager:
                     tc_id = tc.get("id", "")
                     if tc_id in failed_ids:
                         continue
-                    # Shrink successful call arguments
-                    tool_name = tc.get("function", {}).get("name", "")
-                    args_str = tc.get("function", {}).get("arguments", "{}")
+                    # 适配两种格式：{"function": {"name", "arguments"}} 或 {"name", "arguments"}
+                    if "function" in tc:
+                        tool_name = tc["function"].get("name", "")
+                        args_str = tc["function"].get("arguments", "{}")
+                    else:
+                        tool_name = tc.get("name", "")
+                        args_str = tc.get("arguments", "{}")
                     try:
                         args = json.loads(args_str) if isinstance(args_str, str) else args_str
                     except (json.JSONDecodeError, TypeError):
@@ -335,10 +339,13 @@ class ContextManager:
                     shrunk_args = self.shrink_tool_call_args(tool_name, args, success)
 
                     tc_copy = {**tc}
-                    tc_copy["function"] = {
-                        **tc["function"],
-                        "arguments": json.dumps(shrunk_args, ensure_ascii=False),
-                    }
+                    if "function" in tc:
+                        tc_copy["function"] = {
+                            **tc["function"],
+                            "arguments": json.dumps(shrunk_args, ensure_ascii=False),
+                        }
+                    else:
+                        tc_copy["arguments"] = shrunk_args
                     filtered_calls.append(tc_copy)
 
                 if filtered_calls or not msg.get("content"):

@@ -1460,8 +1460,114 @@ registerApp('agent', {
                     showWelcome(true);
                 } else {
                     showWelcome(false);
+
+                    // 构建 tool 结果映射
+                    const toolResults = {};
+                    for (const toolMsg of msgs) {
+                        if (toolMsg.role === 'tool' && toolMsg.tool_call_id) {
+                            toolResults[toolMsg.tool_call_id] = toolMsg;
+                        }
+                    }
+
+                    // 当前轮次和迭代计数
+                    let currentRound = 0;
+                    let currentIteration = 0;
+                    let lastAssistantEl = null;
+                    let lastToolsContainer = null;
+
                     for (const msg of msgs) {
+                        // 跳过 tool 消息，它们会在 assistant 消息的 tool_calls 中处理
+                        if (msg.role === 'tool') continue;
+
+                        // 渲染消息
                         addMessage(msg.role, msg.content, true);
+
+                        // 如果是 assistant 消息且包含 tool_calls，渲染工具调用面板
+                        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+                            currentRound++;
+                            currentIteration = 0;
+
+                            // 获取当前 assistant 消息元素
+                            lastAssistantEl = messagesEl.querySelector('.assistant-row:last-child');
+                            if (lastAssistantEl) {
+                                const msgContent = lastAssistantEl.querySelector('.msg-content');
+                                if (msgContent) {
+                                    // 获取 msg-tools 容器
+                                    lastToolsContainer = msgContent.querySelector('.msg-tools');
+                                }
+                            }
+
+                            // 为每个 tool_call 渲染工具调用面板
+                            for (const tc of msg.tool_calls) {
+                                currentIteration++;
+                                const toolName = tc.function?.name || tc.name || 'unknown';
+                                const toolArgs = tc.function?.arguments || tc.arguments || {};
+                                const toolResult = toolResults[tc.id];
+                                const resultContent = toolResult?.content || '';
+                                const isError = resultContent.startsWith('错误:') || resultContent.startsWith('Error:');
+
+                                // 添加到右侧工具调用面板
+                                addToolEntry(toolName, toolArgs, isError ? 'error' : 'done', `R${currentRound}-${currentIteration}`);
+
+                                // 在消息中添加工具调用面板
+                                if (lastToolsContainer) {
+                                    const toolIndicator = document.createElement('div');
+                                    toolIndicator.className = 'tool-call-indicator completed';
+                                    toolIndicator.innerHTML = `
+                                        <div class="tool-call-content">
+                                            <span class="tool-call-icon">⚡</span>
+                                            <span class="tool-call-text">Function Calling — 工具调用结束</span>
+                                            <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
+                                            <span class="tool-call-time"></span>
+                                            <span class="tool-call-count">Round ${currentIteration}</span>
+                                        </div>
+                                    `;
+                                    toolIndicator.addEventListener('click', () => {
+                                        // 打开工具调用详情模态框
+                                        const argsParsed = typeof toolArgs === 'string' ? JSON.parse(toolArgs) : toolArgs;
+                                        const overlay = document.createElement('div');
+                                        overlay.className = 'tool-modal-overlay';
+                                        overlay.innerHTML = `
+                                            <div class="tool-modal">
+                                                <div class="tool-modal-header">
+                                                    <span class="tool-modal-title">工具调用详情</span>
+                                                    <span class="tool-modal-count">Round ${currentIteration}</span>
+                                                    <button class="tool-modal-close">×</button>
+                                                </div>
+                                                <div class="tool-modal-body">
+                                                    <div class="tool-modal-col">
+                                                        <div class="tool-modal-col-title">参数</div>
+                                                        <pre class="tool-modal-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</pre>
+                                                    </div>
+                                                    <div class="tool-modal-col">
+                                                        <div class="tool-modal-col-title">${isError ? '错误' : '返回值'}</div>
+                                                        <pre class="tool-modal-content ${isError ? 'error' : ''}">${escapeHtml(resultContent)}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                        overlay.addEventListener('click', (e) => {
+                                            if (e.target === overlay) overlay.remove();
+                                        });
+                                        overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
+                                        document.body.appendChild(overlay);
+                                    });
+
+                                    // 将工具面板插入到工具容器中
+                                    lastToolsContainer.appendChild(toolIndicator);
+                                }
+
+                                _toolCallHistory.push({
+                                    name: toolName,
+                                    args: typeof toolArgs === 'string' ? JSON.parse(toolArgs) : toolArgs,
+                                    result: resultContent,
+                                    error: isError ? resultContent : null,
+                                    time: Date.now(),
+                                    iterationCount: currentIteration,
+                                    roundLabel: `R${currentRound}-${currentIteration}`,
+                                });
+                            }
+                        }
                     }
                 }
                 const session = sessionCache.find(s => s.id === sessionId);
@@ -1599,8 +1705,9 @@ registerApp('agent', {
                     break;
                 case 'text':
                     removeThinkingIndicator();
-                    // 模型输出文本，重置迭代计数，完成工具调用指示器
+                    // 模型输出文本，重置迭代计数
                     _iterationCount = 0;
+                    // 如果有正在进行的工具调用，标记完成
                     if (_toolIndicatorEl) {
                         updateToolIndicator('工具调用结束');
                         playCompleteEffect(_toolIndicatorEl);
@@ -1643,6 +1750,7 @@ registerApp('agent', {
                     break;
                 case 'done':
                     removeThinkingIndicator();
+                    // 如果有正在进行的工具调用，标记完成
                     if (_toolIndicatorEl) {
                         updateToolIndicator('工具调用结束');
                         playCompleteEffect(_toolIndicatorEl);
@@ -1652,11 +1760,13 @@ registerApp('agent', {
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
+                    _sending = false;
                     if (data.tokens) os.updateAgentPanel(agentId, { contextTokens: data.tokens });
                     if (data.queued) addSystemMessage(`队列中还有 ${data.queued} 条消息等待处理`);
                     break;
                 case 'error':
                     removeThinkingIndicator();
+                    // 如果有正在进行的工具调用，标记完成
                     if (_toolIndicatorEl) {
                         updateToolIndicator('工具调用结束');
                         playCompleteEffect(_toolIndicatorEl);
@@ -1666,9 +1776,11 @@ registerApp('agent', {
                     addSystemMessage('错误: ' + data.message);
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
+                    _sending = false;
                     break;
                 case 'interrupted':
                     removeThinkingIndicator();
+                    // 如果有正在进行的工具调用，标记完成
                     if (_toolIndicatorEl) {
                         updateToolIndicator('工具调用结束');
                         playCompleteEffect(_toolIndicatorEl);
@@ -1677,6 +1789,7 @@ registerApp('agent', {
                     addSystemMessage('Agent 已中断');
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
+                    _sending = false;
                     break;
                 case 'queued':
                     addSystemMessage(`消息已排队 (位置: ${data.position})`);
@@ -1696,6 +1809,14 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
             } else {
+                // 先渲染缓冲区的文本
+                flushPendingText();
+
+                // 移除流式临时元素
+                if (_assistantTextEl) {
+                    _assistantTextEl.querySelectorAll('.streaming-pending').forEach(el => el.remove());
+                }
+
                 // 创建工具调用指示器
                 _toolIndicatorEl = document.createElement('div');
                 _toolIndicatorEl.className = 'tool-call-indicator';
@@ -1713,12 +1834,6 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-                // 移除 thinking 指示器
-                if (_thinkingEl) {
-                    _thinkingEl.remove();
-                    _thinkingEl = null;
-                }
-
                 // 创建或复用 assistant 消息块
                 if (!_currentAssistantEl) {
                     _currentAssistantEl = document.createElement('div');
@@ -1727,16 +1842,22 @@ registerApp('agent', {
                         <div class="msg-avatar assistant-avatar">E</div>
                         <div class="msg-body">
                             <div class="msg-role-label">Eos Agent</div>
-                            <div class="msg-content"></div>
+                            <div class="msg-content">
+                                <div class="msg-text"></div>
+                                <div class="msg-tools"></div>
+                            </div>
                         </div>
                     `;
                     messagesEl.appendChild(_currentAssistantEl);
                     _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
+                    _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
+                    _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
                     _assistantContent = '';
+                    _pendingText = '';
                 }
 
-                // 将工具调用指示器插入到 assistant 消息块中
-                _assistantContentEl.appendChild(_toolIndicatorEl);
+                // 将工具调用指示器插入到工具容器中
+                _assistantToolEl.appendChild(_toolIndicatorEl);
             }
 
             // 清除旧的定时器
@@ -1985,16 +2106,36 @@ registerApp('agent', {
         function showThinkingIndicator() {
             if (_thinkingEl) return;
             showWelcome(false);
+
+            // 确保 assistant 消息块存在
+            if (!_currentAssistantEl) {
+                _currentAssistantEl = document.createElement('div');
+                _currentAssistantEl.className = 'msg-row assistant-row';
+                _currentAssistantEl.innerHTML = `
+                    <div class="msg-avatar assistant-avatar">E</div>
+                    <div class="msg-body">
+                        <div class="msg-role-label">Eos Agent</div>
+                        <div class="msg-content">
+                            <div class="msg-text"></div>
+                            <div class="msg-tools"></div>
+                        </div>
+                    </div>
+                `;
+                messagesEl.appendChild(_currentAssistantEl);
+                _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
+                _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
+                _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
+                _assistantContent = '';
+                _pendingText = '';
+            }
+
+            // 创建 thinking 指示器（作为 msg-tools 的子元素，在文本之上）
             _thinkingEl = document.createElement('div');
             _thinkingEl.className = 'thinking-indicator';
             _thinkingEl.innerHTML = `
-                <div class="msg-avatar assistant-avatar">E</div>
-                <div class="msg-body">
-                    <div class="msg-role-label">Eos Agent</div>
-                    <div class="thinking-dots"><span></span><span></span><span></span></div>
-                </div>
+                <div class="thinking-dots"><span></span><span></span><span></span></div>
             `;
-            messagesEl.appendChild(_thinkingEl);
+            _assistantToolEl.appendChild(_thinkingEl);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -2008,48 +2149,149 @@ registerApp('agent', {
         let _currentAssistantEl = null;
         let _assistantContent = '';
         let _assistantContentEl = null;
+        let _assistantTextEl = null;   // 文本容器
+        let _assistantToolEl = null;   // 工具面板容器
+        let _pendingText = '';         // 待渲染的文本缓冲区
+
+        function flushPendingText() {
+            // 将缓冲区的文本渲染为一个 <span> 元素
+            if (_pendingText && _assistantTextEl) {
+                const span = document.createElement('span');
+                span.innerHTML = formatContent(_pendingText);
+                _assistantTextEl.appendChild(span);
+                _pendingText = '';
+            }
+        }
 
         function appendAssistantText(text) {
             if (!_currentAssistantEl) {
+                // 移除 thinking 指示器
+                if (_thinkingEl) {
+                    _thinkingEl.remove();
+                    _thinkingEl = null;
+                }
                 _currentAssistantEl = document.createElement('div');
                 _currentAssistantEl.className = 'msg-row assistant-row';
                 _currentAssistantEl.innerHTML = `
                     <div class="msg-avatar assistant-avatar">E</div>
                     <div class="msg-body">
                         <div class="msg-role-label">Eos Agent</div>
-                        <div class="msg-content streaming-cursor"></div>
+                        <div class="msg-content">
+                            <div class="msg-text streaming-cursor"></div>
+                            <div class="msg-tools"></div>
+                        </div>
                     </div>
                 `;
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
+                _assistantTextEl = _currentAssistantEl.querySelector('.msg-text');
+                _assistantToolEl = _currentAssistantEl.querySelector('.msg-tools');
                 _assistantContent = '';
+                _pendingText = '';
             }
+
+            // 只追加到缓冲区，不立即渲染
             _assistantContent += text;
-            _assistantContentEl.innerHTML = formatContent(_assistantContent);
-            _assistantContentEl.classList.add('streaming-cursor');
+            _pendingText += text;
+
+            // 实时显示：创建临时 span 显示流式内容
+            let streamingSpan = _assistantTextEl.querySelector('.streaming-pending');
+            if (!streamingSpan) {
+                streamingSpan = document.createElement('span');
+                streamingSpan.className = 'streaming-pending';
+                _assistantTextEl.appendChild(streamingSpan);
+            }
+            streamingSpan.innerHTML = formatContent(_pendingText);
+            streamingSpan.classList.add('streaming-cursor');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function finishAssistantMessage() {
             if (_currentAssistantEl) {
-                // 移除所有流式光标和 current 类
-                _assistantContentEl.querySelectorAll('.streaming-cursor').forEach(el => {
+                // 渲染剩余缓冲区
+                flushPendingText();
+
+                // 移除所有流式光标和临时元素
+                _assistantTextEl.querySelectorAll('.streaming-cursor').forEach(el => {
                     el.classList.remove('streaming-cursor');
                 });
-                _assistantContentEl.querySelectorAll('.assistant-text.current').forEach(el => {
-                    el.classList.remove('current');
+                _assistantTextEl.querySelectorAll('.streaming-pending').forEach(el => {
+                    el.remove();
                 });
-                const content = _assistantContent || _assistantContentEl.textContent;
+
+                const content = _assistantContent || _assistantTextEl.textContent;
                 messages.push({ role: 'assistant', content });
-                persistMessage('assistant', content);
+                // 不调用 persistMessage，后端会持久化
                 _currentAssistantEl = null;
                 _assistantContent = '';
                 _assistantContentEl = null;
-                _toolIndicatorEl = null;
+                _assistantTextEl = null;
+                _assistantToolEl = null;
+                _pendingText = '';
+                // 不设置 _toolIndicatorEl = null，保留工具面板引用
             }
         }
 
         function formatContent(text) {
+            if (!text) return '';
+
+            // 配置 marked
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: false,
+                    mangle: false,
+                });
+
+                // 自定义渲染器：添加代码复制按钮
+                const renderer = new marked.Renderer();
+                renderer.code = function(codeObj) {
+                    const code = typeof codeObj === 'object' ? codeObj.text : codeObj;
+                    const lang = typeof codeObj === 'object' ? codeObj.lang : arguments[1];
+                    const escaped = escapeHtml(code);
+                    const langLabel = lang ? `<span style="position:absolute;top:6px;left:10px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">${escapeHtml(lang)}</span>` : '';
+                    return `<pre style="position:relative">${langLabel}<button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.textContent.replace('复制','').trim());this.textContent='已复制';setTimeout(()=>this.textContent='复制',1500)">复制</button><code>${escaped}</code></pre>`;
+                };
+
+                try {
+                    let html = marked.parse(text, { renderer });
+
+                    // LaTeX 渲染：行内公式 $...$ 和块级公式 $$...$$
+                    if (typeof katex !== 'undefined') {
+                        // 块级公式 $$...$$
+                        html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, tex) => {
+                            try {
+                                return katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false });
+                            } catch (e) {
+                                return `<span class="katex-error">${escapeHtml(tex)}</span>`;
+                            }
+                        });
+                        // 行内公式 $...$
+                        html = html.replace(/\$([^\$\n]+?)\$/g, (_, tex) => {
+                            try {
+                                return katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false });
+                            } catch (e) {
+                                return `<span class="katex-error">${escapeHtml(tex)}</span>`;
+                            }
+                        });
+                    }
+
+                    return html;
+                } catch (e) {
+                    // fallback：简单格式化
+                    return text
+                        .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+                            const escaped = escapeHtml(code);
+                            const langLabel = lang ? `<span style="position:absolute;top:6px;left:10px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">${lang}</span>` : '';
+                            return `<pre style="position:relative">${langLabel}<button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.textContent.replace('复制','').trim());this.textContent='已复制';setTimeout(()=>this.textContent='复制',1500)">复制</button><code>${escaped}</code></pre>`;
+                        })
+                        .replace(/`([^`]+)`/g, '<code>$1</code>')
+                        .replace(/\n/g, '<br>');
+                }
+            }
+
+            // fallback：简单格式化
             return text
                 .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
                     const escaped = escapeHtml(code);
@@ -2123,9 +2365,15 @@ registerApp('agent', {
         }
 
         let _sending = false;
+        let _lastSendTime = 0;
+        const MIN_SEND_INTERVAL = 500; // 最小发送间隔 500ms
 
         async function sendMessage() {
             if (_sending) return;
+            const now = Date.now();
+            if (now - _lastSendTime < MIN_SEND_INTERVAL) return;
+            _lastSendTime = now;
+
             const text = inputEl.value.trim();
             if (!text) return;
 
@@ -2138,7 +2386,7 @@ registerApp('agent', {
             _iterationCount = 0;
             _toolCallHistory = [];
 
-            addMessage('user', text);
+            addMessage('user', text, true);  // skipPersist=true，后端会持久化
             inputEl.value = '';
             inputEl.style.height = '44px';
             sendBtn.disabled = true;
@@ -2153,9 +2401,10 @@ registerApp('agent', {
                 _assistantContent = '';
             } else {
                 addMessage('assistant', 'Agent 引擎未连接。请确保后端服务正在运行。', true);
+                _sending = false;
             }
 
-            _sending = false;
+            // 注意：_sending 会在 done/error/interrupted 事件中重置为 false
         }
 
         function sendInterrupt() {

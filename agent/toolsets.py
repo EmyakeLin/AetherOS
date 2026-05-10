@@ -6,6 +6,7 @@ Eos Agent — 工具集系统
 
 # 工具集定义
 TOOLSETS = {
+    # ── 基础工具集 ──
     "file": {
         "description": "文件操作",
         "tools": ["read_file", "write_file", "list_dir", "search_files", "patch"],
@@ -14,10 +15,30 @@ TOOLSETS = {
         "description": "终端执行",
         "tools": ["run_command"],
     },
+
+    # ── 组合工具集 ──
     "default": {
-        "description": "默认工具集",
+        "description": "默认工具集（文件 + 终端）",
         "includes": ["file", "terminal"],
     },
+
+    # ── 预留工具集（待实现） ──
+    # "browser": {
+    #     "description": "浏览器控制",
+    #     "tools": ["browser_navigate", "browser_click", "browser_snapshot"],
+    # },
+    # "web": {
+    #     "description": "Web 搜索与提取",
+    #     "tools": ["web_search", "web_extract"],
+    # },
+    # "planning": {
+    #     "description": "任务规划",
+    #     "tools": ["todo"],
+    # },
+    # "memory": {
+    #     "description": "记忆管理",
+    #     "tools": ["memory"],
+    # },
 }
 
 

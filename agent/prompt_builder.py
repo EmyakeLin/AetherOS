@@ -1,11 +1,65 @@
 """
-Eos Agent — 系统提示词组装
-动态组装：身份 + 工具指导 + 上下文注入 + 安全扫描
+Eos Agent — 系统提示词组装（模块化架构）
+
+设计借鉴 Claude Code 的系统提示词架构：
+- 模块化分段：每个功能段落独立配置
+- 静态/动态分离：静态段落可缓存，动态段落每轮重新计算
+- 优先级链：override > agent > custom > default
+- 配置文件化：所有提示词内容从 prompts.json 加载
+
+缓存策略：
+- system_prompt_section(): 计算一次后缓存，直到手动清除
+- uncached_system_prompt_section(): 每轮重新计算，用于会话特定内容
 """
 
+import os
 import re
+import json
+import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable, Any
+from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+# prompts.json 路径
+PROMPTS_FILE = Path(__file__).parent / "prompts.json"
+
+
+# =========================================================================
+# 提示词配置加载
+# =========================================================================
+
+def _load_prompts() -> dict:
+    """从 prompts.json 加载提示词配置"""
+    try:
+        with open(PROMPTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.warning(f"prompts.json not found at {PROMPTS_FILE}, using defaults")
+        return {}
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse prompts.json: {e}, using defaults")
+        return {}
+
+
+# 全局缓存提示词配置
+_prompts_config: dict = None
+
+
+def get_prompts_config() -> dict:
+    """获取提示词配置（懒加载）"""
+    global _prompts_config
+    if _prompts_config is None:
+        _prompts_config = _load_prompts()
+    return _prompts_config
+
+
+def reload_prompts():
+    """重新加载提示词配置（修改 prompts.json 后调用）"""
+    global _prompts_config
+    _prompts_config = _load_prompts()
+    clear_section_cache()
 
 
 # =========================================================================
@@ -35,12 +89,10 @@ def _scan_context_content(content: str, filename: str) -> str:
     """扫描上下文文件内容，检测 prompt injection。返回安全内容或警告。"""
     findings = []
 
-    # 检测不可见 Unicode 字符
     for char in _INVISIBLE_CHARS:
         if char in content:
             findings.append(f"invisible unicode U+{ord(char):04X}")
 
-    # 检测威胁模式
     for pattern, pid in _THREAT_PATTERNS:
         if re.search(pattern, content, re.IGNORECASE):
             findings.append(pid)
@@ -52,130 +104,263 @@ def _scan_context_content(content: str, filename: str) -> str:
 
 
 # =========================================================================
-# 常量定义
+# Section 系统 — 模块化提示词段落
 # =========================================================================
 
-DEFAULT_AGENT_IDENTITY = (
-    "你是 Eos Agent，AetherOS 浏览器操作系统中的智能 AI 助手。"
-    "你能够帮助用户完成各种任务，包括：文件操作、终端执行、代码编写、信息查询等。"
-    "你使用中文与用户沟通，保持简洁高效。"
-    "遇到不确定的情况时，坦诚说明并寻求澄清。"
-    "优先完成实际任务，而非冗长的解释。"
-)
-
-PLATFORM_HINT = (
-    "你运行在 AetherOS 浏览器操作系统中。"
-    "用户通过浏览器界面与你交互，支持 Markdown 渲染。"
-    "你可以使用工具执行文件操作、终端命令、代码搜索等任务。"
-    "所有文件操作都在服务器的文件系统中进行。"
-)
-
-TOOL_USE_ENFORCEMENT_GUIDANCE = (
-    "# 工具使用规则\n"
-    "你必须使用工具来完成任务——不要描述你会做什么而不执行。"
-    "当你说要执行某个操作（如「我来检查文件」、「我来运行命令」）时，"
-    "必须在同一响应中调用相应的工具。不要以承诺未来操作结束响应。\n"
-    "持续工作直到任务实际完成。不要只总结下次要做什么。\n"
-    "每个响应应该 (a) 包含工具调用来推进任务，或 (b) 向用户交付最终结果。"
-    "只描述意图而不执行的响应是不可接受的。"
-)
+@dataclass
+class SystemPromptSection:
+    """系统提示词段落"""
+    name: str
+    compute: Callable[[], Optional[str]]
+    cache_break: bool = False  # True = 每轮重新计算
 
 
-# =========================================================================
-# 上下文文件加载
-# =========================================================================
-
-CONTEXT_FILE_MAX_CHARS = 20_000
+# 段落缓存
+_section_cache: dict[str, Optional[str]] = {}
 
 
-def _truncate_content(content: str, filename: str, max_chars: int = CONTEXT_FILE_MAX_CHARS) -> str:
-    """截断过长内容，保留头部和尾部。"""
-    if len(content) <= max_chars:
-        return content
-    head_chars = int(max_chars * 0.7)
-    tail_chars = int(max_chars * 0.2)
-    head = content[:head_chars]
-    tail = content[-tail_chars:]
-    marker = f"\n\n[...已截断 {filename}: 保留 {head_chars}+{tail_chars} / {len(content)} 字符]\n\n"
-    return head + marker + tail
+def system_prompt_section(name: str, compute: Callable[[], Optional[str]]) -> SystemPromptSection:
+    """创建缓存段落：计算一次后缓存，直到手动清除"""
+    return SystemPromptSection(name=name, compute=compute, cache_break=False)
 
 
-def _load_claude_md(project_root: Optional[str] = None) -> str:
-    """加载 CLAUDE.md 项目指令文件。"""
-    if project_root is None:
-        project_root = str(Path.cwd())
+def uncached_system_prompt_section(
+    name: str,
+    compute: Callable[[], Optional[str]],
+    reason: str = "",
+) -> SystemPromptSection:
+    """创建动态段落：每轮重新计算，会破坏缓存"""
+    return SystemPromptSection(name=name, compute=compute, cache_break=True)
 
-    cwd_path = Path(project_root).resolve()
 
-    for name in ["CLAUDE.md", "claude.md"]:
-        candidate = cwd_path / name
-        if candidate.exists():
-            try:
-                content = candidate.read_text(encoding="utf-8").strip()
-                if content:
-                    content = _scan_context_content(content, name)
-                    result = f"## {name}\n\n{content}"
-                    return _truncate_content(result, "CLAUDE.md")
-            except Exception:
-                pass
-    return ""
+def resolve_sections(sections: list[SystemPromptSection]) -> list[str]:
+    """解析所有段落，返回非空的提示词字符串列表"""
+    global _section_cache
+    results = []
+
+    for section in sections:
+        if not section.cache_break and section.name in _section_cache:
+            cached = _section_cache[section.name]
+            if cached is not None:
+                results.append(cached)
+            continue
+
+        value = section.compute()
+        _section_cache[section.name] = value
+        if value is not None:
+            results.append(value)
+
+    return results
+
+
+def clear_section_cache():
+    """清除所有段落缓存（调用 /clear 或 /compact 时）"""
+    global _section_cache
+    _section_cache.clear()
 
 
 # =========================================================================
-# 系统提示词组装
+# 核心段落函数 — 从 prompts.json 加载
+# =========================================================================
+
+def _get_config_value(key: str, fallback: str = "") -> str:
+    """从 prompts.json 获取配置值"""
+    config = get_prompts_config()
+    return config.get(key, fallback)
+
+
+def _get_identity_section() -> str:
+    """身份声明"""
+    return _get_config_value("identity", "You are Eos Agent, an intelligent AI assistant.")
+
+
+def _get_platform_section() -> str:
+    """平台信息"""
+    return _get_config_value("platform", "# Platform\nYou run in AetherOS.")
+
+
+def _get_system_rules_section() -> str:
+    """系统规则"""
+    return _get_config_value("system_rules", "# System\n - Follow standard guidelines.")
+
+
+def _get_doing_tasks_section() -> str:
+    """任务执行指南"""
+    return _get_config_value("doing_tasks", "# Doing tasks\n - Complete tasks efficiently.")
+
+
+def _get_actions_section() -> str:
+    """操作谨慎性指南"""
+    return _get_config_value("actions", "# Executing actions with care\nBe careful with destructive operations.")
+
+
+def _get_tool_usage_section(tools_schema: list = None) -> str:
+    """工具使用指南"""
+    return _get_config_value("tool_usage", "# Using your tools\n - Use tools to complete tasks.")
+
+
+def _get_tone_style_section() -> str:
+    """语气风格"""
+    return _get_config_value("tone_style", "# Tone and style\n - Be concise.")
+
+
+def _get_output_efficiency_section() -> str:
+    """输出效率"""
+    return _get_config_value("output_efficiency", "# Output efficiency\nGo straight to the point.")
+
+
+# =========================================================================
+# 动态段落函数 — 每轮变化的内容
+# =========================================================================
+
+def _get_env_info_section(
+    cwd: str = None,
+    is_git: bool = False,
+    platform: str = None,
+    model: str = None,
+) -> str:
+    """环境信息（动态）"""
+    template = _get_config_value("env_info_template", "# Environment\nWorking directory: {cwd}")
+    return template.format(
+        cwd=cwd or os.getcwd(),
+        is_git="Yes" if is_git else "No",
+        platform=platform or "unknown",
+        model=model or "unknown",
+    )
+
+
+def _get_context_section(extra_context: dict = None) -> Optional[str]:
+    """上下文注入（动态）"""
+    if not extra_context:
+        return None
+
+    ctx_parts = []
+    for key, value in extra_context.items():
+        if isinstance(value, str):
+            scanned = _scan_context_content(value, key)
+            ctx_parts.append(f"[{key}]\n{scanned}")
+        else:
+            ctx_parts.append(f"[{key}]\n{value}")
+
+    if not ctx_parts:
+        return None
+
+    return "# System Context\n\n" + "\n\n".join(ctx_parts)
+
+
+def _get_language_section(language: str = "中文") -> str:
+    """语言偏好"""
+    template = _get_config_value("language_template", "# Language\nAlways respond in {language}.")
+    return template.format(language=language)
+
+
+def _get_user_custom_section(user_system_prompt: str = None) -> Optional[str]:
+    """用户自定义提示词"""
+    if not user_system_prompt:
+        return None
+    return user_system_prompt
+
+
+# =========================================================================
+# 主入口：构建系统提示词
 # =========================================================================
 
 def build_system_prompt(
     identity: str = None,
     user_system_prompt: str = None,
-    project_root: str = None,
     extra_context: dict = None,
+    tools_schema: list = None,
+    cwd: str = None,
+    is_git: bool = False,
+    platform: str = None,
+    model: str = None,
+    language: str = "中文",
+    override_system_prompt: str = None,
+    append_system_prompt: str = None,
 ) -> str:
     """组装完整的系统提示词。
 
+    优先级链（从高到低）：
+    1. override_system_prompt — 完全覆盖（如 loop 模式）
+    2. agent_system_prompt — 自定义 Agent 定义
+    3. custom_system_prompt — 用户配置的 system_prompt
+    4. default_system_prompt — 默认 Eos Agent 提示词
+
     参数:
-        identity: Agent 身份字符串（默认使用 DEFAULT_AGENT_IDENTITY）
-        user_system_prompt: 用户自定义 system prompt（从 Agent 设置中配置）
-        project_root: 项目根目录（用于加载 CLAUDE.md）
+        identity: Agent 身份字符串（默认使用内置身份）
+        user_system_prompt: 用户自定义 system prompt
         extra_context: 额外上下文（如当前目录、打开的文件等）
+        tools_schema: 工具定义列表
+        cwd: 当前工作目录
+        is_git: 是否是 git 仓库
+        platform: 运行平台
+        model: 使用的模型
+        language: 语言偏好
+        override_system_prompt: 完全覆盖的系统提示词
+        append_system_prompt: 始终追加在末尾的提示词
     """
+    # 优先级 1: 完全覆盖
+    if override_system_prompt:
+        return override_system_prompt
+
+    # 构建默认段落列表
     sections = []
 
-    # 1. Agent 身份
-    sections.append(identity or DEFAULT_AGENT_IDENTITY)
+    # 静态段落（可缓存）
+    sections.append(system_prompt_section("identity", _get_identity_section))
+    sections.append(system_prompt_section("platform", _get_platform_section))
+    sections.append(system_prompt_section("system_rules", _get_system_rules_section))
+    sections.append(system_prompt_section("doing_tasks", _get_doing_tasks_section))
+    sections.append(system_prompt_section("actions", _get_actions_section))
+    sections.append(system_prompt_section("tool_usage", lambda: _get_tool_usage_section(tools_schema)))
+    sections.append(system_prompt_section("tone_style", _get_tone_style_section))
+    sections.append(system_prompt_section("output_efficiency", _get_output_efficiency_section))
 
-    # 2. 平台提示
-    sections.append(PLATFORM_HINT)
+    # 动态段落（每轮重新计算）
+    sections.append(uncached_system_prompt_section(
+        "env_info",
+        lambda: _get_env_info_section(cwd, is_git, platform, model),
+        "Environment info changes between sessions",
+    ))
+    sections.append(uncached_system_prompt_section(
+        "language",
+        lambda: _get_language_section(language),
+        "Language preference is session-specific",
+    ))
+    sections.append(uncached_system_prompt_section(
+        "context",
+        lambda: _get_context_section(extra_context),
+        "Extra context changes between turns",
+    ))
 
-    # 3. 工具使用强制指导
-    sections.append(TOOL_USE_ENFORCEMENT_GUIDANCE)
-
-    # 4. 上下文文件（CLAUDE.md）
-    claude_md = _load_claude_md(project_root)
-    if claude_md:
-        sections.append(claude_md)
-
-    # 5. OS 状态上下文
-    if extra_context:
-        ctx_parts = []
-        for key, value in extra_context.items():
-            ctx_parts.append(f"[{key}]\n{value}")
-        if ctx_parts:
-            sections.append("# 系统上下文\n\n" + "\n\n".join(ctx_parts))
-
-    # 6. 用户自定义 system prompt
+    # 用户自定义提示词
     if user_system_prompt:
-        sections.append(user_system_prompt)
+        sections.append(uncached_system_prompt_section(
+            "user_custom",
+            lambda: _get_user_custom_section(user_system_prompt),
+            "User custom prompt is session-specific",
+        ))
 
-    return "\n\n".join(sections)
+    # 同步解析
+    results = resolve_sections(sections)
+
+    # 追加提示词
+    if append_system_prompt:
+        results.append(append_system_prompt)
+
+    return "\n\n".join(results)
 
 
 def build_system_prompt_with_tools(
     tools_schema: list,
     identity: str = None,
     user_system_prompt: str = None,
-    project_root: str = None,
     extra_context: dict = None,
+    cwd: str = None,
+    is_git: bool = False,
+    platform: str = None,
+    model: str = None,
+    language: str = "中文",
 ) -> tuple[str, list]:
     """组装系统提示词并返回工具列表。
 
@@ -184,7 +369,21 @@ def build_system_prompt_with_tools(
     system_prompt = build_system_prompt(
         identity=identity,
         user_system_prompt=user_system_prompt,
-        project_root=project_root,
         extra_context=extra_context,
+        tools_schema=tools_schema,
+        cwd=cwd,
+        is_git=is_git,
+        platform=platform,
+        model=model,
+        language=language,
     )
     return system_prompt, tools_schema
+
+
+# =========================================================================
+# Agent 模式提示词
+# =========================================================================
+
+def get_agent_system_prompt() -> str:
+    """获取 Agent 模式的系统提示词"""
+    return _get_config_value("agent_prompt", "You are an agent. Complete the task fully.")
