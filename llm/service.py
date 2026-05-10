@@ -165,10 +165,13 @@ class LLMService:
 
     async def chat_stream(self, messages: list, model: str,
                           max_tokens: int = 4096, system: str = None,
+                          tools: list = None,
                           api_key: str = None, api_base: str = None,
                           **kwargs) -> AsyncGenerator[dict, None]:
         """流式对话。统一输出格式：
         {'type': 'text', 'content': '...'}
+        {'type': 'thinking', 'content': '...'}
+        {'type': 'tool_call', 'id': '...', 'name': '...', 'arguments': {...}}
         {'type': 'done', 'usage': {...}}
         {'type': 'error', 'message': '...'}
         """
@@ -180,23 +183,24 @@ class LLMService:
 
         try:
             if provider_type == "anthropic":
-                async for event in self._stream_anthropic(client, model_id, messages, max_tokens, system):
+                async for event in self._stream_anthropic(client, model_id, messages, max_tokens, system, tools):
                     yield event
             else:
-                async for event in self._stream_openai(client, model_id, messages, max_tokens, system):
+                async for event in self._stream_openai(client, model_id, messages, max_tokens, system, tools):
                     yield event
         except Exception as e:
             yield {"type": "error", "message": str(e)}
 
-    async def _stream_anthropic(self, client, model, messages, max_tokens, system):
+    async def _stream_anthropic(self, client, model, messages, max_tokens, system, tools=None):
         chat_msgs = [m for m in messages if m.get("role") != "system"]
         sys_msg = system or next((m["content"] for m in messages if m.get("role") == "system"), None)
 
         call_kwargs = {"model": model, "max_tokens": max_tokens, "messages": chat_msgs}
         if sys_msg:
             call_kwargs["system"] = sys_msg
-        # 启用 thinking（extended thinking）
         call_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10240}
+        if tools:
+            call_kwargs["tools"] = [self._format_tool_anthropic(t) for t in tools]
 
         q = queue.Queue()
         _SENTINEL = object()
@@ -204,12 +208,43 @@ class LLMService:
         def _do_stream():
             try:
                 with client.messages.stream(**call_kwargs) as stream:
+                    # 工具调用累积状态
+                    tool_blocks = {}  # idx -> {"id", "name", "input_json"}
+                    current_tool_idx = None
+
                     for event in stream.events():
-                        if event.type == "content_block_delta":
+                        if event.type == "content_block_start":
+                            block = event.content_block
+                            if block.type == "tool_use":
+                                current_tool_idx = event.index
+                                tool_blocks[current_tool_idx] = {
+                                    "id": block.id,
+                                    "name": block.name,
+                                    "input_json": "",
+                                }
+                        elif event.type == "content_block_delta":
                             if event.delta.type == "thinking_delta":
                                 q.put({"type": "thinking", "content": event.delta.thinking})
                             elif event.delta.type == "text_delta":
                                 q.put({"type": "text", "content": event.delta.text})
+                            elif event.delta.type == "input_json_delta":
+                                if current_tool_idx is not None and current_tool_idx in tool_blocks:
+                                    tool_blocks[current_tool_idx]["input_json"] += event.delta.partial_json
+                        elif event.type == "content_block_stop":
+                            if current_tool_idx is not None and current_tool_idx in tool_blocks:
+                                tb = tool_blocks[current_tool_idx]
+                                try:
+                                    arguments = json.loads(tb["input_json"]) if tb["input_json"] else {}
+                                except json.JSONDecodeError:
+                                    arguments = {}
+                                q.put({
+                                    "type": "tool_call",
+                                    "id": tb["id"],
+                                    "name": tb["name"],
+                                    "arguments": arguments,
+                                })
+                            current_tool_idx = None
+
                     final = stream.get_final_message()
                     if final and final.usage:
                         q.put({"type": "done", "usage": {
@@ -232,7 +267,7 @@ class LLMService:
                 break
             yield event
 
-    async def _stream_openai(self, client, model, messages, max_tokens, system):
+    async def _stream_openai(self, client, model, messages, max_tokens, system, tools=None):
         if system:
             messages = [{"role": "system", "content": system}] + list(messages)
 
@@ -241,6 +276,9 @@ class LLMService:
             "max_tokens": max_tokens, "stream": True,
             "stream_options": {"include_usage": True},
         }
+        if tools:
+            call_kwargs["tools"] = [self._format_tool_openai(t) for t in tools]
+            call_kwargs["tool_choice"] = "auto"
 
         q = queue.Queue()
         _SENTINEL = object()
@@ -249,6 +287,9 @@ class LLMService:
             try:
                 response = client.chat.completions.create(**call_kwargs)
                 usage = {}
+                # 工具调用累积状态
+                tool_calls = {}  # index -> {"id", "name", "arguments"}
+
                 for chunk in response:
                     if hasattr(chunk, 'usage') and chunk.usage:
                         usage = {
@@ -264,6 +305,34 @@ class LLMService:
                             q.put({"type": "thinking", "content": rc})
                         if delta.content:
                             q.put({"type": "text", "content": delta.content})
+                        # 累积工具调用
+                        if delta.tool_calls:
+                            for tc_delta in delta.tool_calls:
+                                idx = tc_delta.index
+                                if idx not in tool_calls:
+                                    tool_calls[idx] = {"id": "", "name": "", "arguments": ""}
+                                if tc_delta.id:
+                                    tool_calls[idx]["id"] = tc_delta.id
+                                if tc_delta.function:
+                                    if tc_delta.function.name:
+                                        tool_calls[idx]["name"] = tc_delta.function.name
+                                    if tc_delta.function.arguments:
+                                        tool_calls[idx]["arguments"] += tc_delta.function.arguments
+
+                # 流结束后输出完整的工具调用
+                for idx in sorted(tool_calls.keys()):
+                    tc = tool_calls[idx]
+                    try:
+                        arguments = json.loads(tc["arguments"]) if tc["arguments"] else {}
+                    except json.JSONDecodeError:
+                        arguments = {}
+                    q.put({
+                        "type": "tool_call",
+                        "id": tc["id"],
+                        "name": tc["name"],
+                        "arguments": arguments,
+                    })
+
                 q.put({"type": "done", "usage": usage})
             except Exception as e:
                 q.put({"type": "error", "message": str(e)})

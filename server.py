@@ -503,8 +503,12 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
 
     try:
         sys.path.insert(0, str(BASE_DIR / "agent"))
+        import logging
         from engine import CustomAgentEngine
         from context import ContextManager
+        from context_manager import ContextManager as FileContextManager
+
+        logger = logging.getLogger(__name__)
 
         config_path = BASE_DIR / "agent" / "config.yaml"
         config = {}

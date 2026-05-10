@@ -4,10 +4,19 @@
 
 model: ""           # 模型引用，如 openai-main/gpt-4o（留空则在界面中选择）
 max_iterations: 50  # 工具调用循环上限
+
+# 系统提示词配置（模块化架构）
 system_prompt: |
   你是 Eos Agent，一个强大的 AI 编程助手。
   你可以读写文件、执行终端命令、分析代码。
   请用中文回复。
+
+# 语言偏好（影响系统提示词中的语言指令）
+language: "中文"
+
+# 高级选项（可选）
+# override_system_prompt: ""   # 完全覆盖系统提示词（优先级最高）
+# append_system_prompt: ""     # 始终追加在末尾的提示词
 
 # 上下文管理
 context:

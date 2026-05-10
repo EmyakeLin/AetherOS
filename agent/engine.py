@@ -9,13 +9,12 @@ LLM 调用统一通过 llm_service（全局 LLM 配置），引擎自身不管�
 import json
 import time
 import logging
-from pathlib import Path
 from typing import AsyncGenerator
 
 from context import ContextManager
 from context_manager import ContextManager as FileContextManager
-from prompt_builder import build_system_prompt
-from tools.registry import registry
+from prompt_builder import build_system_prompt, clear_section_cache
+from model_tools import get_tool_definitions, handle_function_call
 from storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -26,21 +25,25 @@ class CustomAgentEngine:
         config = config or {}
         self.model = config.get("model", "")
         self.max_iterations = config.get("max_iterations", 50)
-        self.tools = registry
         self.llm_service = llm_service
         self.session_id = None  # 当前 session ID，由外部设置
         # 中断信号
         self._interrupted = False
 
-        # 构建系统提示词
+        # 构建系统提示词（支持模块化架构）
         user_system_prompt = config.get("system_prompt", "")
-        project_root = config.get("project_root", str(Path.cwd()))
         extra_context = config.get("extra_context", {})
+        override_system_prompt = config.get("override_system_prompt")
+        append_system_prompt = config.get("append_system_prompt")
+        language = config.get("language", "中文")
 
         system_prompt = build_system_prompt(
             user_system_prompt=user_system_prompt,
-            project_root=project_root,
             extra_context=extra_context,
+            tools_schema=get_tool_definitions(),
+            language=language,
+            override_system_prompt=override_system_prompt,
+            append_system_prompt=append_system_prompt,
         )
 
         # 初始化上下文管理器（传入构建好的 system_prompt）
@@ -55,6 +58,10 @@ class CustomAgentEngine:
     def clear_interrupt(self):
         """清除中断状态（每轮开始时调用）"""
         self._interrupted = False
+
+    def clear_cache(self):
+        """清除系统提示词缓存（调用 /clear 或 /compact 时）"""
+        clear_section_cache()
 
     async def _persist_message(self, role: str, content: str = None,
                                tool_call_id: str = None, tool_calls: list = None,
@@ -80,7 +87,7 @@ class CustomAgentEngine:
         await self._persist_message("user", user_message)
 
         # 获取工具定义
-        tools_schema = self.tools.list_tools()
+        tools_schema = get_tool_definitions()
 
         if not self.llm_service or not self.model:
             yield {
@@ -105,45 +112,68 @@ class CustomAgentEngine:
                 # 处理消息（缩减参数、清理失败调用、注入通知）
                 processed_messages = self.file_context.process_messages(messages)
 
-                # 调用 LLM（统一通过 llm_service）
+                # 调用 LLM（流式传输，统一通过 llm_service.chat_stream）
                 start_time = time.time()
-                response = await self.llm_service.chat(
-                    messages=processed_messages, model=self.model, tools=tools_schema,
-                )
-                latency = round(time.time() - start_time, 2)
-                tokens = response.get("usage", {}).get("total_tokens", 0) if response else 0
+                text_content = ""
+                reasoning_content = ""
+                raw_tool_calls = []
+                tokens = 0
 
-                if not response:
-                    yield {"type": "error", "message": "LLM 返回空响应"}
-                    yield {"type": "done"}
-                    return
+                async for event in self.llm_service.chat_stream(
+                    messages=processed_messages, model=self.model, tools=tools_schema,
+                ):
+                    if event["type"] == "text":
+                        text_content += event["content"]
+                        yield {"type": "text", "content": event["content"]}
+                    elif event["type"] == "thinking":
+                        reasoning_content += event["content"]
+                        yield {"type": "thinking", "content": event["content"]}
+                    elif event["type"] == "tool_call":
+                        raw_tool_calls.append(event)
+                    elif event["type"] == "done":
+                        tokens = event.get("usage", {}).get("total_tokens", 0)
+                    elif event["type"] == "error":
+                        yield {"type": "error", "message": event["message"]}
+                        yield {"type": "done"}
+                        return
+
+                latency = round(time.time() - start_time, 2)
 
                 # 处理工具调用
-                if response.get("tool_calls"):
-                    # 输出思考文本
-                    if response.get("content"):
-                        yield {"type": "text", "content": response["content"]}
+                if raw_tool_calls:
+                    # 标准化工具调用格式
+                    normalized_tool_calls = []
+                    for tc in raw_tool_calls:
+                        args = tc.get("arguments", {})
+                        args_str = json.dumps(args, ensure_ascii=False) if isinstance(args, dict) else args
+                        normalized_tool_calls.append({
+                            "id": tc.get("id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": tc["name"],
+                                "arguments": args_str,
+                            }
+                        })
 
-                    # 构建 assistant 消息（保留 reasoning_content 供 DeepSeek 等模型回传）
                     assistant_msg = {
                         "role": "assistant",
-                        "content": response.get("content") or None,
-                        "tool_calls": response["tool_calls"],
+                        "content": text_content or None,
+                        "tool_calls": normalized_tool_calls,
                     }
-                    if response.get("reasoning_content"):
-                        assistant_msg["reasoning_content"] = response["reasoning_content"]
+                    if reasoning_content:
+                        assistant_msg["reasoning_content"] = reasoning_content
 
                     # 持久化 assistant 消息（含 tool_calls）
                     await self._persist_message(
                         "assistant",
-                        content=response.get("content"),
-                        tool_calls=response["tool_calls"],
-                        reasoning_content=response.get("reasoning_content"),
+                        content=text_content or None,
+                        tool_calls=normalized_tool_calls,
+                        reasoning_content=reasoning_content or None,
                     )
 
                     tool_result_msgs = []
 
-                    for tc in response["tool_calls"]:
+                    for tc in normalized_tool_calls:
                         # ── 中断检查点（工具执行前） ──
                         if self._interrupted:
                             yield {"type": "interrupted"}
@@ -169,8 +199,7 @@ class CustomAgentEngine:
 
                         # 执行工具
                         try:
-                            result = await self.tools.execute(tool_name, tool_args)
-                            result_str = str(result)
+                            result_str = await handle_function_call(tool_name, tool_args)
                             yield {
                                 "type": "tool_result",
                                 "name": tool_name,
@@ -225,27 +254,23 @@ class CustomAgentEngine:
 
                 else:
                     # 纯文本响应 = 最终答案
-                    content = response.get("content", "")
-                    if content:
+                    if text_content:
                         # 存储时保留 reasoning_content（DeepSeek 等模型需要回传）
-                        ctx_msg = {"role": "assistant", "content": content}
-                        if response.get("reasoning_content"):
-                            ctx_msg["reasoning_content"] = response["reasoning_content"]
+                        ctx_msg = {"role": "assistant", "content": text_content}
+                        if reasoning_content:
+                            ctx_msg["reasoning_content"] = reasoning_content
                         self.context.messages.append(ctx_msg)
-                        yield {"type": "text", "content": content, "call_id": call_id, "model": self.model, "latency": latency, "tokens": tokens}
 
                         # 持久化最终响应
                         await self._persist_message(
                             "assistant",
-                            content=content,
-                            reasoning_content=response.get("reasoning_content"),
+                            content=text_content,
+                            reasoning_content=reasoning_content or None,
                         )
 
-                    # 计算 token
-                    usage = response.get("usage", {})
                     yield {
                         "type": "done",
-                        "tokens": usage.get("total_tokens", 0),
+                        "tokens": tokens,
                         "call_id": call_id,
                     }
                     return

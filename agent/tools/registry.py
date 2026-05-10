@@ -68,6 +68,12 @@ class ToolRegistry:
 
     def list_tools_by_toolset(self, toolset_name: str) -> list[dict]:
         """按工具集过滤工具 schema"""
+        import sys
+        from pathlib import Path
+        # 添加 agent 目录到路径以导入 toolsets
+        agent_dir = str(Path(__file__).parent.parent)
+        if agent_dir not in sys.path:
+            sys.path.insert(0, agent_dir)
         from toolsets import resolve_toolset
         allowed = resolve_toolset(toolset_name)
         with self._lock:
