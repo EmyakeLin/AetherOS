@@ -1,0 +1,13 @@
+{
+    "id": "files",
+    "title": "文件管理器",
+    "icon": "/svg/files.svg",
+    "emoji": "📁",
+    "entry": "files.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "文件系统浏览器，支持树形目录、列表/图标视图、隐藏文件过滤",
+    "dock": true,
+    "width": 900,
+    "height": 600
+}

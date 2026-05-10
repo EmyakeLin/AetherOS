@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+    <defs>
+        <!-- Filter to create the faint inner neon indigo glow effect -->
+        <filter id="glowBlur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.5" />
+        </filter>
+    </defs>
+
+    <!-- 
+      LAYER 1: OUTER CONTAINER
+      Main structural boundary of the monitoring window.
+    -->
+    <path d="M 12 16
+             L 12 48
+             L 14 50
+             L 50 50
+             L 52 48
+             L 52 16
+             L 50 14
+             L 14 14
+             Z"
+          fill="none" stroke="#00e5ff" stroke-width="1.5"
+          stroke-linejoin="round" stroke-linecap="round" />
+
+    <!-- 
+      LAYER 2: INNER GLOW (INDIGO)
+      The faint indigo inner neon glow effect.
+    -->
+    <path d="M 14 18
+             L 14 46
+             L 16 48
+             L 48 48
+             L 50 46
+             L 50 18
+             L 48 16
+             L 16 16
+             Z"
+          fill="none" stroke="#6c5ce7" stroke-width="2" filter="url(#glowBlur)" opacity="0.8" stroke-linejoin="round"/>
+
+    <!-- 
+      LAYER 3: MAIN CONTENT (BIPARTITE COLORING)
+      Foreground elements using split coloring (Cyan/Indigo) instead of gradient.
+    -->
+    <!-- Main Body Fill -->
+    <path d="M 12 16
+             L 12 48
+             L 14 50
+             L 50 50
+             L 52 48
+             L 52 16
+             L 50 14
+             L 14 14
+             Z"
+          fill="#6c5ce7" fill-opacity="0.08" stroke="none" />
+
+    <!-- Bar Chart Split: Cyan bars for initial data, Indigo for the peak -->
+    <!-- Bar 1 (Shortest - Cyan) -->
+    <rect x="20" y="34" width="4" height="8" fill="#00e5ff" rx="0.5"/>
+    <!-- Bar 2 (Medium - Cyan) -->
+    <rect x="28" y="28" width="4" height="14" fill="#00e5ff" rx="0.5"/>
+    <!-- Bar 3 (Tallest - Indigo) -->
+    <rect x="36" y="22" width="4" height="20" fill="#6c5ce7" rx="0.5"/>
+    
+    <!-- Natural Connection: An angled circuit line connecting the peak bar to the data node -->
+    <path d="M 40 22 L 43 19 L 45 19" fill="none" stroke="#6c5ce7" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="48" cy="19" r="2" fill="none" stroke="#6c5ce7" stroke-width="1.5"/>
+
+    <!-- 
+      LAYER 4: CYBERPUNK ACCENTS 
+    -->
+    <!-- Floating downward triangle (▽) accent -->
+    <polygon points="30.5,10.5 33.5,10.5 32,13.5" fill="#6c5ce7" opacity="0.9" stroke="#6c5ce7" stroke-width="0.5" stroke-linejoin="round"/>
+
+    <!-- Data tracks near the bottom -->
+    <line x1="16" y1="44" x2="23" y2="44" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <line x1="16" y1="48" x2="19" y2="48" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <line x1="22" y1="48" x2="24" y2="48" stroke="#6c5ce7" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Right side circuit lead & terminal node -->
+    <path d="M 44 42 L 47 42 L 49 40 L 54 40" fill="none" stroke="#00e5ff" stroke-width="1.5" opacity="0.4" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="54" cy="40" r="1.5" fill="#6c5ce7" opacity="0.9"/>
+</svg>
+

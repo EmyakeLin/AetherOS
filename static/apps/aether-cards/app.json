@@ -1,0 +1,13 @@
+{
+    "id": "aether-cards",
+    "title": "Aether Cards",
+    "icon": "/apps/aether-cards/icon.svg",
+    "emoji": "🃏",
+    "entry": "aether-cards.js",
+    "version": "1.0.0",
+    "author": "user",
+    "description": "无限画布灵感卡片，支持 LLM 对话和多模态输入",
+    "dock": true,
+    "width": 1100,
+    "height": 750
+}

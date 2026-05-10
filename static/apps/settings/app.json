@@ -1,0 +1,13 @@
+{
+    "id": "settings",
+    "title": "设置",
+    "icon": "/svg/settings.svg",
+    "emoji": "⚙️",
+    "entry": "settings.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "系统设置，包含通用、Agent、工具、MCP、上下文、外观、应用管理",
+    "dock": true,
+    "width": 800,
+    "height": 550
+}

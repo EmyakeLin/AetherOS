@@ -1,0 +1,13 @@
+{
+    "id": "browser",
+    "title": "浏览器",
+    "icon": "/svg/browser.svg",
+    "emoji": "🌐",
+    "entry": "browser.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "URL 启动器，在外部浏览器中打开网页",
+    "dock": true,
+    "width": 900,
+    "height": 600
+}
