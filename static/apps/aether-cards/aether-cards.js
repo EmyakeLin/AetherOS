@@ -103,30 +103,36 @@ registerApp('aether-cards', {
 
         // ── SVG 图标 ──
         const ICO = {
-            back: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            plus: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3V11M3 7H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
-            popout: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 5L13 1M7 1H13V7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 7V11H5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            restore: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 1H2C1.45 1 1 1.45 1 2V4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8 11H10C10.55 11 11 10.55 11 10V8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M1 4L4 1M11 8L8 11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
-            trash: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4H11M5 4V3C5 2.45 5.45 2 6 2H8C8.55 2 9 2.45 9 3V4M4 4L5 12H9L10 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            image: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><circle cx="5" cy="5" r="1.2" stroke="currentColor" stroke-width="1"/><path d="M1.5 10L4.5 7L6.5 9L8.5 6.5L12.5 10.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            send: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 1.5L10.5 6L1.5 10.5V7L7.5 6L1.5 4.5V1.5Z" fill="currentColor"/></svg>`,
-            folder: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5C2 2.95 2.45 2.5 3 2.5H5.5L7 4.5H11C11.55 4.5 12 4.95 12 5.5V10.5C12 11.05 11.55 11.5 11 11.5H3C2.45 11.5 2 11.05 2 10.5V3.5Z" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>`,
-            zoomIn: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M6 4V8M4 6H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            zoomOut: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M4 6H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            zoomReset: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.1"/><text x="7" y="9" text-anchor="middle" fill="currentColor" font-size="7" font-family="var(--font-mono)">1:1</text></svg>`,
-            settings: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M7 1V3M7 11V13M1 7H3M11 7H13M2.8 2.8L4.2 4.2M9.8 9.8L11.2 11.2M11.2 2.8L9.8 4.2M4.2 9.8L2.8 11.2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            toText: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2H10M2 5H8M2 8H10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
-            toCard: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1"/><path d="M4 6H8M6 4V8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            toIDE: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3L1 6L4 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3L11 6L8 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            cover: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1"/><path d="M1 9L4 6L6 8L8 5L11 8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            close: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
-            chat: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2H12V10H5L2 13V2Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5H9M5 7.5H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            newChat: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3V11M3 7H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M2 2H12V10H5L2 13V2Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            history: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.1"/><path d="M7 4V7.5L9.5 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            attach: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7.5 3L3.5 7C2.67 7.83 2.67 9.17 3.5 10C4.33 10.83 5.67 10.83 6.5 10L11 5.5C11.55 4.95 11.55 4.05 11 3.5C10.45 2.95 9.55 2.95 9 3.5L5 7.5C4.72 7.78 4.72 8.22 5 8.5C5.28 8.78 5.72 8.78 6 8.5L9.5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            draw: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L3.5 8.5L10 2L12 4L5.5 10.5L2 12Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 3.5L10.5 5.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
-            pin: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 1.5L12.5 5.5L9 9L10 13L7 10L4 13L5 9L1.5 5.5L5.5 1.5L8.5 1.5Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-            spinner: `<span class="cards-thinking-dots"><span></span><span></span><span></span></span>`,
+            back_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            plus_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3V11M3 7H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+            popout_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 5L13 1M7 1H13V7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 7V11H5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            restore_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 1H2C1.45 1 1 1.45 1 2V4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8 11H10C10.55 11 11 10.55 11 10V8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M1 4L4 1M11 8L8 11" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
+            trash_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4H11M5 4V3C5 2.45 5.45 2 6 2H8C8.55 2 9 2.45 9 3V4M4 4L5 12H9L10 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            image_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><circle cx="5" cy="5" r="1.2" stroke="currentColor" stroke-width="1"/><path d="M1.5 10L4.5 7L6.5 9L8.5 6.5L12.5 10.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            send_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 1.5L10.5 6L1.5 10.5V7L7.5 6L1.5 4.5V1.5Z" fill="currentColor"/></svg>`,
+            folder_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5C2 2.95 2.45 2.5 3 2.5H5.5L7 4.5H11C11.55 4.5 12 4.95 12 5.5V10.5C12 11.05 11.55 11.5 11 11.5H3C2.45 11.5 2 11.05 2 10.5V3.5Z" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>`,
+            zoomIn_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M6 4V8M4 6H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            zoomOut_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M4 6H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            zoomReset_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.1"/><text x="7" y="9" text-anchor="middle" fill="currentColor" font-size="7" font-family="var(--font-mono)">1:1</text></svg>`,
+            settings_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.1"/><path d="M7 1V3M7 11V13M1 7H3M11 7H13M2.8 2.8L4.2 4.2M9.8 9.8L11.2 11.2M11.2 2.8L9.8 4.2M4.2 9.8L2.8 11.2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            toText_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2H10M2 5H8M2 8H10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>`,
+            toCard_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1"/><path d="M4 6H8M6 4V8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            toIDE_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 3L1 6L4 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 3L11 6L8 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            cover_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1"/><path d="M1 9L4 6L6 8L8 5L11 8" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            close_svg: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+            chat_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2H12V10H5L2 13V2Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5H9M5 7.5H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            newChat_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 3V11M3 7H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M2 2H12V10H5L2 13V2Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            history_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.1"/><path d="M7 4V7.5L9.5 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            attach_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7.5 3L3.5 7C2.67 7.83 2.67 9.17 3.5 10C4.33 10.83 5.67 10.83 6.5 10L11 5.5C11.55 4.95 11.55 4.05 11 3.5C10.45 2.95 9.55 2.95 9 3.5L5 7.5C4.72 7.78 4.72 8.22 5 8.5C5.28 8.78 5.72 8.78 6 8.5L9.5 5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            draw_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12L3.5 8.5L10 2L12 4L5.5 10.5L2 12Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 3.5L10.5 5.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            pin_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 1.5L12.5 5.5L9 9L10 13L7 10L4 13L5 9L1.5 5.5L5.5 1.5L8.5 1.5Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            rename_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 2.5L11.5 5.5M2 12L3 9L9.5 2.5L11.5 4.5L5 11L2 12Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 2.5L11.5 4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>`,
+            export_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 8V2M7 2L4.5 4.5M7 2L9.5 4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9V11.5C2 12.05 2.45 12.5 3 12.5H11C11.55 12.5 12 12.05 12 11.5V9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            import_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2V8M7 8L4.5 5.5M7 8L9.5 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11.5V9C2 8.45 2.45 8 3 8H11C11.55 8 12 8.45 12 9V11.5C12 12.05 11.55 12.5 11 12.5H3C2.45 12.5 2 12.05 2 11.5Z" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            check_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            board_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="3" height="10" rx="0.8" stroke="currentColor" stroke-width="1.1"/><rect x="5.5" y="2" width="3" height="7" rx="0.8" stroke="currentColor" stroke-width="1.1"/><rect x="9.5" y="2" width="3" height="5" rx="0.8" stroke="currentColor" stroke-width="1.1"/></svg>`,
+            duplicate_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.2" stroke="currentColor" stroke-width="1.1"/><path d="M10 4V2.5C10 2.22 9.78 2 9.5 2H2.5C2.22 2 2 2.22 2 2.5V9.5C2 9.78 2.22 10 2.5 10H4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            spinner_svg: `<span class="cards-thinking-dots"><span></span><span></span><span></span></span>`,
         };
 
         const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp']);
@@ -145,17 +151,17 @@ registerApp('aether-cards', {
         container.innerHTML = `
             <div style="display:flex;flex-direction:column;height:100%;background:var(--bg-base);">
                 <div class="cards-toolbar" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-surface);">
-                    <button class="cards-tb-btn" id="cards-add" title="新建卡片">${ICO.plus} 新建</button>
-                    <button class="cards-tb-btn" id="cards-draw-board" title="新建手绘板">${ICO.draw} 手绘板</button>
-                    <button class="cards-tb-btn" id="cards-chat-toggle" title="显示对话框">${ICO.chat} 对话</button>
-                    <button class="cards-tb-btn" id="cards-board-mgr" title="管理工作板">${ICO.folder} <span id="cards-board-name">默认工作板</span></button>
+                    <button class="cards-tb-btn" id="cards-add" title="新建卡片">${ICO.plus_svg} 新建</button>
+                    <button class="cards-tb-btn" id="cards-draw-board" title="新建手绘板">${ICO.draw_svg} 手绘板</button>
+                    <button class="cards-tb-btn" id="cards-chat-toggle" title="显示对话框">${ICO.chat_svg} 对话</button>
+                    <button class="cards-tb-btn" id="cards-board-mgr" title="管理工作板">${ICO.folder_svg} <span id="cards-board-name">默认工作板</span></button>
                     <div style="flex:1;"></div>
-                    <button class="cards-tb-btn" id="cards-llm-settings" title="LLM 设置">${ICO.settings} LLM</button>
+                    <button class="cards-tb-btn" id="cards-llm-settings" title="LLM 设置">${ICO.settings_svg} LLM</button>
                     <div style="width:1px;height:16px;background:var(--border);margin:0 4px;"></div>
                     <span id="cards-zoom-label" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:42px;text-align:center;">100%</span>
-                    <button class="cards-tb-btn" id="cards-zoom-out" title="缩小">${ICO.zoomOut}</button>
-                    <button class="cards-tb-btn" id="cards-zoom-in" title="放大">${ICO.zoomIn}</button>
-                    <button class="cards-tb-btn" id="cards-zoom-reset" title="重置缩放">${ICO.zoomReset}</button>
+                    <button class="cards-tb-btn" id="cards-zoom-out" title="缩小">${ICO.zoomOut_svg}</button>
+                    <button class="cards-tb-btn" id="cards-zoom-in" title="放大">${ICO.zoomIn_svg}</button>
+                    <button class="cards-tb-btn" id="cards-zoom-reset" title="重置缩放">${ICO.zoomReset_svg}</button>
                     <span style="font-size:11px;color:var(--text-muted);margin-left:8px;" id="cards-count">0 张卡片</span>
                 </div>
                 <div class="cards-canvas" id="cards-canvas" style="flex:1;overflow:hidden;position:relative;cursor:grab;">
@@ -171,7 +177,7 @@ registerApp('aether-cards', {
             <div id="cards-detail-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:50;background:rgba(0,0,0,0.5);">
                 <div id="cards-detail-modal" style="width:80%;height:80%;max-width:960px;max-height:640px;margin:auto;display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);overflow:hidden;">
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-elevated);">
-                        <button class="cards-tb-btn" id="cards-detail-back">${ICO.back} 画布</button>
+                        <button class="cards-tb-btn" id="cards-detail-back">${ICO.back_svg} 画布</button>
                         <input id="cards-detail-title" type="text" placeholder="卡片标题..." style="flex:1;background:transparent;border:1px solid transparent;color:var(--text-primary);font-family:var(--font-body);font-size:14px;padding:4px 8px;border-radius:var(--radius-sm);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='transparent'">
                     </div>
                     <div style="display:flex;flex:1;overflow:hidden;">
@@ -199,9 +205,9 @@ registerApp('aether-cards', {
                             </div>
                             <!-- 图片条 -->
                             <div style="flex:1;display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border);background:var(--bg-surface);overflow-x:auto;min-height:48px;flex-shrink:0;">
-                                <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${ICO.image} 图片</span>
+                                <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${ICO.image_svg} 图片</span>
                                 <div id="cards-detail-images" style="display:flex;gap:4px;flex:1;overflow-x:auto;"></div>
-                                <button class="cards-tb-btn" id="cards-detail-add-image">${ICO.plus}</button>
+                                <button class="cards-tb-btn" id="cards-detail-add-image">${ICO.plus_svg}</button>
                             </div>
                         </div>
                         <!-- 右侧 1/3 LLM 对话 -->
@@ -213,7 +219,7 @@ registerApp('aether-cards', {
                             <div id="cards-chat-messages" style="flex:1;overflow-y:auto;padding:10px;"></div>
                             <div style="border-top:1px solid var(--border);padding:8px;display:flex;gap:6px;background:var(--bg-surface);flex-shrink:0;">
                                 <input id="cards-chat-input" type="text" placeholder="发送消息... (@ 引用图片)" style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:6px 10px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                                <button class="cards-tb-btn" id="cards-chat-send">${ICO.send}</button>
+                                <button class="cards-tb-btn" id="cards-chat-send">${ICO.send_svg}</button>
                             </div>
                         </div>
                     </div>
@@ -226,7 +232,7 @@ registerApp('aether-cards', {
             <!-- 图片选择 modal -->
             <div id="cards-image-modal" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:200;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
                 <div style="width:500px;max-height:70vh;display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);">
-                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);"><span style="font-size:13px;color:var(--text-primary);">${ICO.folder} 选择图片</span><div style="flex:1;"></div><button class="cards-tb-btn" id="cards-img-modal-close">${ICO.close}</button></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);"><span style="font-size:13px;color:var(--text-primary);">${ICO.folder_svg} 选择图片</span><div style="flex:1;"></div><button class="cards-tb-btn" id="cards-img-modal-close">${ICO.close_svg}</button></div>
                     <div id="cards-img-modal-bc" style="padding:4px 14px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);border-bottom:1px solid var(--border);"></div>
                     <div id="cards-img-modal-list" style="flex:1;overflow-y:auto;padding:8px;"></div>
                     <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
@@ -241,9 +247,9 @@ registerApp('aether-cards', {
             <div id="cards-llm-panel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:300;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
                 <div style="width:620px;max-height:80vh;display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);">
                     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);">
-                        <span style="font-size:13px;color:var(--text-primary);">${ICO.settings} LLM 模型配置</span>
+                        <span style="font-size:13px;color:var(--text-primary);">${ICO.settings_svg} LLM 模型配置</span>
                         <div style="flex:1;"></div>
-                        <button class="cards-tb-btn" id="cards-llm-close">${ICO.close}</button>
+                        <button class="cards-tb-btn" id="cards-llm-close">${ICO.close_svg}</button>
                     </div>
                     <div style="display:flex;flex:1;overflow:hidden;">
                         <!-- 左侧导航 -->
@@ -272,16 +278,16 @@ registerApp('aether-cards', {
                         <!-- 工具栏行 -->
                         <div style="display:flex;align-items:center;gap:4px;">
                             <select id="cards-chat-model-float" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:2px 6px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font-body);outline:none;max-width:180px;"></select>
-                            <button class="cards-tb-btn" id="cards-chat-attach" title="上传文件">${ICO.attach}</button>
-                            <button class="cards-tb-btn" id="cards-chat-new" title="新建对话">${ICO.newChat}</button>
-                            <button class="cards-tb-btn" id="cards-chat-history-btn" title="历史对话">${ICO.history}</button>
+                            <button class="cards-tb-btn" id="cards-chat-attach" title="上传文件">${ICO.attach_svg}</button>
+                            <button class="cards-tb-btn" id="cards-chat-new" title="新建对话">${ICO.newChat_svg}</button>
+                            <button class="cards-tb-btn" id="cards-chat-history-btn" title="历史对话">${ICO.history_svg}</button>
                             <div style="flex:1;"></div>
-                            <button class="cards-tb-btn" id="cards-chat-close" title="关闭对话框">${ICO.close}</button>
+                            <button class="cards-tb-btn" id="cards-chat-close" title="关闭对话框">${ICO.close_svg}</button>
                         </div>
                         <!-- 输入行 -->
                         <div style="display:flex;align-items:flex-end;gap:6px;">
                             <textarea id="cards-chat-input-float" placeholder="发送消息... (Shift+Enter 换行)" style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:8px 10px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;outline:none;resize:none;min-height:36px;max-height:120px;line-height:1.4;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-                            <button class="cards-tb-btn" id="cards-chat-send-float" style="align-self:flex-end;">${ICO.send}</button>
+                            <button class="cards-tb-btn" id="cards-chat-send-float" style="align-self:flex-end;">${ICO.send_svg}</button>
                         </div>
                     </div>
                 </div>
@@ -289,22 +295,25 @@ registerApp('aether-cards', {
                 <div id="cards-chat-history-panel" style="display:none;position:absolute;bottom:100%;left:0;right:0;margin-bottom:8px;max-height:70vh;overflow-y:auto;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 -4px 20px rgba(0,0,0,0.3);">
                     <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
                         <span style="font-size:12px;color:var(--text-primary);font-weight:500;">历史对话</span>
-                        <button class="cards-tb-btn" id="cards-chat-history-close">${ICO.close}</button>
+                        <button class="cards-tb-btn" id="cards-chat-history-close">${ICO.close_svg}</button>
                     </div>
                     <div id="cards-chat-history-list" style="padding:4px;max-height:calc(70vh - 40px);overflow-y:auto;"></div>
                 </div>
             </div>
             <!-- 工作板管理面板 -->
-            <div id="cards-board-panel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:350;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
-                <div style="width:480px;max-height:70vh;display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);">
-                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);">
-                        <span style="font-size:13px;color:var(--text-primary);">${ICO.folder} 工作板管理</span>
+            <div id="cards-board-panel" class="cards-board-overlay" style="display:none;">
+                <div class="cards-board-container">
+                    <div class="cards-board-header">
+                        <span style="color:var(--accent);display:flex;align-items:center;">${ICO.board_svg}</span>
+                        <span style="font-size:13px;font-weight:600;color:var(--text-primary);letter-spacing:0.5px;">工作板管理</span>
                         <div style="flex:1;"></div>
-                        <button class="cards-tb-btn" id="cards-board-close">${ICO.close}</button>
+                        <button class="cards-board-close-btn" id="cards-board-close" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:var(--radius-sm);transition:all 0.15s ease;">${ICO.close_svg}</button>
                     </div>
                     <div id="cards-board-list" style="flex:1;overflow-y:auto;padding:8px;"></div>
-                    <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;">
-                        <button class="cards-tb-btn" id="cards-board-new">${ICO.plus} 新建工作板</button>
+                    <div class="cards-board-footer">
+                        <button class="cards-board-footer-btn primary" id="cards-board-new">${ICO.plus_svg} 新建</button>
+                        <button class="cards-board-footer-btn" id="cards-board-export">${ICO.export_svg} 导出</button>
+                        <button class="cards-board-footer-btn" id="cards-board-import">${ICO.import_svg} 导入</button>
                     </div>
                 </div>
             </div>
@@ -456,12 +465,74 @@ registerApp('aether-cards', {
                 .cards-thinking-dots span:nth-child(2){animation-delay:0.15s;}
                 .cards-thinking-dots span:nth-child(3){animation-delay:0.3s;}
                 @keyframes cards-dot-bounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
-                .board-mgr-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);}
+                .cards-board-overlay{position:absolute;top:0;left:0;right:0;bottom:0;z-index:350;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;}
+                .cards-board-container{width:520px;max-height:75vh;display:flex;flex-direction:column;background:rgba(210,235,255,0.18);backdrop-filter:blur(28px) saturate(1.6);border:1px solid rgba(220,240,255,0.30);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.08);}
+                .cards-board-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(220,240,255,0.18);}
+                [data-theme="light"] .cards-board-overlay{background:rgba(0,0,0,0.25);}
+                [data-theme="light"] .cards-board-container{background:rgba(240,235,226,0.92);border-color:rgba(60,50,40,0.18);box-shadow:0 8px 32px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.6);}
+                [data-theme="light"] .cards-board-header{border-bottom-color:rgba(60,50,40,0.12);}
+                .board-mgr-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);border-left:3px solid transparent;transition:all var(--duration-fast) var(--ease-out);position:relative;}
                 .board-mgr-item:hover{background:var(--bg-hover);color:var(--text-primary);}
-                .board-mgr-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);}
-                .board-mgr-item .board-count{font-size:10px;color:var(--text-muted);margin-left:auto;}
-                .board-mgr-item .board-actions{display:flex;gap:2px;opacity:0;transition:opacity 0.15s;}
+                .board-mgr-item.active{border-left-color:var(--accent);background:var(--accent-glow);color:var(--accent);}
+                .board-mgr-item .board-icon{display:flex;align-items:center;color:var(--text-muted);flex-shrink:0;transition:color var(--duration-fast) var(--ease-out);}
+                .board-mgr-item:hover .board-icon{color:var(--text-secondary);}
+                .board-mgr-item.active .board-icon{color:var(--accent);}
+                .board-mgr-item .board-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-body);}
+                .board-mgr-item .board-count{font-size:10px;color:var(--text-muted);background:var(--bg-elevated);padding:1px 7px;border-radius:10px;font-family:var(--font-mono);flex-shrink:0;transition:all var(--duration-fast) var(--ease-out);}
+                .board-mgr-item:hover .board-count{color:var(--text-secondary);background:var(--bg-hover);}
+                .board-mgr-item.active .board-count{color:var(--accent);background:rgba(0,229,255,0.12);}
+                .board-mgr-item .board-actions{display:flex;gap:2px;opacity:0;transition:opacity var(--duration-fast) var(--ease-out);flex-shrink:0;}
                 .board-mgr-item:hover .board-actions{opacity:1;}
+                .board-action-btn{display:flex;align-items:center;justify-content:center;width:26px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:var(--radius-sm);transition:all var(--duration-fast) var(--ease-out);}
+                .board-action-btn:hover{background:var(--accent-glow);color:var(--accent);}
+                .board-action-btn.danger:hover{background:rgba(255,107,107,0.12);color:var(--accent-warm);}
+                .cards-board-footer{display:flex;gap:6px;padding:10px 14px;border-top:1px solid rgba(220,240,255,0.18);}
+                .cards-board-footer-btn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--radius-sm);background:var(--sky-tint);border:1px solid var(--sky-border);font-size:11px;font-family:var(--font-body);color:var(--text-secondary);cursor:pointer;transition:all var(--duration-fast) var(--ease-out);white-space:nowrap;}
+                .cards-board-footer-btn:hover{color:var(--accent);border-color:rgba(0,229,255,0.25);background:rgba(0,229,255,0.08);}
+                .cards-board-footer-btn.primary{color:var(--accent);background:var(--accent-glow);border-color:rgba(0,229,255,0.2);}
+                .cards-board-footer-btn.primary:hover{background:rgba(0,229,255,0.15);border-color:var(--accent);}
+                .cards-board-close-btn:hover{color:var(--accent-warm);background:rgba(255,107,107,0.1);}
+                .cards-dialog-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:400;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;animation:cards-dialog-fadeIn 0.2s var(--ease-out);}
+                @keyframes cards-dialog-fadeIn{from{opacity:0;}to{opacity:1;}}
+                .cards-dialog{width:420px;max-width:90vw;display:flex;flex-direction:column;background:rgba(210,235,255,0.10);backdrop-filter:blur(28px) saturate(1.6);border:1px solid rgba(220,240,255,0.18);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.06);animation:cards-dialog-scaleIn 0.2s var(--ease-spring);}
+                @keyframes cards-dialog-scaleIn{from{opacity:0;transform:scale(0.95);}to{opacity:1;transform:scale(1);}}
+                .cards-dialog-header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(220,240,255,0.10);}
+                .cards-dialog-header-title{font-size:13px;font-weight:600;color:var(--text-primary);letter-spacing:0.5px;font-family:var(--font-display);}
+                .cards-dialog-body{padding:16px;display:flex;flex-direction:column;gap:12px;}
+                .cards-dialog-body-message{font-size:12px;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap;}
+                .cards-dialog-input{width:100%;box-sizing:border-box;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;font-family:var(--font-body);color:var(--text-primary);outline:none;transition:border-color var(--duration-fast) var(--ease-out),box-shadow var(--duration-fast) var(--ease-out);}
+                .cards-dialog-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,0.12);}
+                .cards-dialog-input::placeholder{color:var(--text-muted);}
+                .cards-dialog-footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid rgba(220,240,255,0.10);justify-content:flex-end;}
+                .cards-dialog-btn{display:flex;align-items:center;gap:5px;padding:6px 18px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font-body);cursor:pointer;transition:all var(--duration-fast) var(--ease-out);border:1px solid transparent;white-space:nowrap;}
+                .cards-dialog-btn-ghost{background:transparent;color:var(--text-secondary);border-color:var(--border);}
+                .cards-dialog-btn-ghost:hover{background:var(--bg-hover);color:var(--text-primary);}
+                .cards-dialog-btn-primary{background:var(--accent);color:#06080f;border-color:var(--accent);font-weight:600;}
+                .cards-dialog-btn-primary:hover{background:var(--accent-bright);border-color:var(--accent-bright);}
+                .cards-dialog-btn-danger{background:var(--accent-warm);color:#fff;border-color:var(--accent-warm);font-weight:600;}
+                .cards-dialog-btn-danger:hover{background:#ff8585;border-color:#ff8585;}
+                .cards-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(210,235,255,0.10);backdrop-filter:blur(28px) saturate(1.6);border:1px solid rgba(220,240,255,0.18);border-radius:var(--radius-xl);padding:8px 24px;font-size:12px;font-family:var(--font-body);color:var(--text-primary);box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.06);animation:cards-toast-in 0.25s var(--ease-spring);pointer-events:none;white-space:nowrap;}
+                .cards-toast.out{animation:cards-toast-out 0.3s var(--ease-out) forwards;}
+                @keyframes cards-toast-in{from{opacity:0;transform:translateX(-50%) translateY(-12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+                @keyframes cards-toast-out{from{opacity:1;transform:translateX(-50%) translateY(0);}to{opacity:0;transform:translateX(-50%) translateY(-12px);}}
+                [data-theme="light"] .cards-dialog{background:rgba(240,235,226,0.85);border-color:rgba(60,50,40,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.5);}
+                [data-theme="light"] .cards-dialog-header{border-bottom-color:rgba(60,50,40,0.1);}
+                [data-theme="light"] .cards-dialog-footer{border-top-color:rgba(60,50,40,0.1);}
+                [data-theme="light"] .cards-dialog-input{background:#f5f0e8;border-color:rgba(60,50,40,0.15);}
+                [data-theme="light"] .cards-dialog-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(184,134,11,0.15);}
+                [data-theme="light"] .cards-dialog-btn-ghost{border-color:rgba(60,50,40,0.12);}
+                [data-theme="light"] .cards-dialog-btn-ghost:hover{background:rgba(60,50,40,0.06);}
+                [data-theme="light"] .cards-toast{background:rgba(240,235,226,0.85);border-color:rgba(60,50,40,0.12);}
+                [data-theme="light"] .cards-board-footer{border-top-color:rgba(60,50,40,0.12);}
+                [data-theme="light"] .cards-board-footer-btn{background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.20);}
+                [data-theme="light"] .cards-board-footer-btn:hover{color:var(--accent);border-color:var(--accent);}
+                [data-theme="light"] .cards-board-footer-btn.primary{color:var(--accent);background:rgba(184,134,11,0.12);}
+                [data-theme="light"] .cards-board-close-btn:hover{color:var(--accent-warm);}
+                [data-theme="light"] .board-action-btn:hover{background:rgba(184,134,11,0.12);}
+                [data-theme="light"] .board-action-btn.danger:hover{background:rgba(255,107,107,0.12);}
+                [data-theme="light"] .board-mgr-item .board-count{background:rgba(184,134,11,0.08);}
+                [data-theme="light"] .board-mgr-item.active{background:rgba(184,134,11,0.10);border-left-color:var(--accent);}
+                [data-theme="light"] .board-mgr-item.active .board-count{background:rgba(184,134,11,0.15);}
                 :root{--bg-surface-rgb:30,30,30;}
                 [data-theme="light"]{--bg-surface-rgb:255,255,255;}
             `;
@@ -734,7 +805,7 @@ registerApp('aether-cards', {
                 if (msg.role === 'assistant') {
                     const act = document.createElement('div');
                     act.className = 'chat-msg-actions';
-                    act.innerHTML = `<button class="cards-tb-btn" data-action="to-card">${ICO.toCard} 新卡片</button><button class="cards-tb-btn" data-action="to-selected">添加到选中卡片</button>`;
+                    act.innerHTML = `<button class="cards-tb-btn" data-action="to-card">${ICO.toCard_svg} 新卡片</button><button class="cards-tb-btn" data-action="to-selected">添加到选中卡片</button>`;
                     act.querySelector('[data-action="to-card"]').onclick = () => addReplyToCard(conversationId, idx, true);
                     act.querySelector('[data-action="to-selected"]').onclick = () => addReplyToCard(conversationId, idx, false);
                     d.appendChild(act);
@@ -828,7 +899,7 @@ registerApp('aether-cards', {
             // 渲染AI消息
             const aiMsgEl = document.createElement('div');
             aiMsgEl.className = 'chat-msg';
-            aiMsgEl.innerHTML = `<div class="chat-msg-role">🤖 Assistant</div><div class="chat-msg-content">${ICO.spinner} 思考中...</div>`;
+            aiMsgEl.innerHTML = `<div class="chat-msg-role">🤖 Assistant</div><div class="chat-msg-content">${ICO.spinner_svg} 思考中...</div>`;
             chatMessagesFloat.appendChild(aiMsgEl);
             const aiContentEl = aiMsgEl.querySelector('.chat-msg-content');
 
@@ -900,7 +971,7 @@ registerApp('aether-cards', {
         function addChatActionsFloat(chatId, msgIndex, msgEl) {
             const act = document.createElement('div');
             act.className = 'chat-msg-actions';
-            act.innerHTML = `<button class="cards-tb-btn" data-action="to-card">${ICO.toCard} 新卡片</button><button class="cards-tb-btn" data-action="to-selected">添加到选中卡片</button>`;
+            act.innerHTML = `<button class="cards-tb-btn" data-action="to-card">${ICO.toCard_svg} 新卡片</button><button class="cards-tb-btn" data-action="to-selected">添加到选中卡片</button>`;
             act.querySelector('[data-action="to-card"]').onclick = () => addReplyToCard(chatId, msgIndex, true);
             act.querySelector('[data-action="to-selected"]').onclick = () => addReplyToCard(chatId, msgIndex, false);
             msgEl.appendChild(act);
@@ -1219,8 +1290,8 @@ registerApp('aether-cards', {
 
             let inner = '<div class="card-title-bar">';
             inner += `<input class="card-title-text" type="text" value="${esc(card.title)}" placeholder="无标题" data-nd>`;
-            inner += `<button class="card-act-btn" title="窗口化" data-nd>${ICO.popout}</button>`;
-            inner += `<button class="card-act-btn" title="删除" data-nd>${ICO.trash}</button>`;
+            inner += `<button class="card-act-btn" title="窗口化" data-nd>${ICO.popout_svg}</button>`;
+            inner += `<button class="card-act-btn" title="删除" data-nd>${ICO.trash_svg}</button>`;
             inner += '</div>';
 
             // 封面图
@@ -1266,7 +1337,7 @@ registerApp('aether-cards', {
             el.className = 'card-windowed-ph'; el.dataset.ph = card.id;
             el.style.left = card.position.x + 'px'; el.style.top = card.position.y + 'px';
             el.style.width = card.size.w + 'px'; el.style.height = card.size.h + 'px';
-            el.innerHTML = `<span>窗口化</span><button class="cards-tb-btn" data-nd>${ICO.restore} 恢复</button>`;
+            el.innerHTML = `<span>窗口化</span><button class="cards-tb-btn" data-nd>${ICO.restore_svg} 恢复</button>`;
             el.querySelector('button').onclick = (e) => { e.stopPropagation(); restoreCard(card.id); };
             worldEl.appendChild(el);
         }
@@ -1478,7 +1549,7 @@ registerApp('aether-cards', {
             const el = getMsgsEl(cardId); if (!el) return;
             if (!_currentChatEl) {
                 _currentChatEl = document.createElement('div'); _currentChatEl.className = 'chat-msg';
-                _currentChatEl.innerHTML = `<div class="chat-msg-role">🤖 Assistant</div><div class="chat-msg-content">${ICO.spinner} 思考中...</div>`;
+                _currentChatEl.innerHTML = `<div class="chat-msg-role">🤖 Assistant</div><div class="chat-msg-content">${ICO.spinner_svg} 思考中...</div>`;
                 el.appendChild(_currentChatEl);
                 _streamRawText = '';
                 _streamThinkingEl = null;
@@ -1515,7 +1586,7 @@ registerApp('aether-cards', {
             let html = `<div class="chat-msg-role">🎨 生成图片</div>`;
             html += `<div class="chat-msg-content"><img src="/aether-cards-images/${esc(filename)}" style="max-width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" title="点击添加到卡片图片"></div>`;
             if (revisedPrompt) html += `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${esc(revisedPrompt)}</div>`;
-            html += `<div class="chat-msg-actions"><button class="cards-tb-btn">${ICO.plus} 添加到卡片</button></div>`;
+            html += `<div class="chat-msg-actions"><button class="cards-tb-btn">${ICO.plus_svg} 添加到卡片</button></div>`;
             msg.innerHTML = html;
             msg.querySelector('img').onclick = () => window.open('/aether-cards-images/' + filename, '_blank');
             msg.querySelector('.chat-msg-actions button').onclick = () => {
@@ -1541,7 +1612,7 @@ registerApp('aether-cards', {
 
         function addChatActionButtons(cardId, txt, msgEl) {
             const act = document.createElement('div'); act.className = 'chat-msg-actions';
-            act.innerHTML = `<button class="cards-tb-btn">${ICO.toText} 文本区</button><button class="cards-tb-btn">${ICO.toCard} 新卡片</button><button class="cards-tb-btn">${ICO.toIDE} IDE</button>`;
+            act.innerHTML = `<button class="cards-tb-btn">${ICO.toText_svg} 文本区</button><button class="cards-tb-btn">${ICO.toCard_svg} 新卡片</button><button class="cards-tb-btn">${ICO.toIDE_svg} IDE</button>`;
             act.children[0].onclick = () => {
                 const c = gc(cardId); if (c) {
                     c.content += '\n\n' + txt; c.updated = Date.now();
@@ -1794,11 +1865,11 @@ registerApp('aether-cards', {
                 if (d.error) { imgModalList.innerHTML = `<div style="padding:12px;color:var(--accent-warm);font-size:12px;">${esc(d.error)}</div>`; return; }
                 const items = (d.items || []).sort((a, b) => a.is_dir !== b.is_dir ? (a.is_dir ? -1 : 1) : a.name.localeCompare(b.name));
                 imgModalList.innerHTML = '';
-                if (path) { const up = document.createElement('div'); up.className = 'img-modal-item'; up.innerHTML = `${ICO.back} <span>..</span>`; up.onclick = () => browseDir(path.split('/').slice(0, -1).join('/') || ''); imgModalList.appendChild(up); }
+                if (path) { const up = document.createElement('div'); up.className = 'img-modal-item'; up.innerHTML = `${ICO.back_svg} <span>..</span>`; up.onclick = () => browseDir(path.split('/').slice(0, -1).join('/') || ''); imgModalList.appendChild(up); }
                 items.forEach(it => {
                     if (!it.is_dir && !IMAGE_EXTS.has('.' + it.name.split('.').pop().toLowerCase())) return;
                     const row = document.createElement('div'); row.className = 'img-modal-item' + (it.is_dir ? ' is-dir' : '');
-                    if (it.is_dir) { row.innerHTML = `${ICO.folder} <span>${esc(it.name)}</span>`; row.onclick = () => browseDir(d.path + '/' + it.name); }
+                    if (it.is_dir) { row.innerHTML = `${ICO.folder_svg} <span>${esc(it.name)}</span>`; row.onclick = () => browseDir(d.path + '/' + it.name); }
                     else { row.innerHTML = `<img src="/aether-cards-images/${encodeURIComponent(it.name)}" alt="" onerror="this.style.display='none'"> <span>${esc(it.name)}</span>`; row.onclick = () => selectFromModal(d.path + '/' + it.name, it.name); }
                     imgModalList.appendChild(row);
                 });
@@ -1901,8 +1972,8 @@ registerApp('aether-cards', {
             let inner = `<div class="card-el" style="position:relative;cursor:default;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;border:none;border-radius:0;">`;
             inner += `<div class="card-title-bar">`;
             inner += `<input class="card-title-text" type="text" value="${esc(card.title)}" placeholder="无标题" data-nd>`;
-            inner += `<button class="card-act-btn" title="展开详情" data-nd>${ICO.popout}</button>`;
-            inner += `<button class="card-act-btn" title="固定在最上层" data-nd>${ICO.pin}</button>`;
+            inner += `<button class="card-act-btn" title="展开详情" data-nd>${ICO.popout_svg}</button>`;
+            inner += `<button class="card-act-btn" title="固定在最上层" data-nd>${ICO.pin_svg}</button>`;
             inner += `</div>`;
             if (card.coverImage) {
                 inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="flex:0 0 auto;max-height:45%;object-fit:cover;" loading="lazy">`;
@@ -2025,7 +2096,7 @@ registerApp('aether-cards', {
             chatPanel.innerHTML = `
                 <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg-elevated);">
                     <span style="font-size:10px;color:var(--text-secondary);font-weight:500;white-space:nowrap;">LLM 对话</span>
-                    <button class="cards-tb-btn windowed-chat-close" style="padding:2px 4px;font-size:10px;">${ICO.close}</button>
+                    <button class="cards-tb-btn windowed-chat-close" style="padding:2px 4px;font-size:10px;">${ICO.close_svg}</button>
                 </div>
                 <div class="windowed-chat-model" style="padding:4px 6px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-surface);">
                     <select class="windowed-model-select" style="width:100%;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:3px 4px;border-radius:var(--radius-sm);font-size:10px;font-family:var(--font-body);outline:none;"></select>
@@ -2033,7 +2104,7 @@ registerApp('aether-cards', {
                 <div class="windowed-chat-msgs" style="flex:1;overflow-y:auto;padding:6px;font-size:11px;"></div>
                 <div style="border-top:1px solid var(--border);padding:6px;display:flex;gap:4px;flex-shrink:0;background:var(--bg-surface);">
                     <input class="windowed-chat-input" type="text" placeholder="消息..." style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:5px 6px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:11px;outline:none;min-width:0;">
-                    <button class="cards-tb-btn windowed-chat-send" style="padding:5px 6px;flex-shrink:0;">${ICO.send}</button>
+                    <button class="cards-tb-btn windowed-chat-send" style="padding:5px 6px;flex-shrink:0;">${ICO.send_svg}</button>
                 </div>
             `;
 
@@ -2093,7 +2164,7 @@ registerApp('aether-cards', {
                     if (m.role === 'assistant') {
                         const actDiv = document.createElement('div');
                         actDiv.style.cssText = 'display:flex;gap:2px;margin-top:4px;flex-wrap:wrap;';
-                        actDiv.innerHTML = `<button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">${ICO.toCard} 新卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入对话</button>`;
+                        actDiv.innerHTML = `<button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">${ICO.toCard_svg} 新卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入对话</button>`;
                         actDiv.children[0].onclick = () => { const nc = createCard(); nc.content = m.content; nc.title = m.content.slice(0, 30).replace(/\n/g, ' ') || '新卡片'; nc.updated = Date.now(); renderCards(); scheduleSave(); };
                         actDiv.children[1].onclick = () => { const c = gc(cardId); if (c) { c.content += '\n\n' + m.content; c.updated = Date.now(); renderCards(); scheduleSave(); } };
                         actDiv.children[2].onclick = () => { if (chatState !== 'hidden') { if (!currentChatId) { currentChatId = 'chat-' + Date.now(); chatConversations[currentChatId] = { title: m.content.slice(0, 50), messages: [], created: Date.now(), updated: Date.now() }; } chatConversations[currentChatId].messages.push({ role: 'assistant', content: m.content, timestamp: Date.now() }); renderChatMessagesFloat(currentChatId); saveChatHistory(); } };
@@ -2130,7 +2201,7 @@ registerApp('aether-cards', {
 
                 const aiDiv = document.createElement('div');
                 aiDiv.style.cssText = 'margin-bottom:6px;';
-                aiDiv.innerHTML = `<div style="font-size:9px;color:var(--text-muted);">🤖 Assistant</div><div style="color:var(--text-primary);">${ICO.spinner} 思考中...</div>`;
+                aiDiv.innerHTML = `<div style="font-size:9px;color:var(--text-muted);">🤖 Assistant</div><div style="color:var(--text-primary);">${ICO.spinner_svg} 思考中...</div>`;
                 msgsEl.appendChild(aiDiv);
                 const aiContent = aiDiv.querySelector('div:last-child');
                 let rawText = '';
@@ -2173,7 +2244,7 @@ registerApp('aether-cards', {
                         saveCardChat(cardId);
                         const actDiv = document.createElement('div');
                         actDiv.style.cssText = 'display:flex;gap:2px;margin-top:4px;flex-wrap:wrap;';
-                        actDiv.innerHTML = `<button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">${ICO.toCard} 新卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入对话</button>`;
+                        actDiv.innerHTML = `<button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">${ICO.toCard_svg} 新卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入卡片</button><button class="cards-tb-btn" style="font-size:9px;padding:2px 4px;">加入对话</button>`;
                         actDiv.children[0].onclick = () => { const nc = createCard(); nc.content = rawText; nc.title = rawText.slice(0, 30).replace(/\n/g, ' ') || '新卡片'; nc.updated = Date.now(); renderCards(); scheduleSave(); };
                         actDiv.children[1].onclick = () => { const c = gc(cardId); if (c) { c.content += '\n\n' + rawText; c.updated = Date.now(); renderCards(); scheduleSave(); } };
                         actDiv.children[2].onclick = () => { if (chatState !== 'hidden') { if (!currentChatId) { currentChatId = 'chat-' + Date.now(); chatConversations[currentChatId] = { title: rawText.slice(0, 50), messages: [], created: Date.now(), updated: Date.now() }; } chatConversations[currentChatId].messages.push({ role: 'assistant', content: rawText, timestamp: Date.now() }); renderChatMessagesFloat(currentChatId); saveChatHistory(); } };
@@ -2219,7 +2290,7 @@ registerApp('aether-cards', {
             cCon.innerHTML = `
                 <div style="display:flex;flex-direction:column;height:100%;background:var(--bg-base);">
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-surface);">
-                        <button class="cards-tb-btn cr-back">${ICO.back} 返回</button>
+                        <button class="cards-tb-btn cr-back">${ICO.back_svg} 返回</button>
                         <input class="cr-det-title" type="text" value="${esc(card.title)}" placeholder="卡片标题..." style="flex:1;background:transparent;border:1px solid transparent;color:var(--text-primary);font-family:var(--font-body);font-size:14px;padding:4px 8px;border-radius:var(--radius-sm);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='transparent'">
                     </div>
                     <div style="display:flex;flex:1;overflow:hidden;">
@@ -2245,9 +2316,9 @@ registerApp('aether-cards', {
                                 <div class="cr-det-editor" contenteditable="true" style="flex:1;overflow-y:auto;padding:12px;font-family:var(--font-body);font-size:14px;line-height:1.7;color:var(--text-primary);outline:none;"></div>
                             </div>
                             <div style="flex:1;display:flex;align-items:center;gap:6px;padding:4px 8px;border-top:1px solid var(--border);background:var(--bg-surface);overflow-x:auto;min-height:48px;flex-shrink:0;">
-                                <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${ICO.image} 图片</span>
+                                <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${ICO.image_svg} 图片</span>
                                 <div class="cr-images" style="display:flex;gap:4px;flex:1;overflow-x:auto;"></div>
-                                <button class="cards-tb-btn cr-add-img">${ICO.plus}</button>
+                                <button class="cards-tb-btn cr-add-img">${ICO.plus_svg}</button>
                             </div>
                         </div>
                         <!-- 右侧 1/3 LLM -->
@@ -2259,7 +2330,7 @@ registerApp('aether-cards', {
                             <div class="cr-chat-msgs" style="flex:1;overflow-y:auto;padding:10px;"></div>
                             <div style="border-top:1px solid var(--border);padding:8px;display:flex;gap:6px;background:var(--bg-surface);flex-shrink:0;">
                                 <input class="cr-chat-input" type="text" placeholder="发送消息... (@ 引用图片)" style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:6px 10px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-                                <button class="cards-tb-btn cr-chat-send">${ICO.send}</button>
+                                <button class="cards-tb-btn cr-chat-send">${ICO.send_svg}</button>
                             </div>
                         </div>
                     </div>
@@ -2360,7 +2431,7 @@ registerApp('aether-cards', {
             const providers = type === 'text' ? CardsLLMConfig.textModels : CardsLLMConfig.imageModels;
             let h = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <span style="font-size:13px;color:var(--text-primary);font-weight:500;">${title}</span>
-                <button class="cards-tb-btn llm-add-provider" data-type="${type}">${ICO.plus} 添加 Provider</button>
+                <button class="cards-tb-btn llm-add-provider" data-type="${type}">${ICO.plus_svg} 添加 Provider</button>
             </div>`;
 
             providers.forEach((prov, pi) => {
@@ -2369,19 +2440,19 @@ registerApp('aether-cards', {
                 h += `<input class="llm-prov-name" value="${esc(prov.name || '')}" placeholder="Provider 名称 (如 OpenAI)" style="width:120px;">`;
                 h += `<input class="llm-prov-key" value="${esc(prov.apiKey || '')}" placeholder="API Key" type="password" style="flex:1;">`;
                 h += `<input class="llm-prov-base" value="${esc(prov.apiBase || '')}" placeholder="API Base URL (可选)" style="width:160px;">`;
-                h += `<button class="cards-tb-btn llm-del-provider" title="删除" style="color:var(--accent-warm);">${ICO.close}</button>`;
+                h += `<button class="cards-tb-btn llm-del-provider" title="删除" style="color:var(--accent-warm);">${ICO.close_svg}</button>`;
                 h += `</div>`;
 
                 h += `<div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">`;
                 h += `<span style="font-size:11px;color:var(--text-muted);">模型列表</span>`;
-                h += `<button class="cards-tb-btn llm-add-model" data-type="${type}" data-pi="${pi}" style="font-size:10px;padding:2px 6px;">${ICO.plus} 添加模型</button>`;
+                h += `<button class="cards-tb-btn llm-add-model" data-type="${type}" data-pi="${pi}" style="font-size:10px;padding:2px 6px;">${ICO.plus_svg} 添加模型</button>`;
                 h += `</div>`;
 
                 (prov.models || []).forEach((model, mi) => {
                     h += `<div class="llm-model-row" data-type="${type}" data-pi="${pi}" data-mi="${mi}">`;
                     h += `<input class="llm-model-name" value="${esc(model.name || '')}" placeholder="模型名称" style="flex:1;">`;
                     if (showMultimodal) { h += `<label><input type="checkbox" class="llm-model-mm" ${model.multimodal ? 'checked' : ''}> 多模态</label>`; }
-                    h += `<button class="cards-tb-btn llm-del-model" style="padding:2px 4px;">${ICO.close}</button>`;
+                    h += `<button class="cards-tb-btn llm-del-model" style="padding:2px 4px;">${ICO.close_svg}</button>`;
                     h += `</div>`;
                 });
                 h += `</div>`;
@@ -2647,6 +2718,50 @@ registerApp('aether-cards', {
         });
 
         // ═══════════════════════════════════════
+        // 自定义对话框系统
+        // ═══════════════════════════════════════
+
+        function showInputPrompt(title, defaultValue = '') {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.className = 'cards-dialog-overlay';
+                overlay.innerHTML = `<div class="cards-dialog"><div class="cards-dialog-header"><span style="color:var(--accent);display:flex;align-items:center;">${ICO.board_svg}</span><span class="cards-dialog-header-title">${esc(title)}</span></div><div class="cards-dialog-body"><input class="cards-dialog-input" type="text" value="${esc(defaultValue)}" spellcheck="false" autocomplete="off"></div><div class="cards-dialog-footer"><button class="cards-dialog-btn cards-dialog-btn-ghost" data-action="cancel">取消</button><button class="cards-dialog-btn cards-dialog-btn-primary" data-action="confirm">${ICO.check_svg} 确认</button></div></div>`;
+                const input = overlay.querySelector('input');
+                const cleanup = (val) => { overlay.remove(); resolve(val); };
+                overlay.querySelector('[data-action="cancel"]').onclick = () => cleanup(null);
+                overlay.querySelector('[data-action="confirm"]').onclick = () => cleanup(input.value.trim() || null);
+                overlay.addEventListener('click', e => { if (e.target === overlay) cleanup(null); });
+                overlay.addEventListener('keydown', e => { if (e.key === 'Escape') cleanup(null); if (e.key === 'Enter') cleanup(input.value.trim() || null); });
+                container.appendChild(overlay);
+                input.select();
+                requestAnimationFrame(() => input.focus());
+            });
+        }
+
+        function showConfirmDialog(title, message) {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.className = 'cards-dialog-overlay';
+                overlay.innerHTML = `<div class="cards-dialog"><div class="cards-dialog-header"><span style="color:var(--accent-warm);display:flex;align-items:center;">${ICO.trash_svg}</span><span class="cards-dialog-header-title">${esc(title)}</span></div><div class="cards-dialog-body"><div class="cards-dialog-body-message">${esc(message)}</div></div><div class="cards-dialog-footer"><button class="cards-dialog-btn cards-dialog-btn-ghost" data-action="cancel">取消</button><button class="cards-dialog-btn cards-dialog-btn-danger" data-action="confirm">删除</button></div></div>`;
+                const cleanup = (val) => { overlay.remove(); resolve(val); };
+                overlay.querySelector('[data-action="cancel"]').onclick = () => cleanup(false);
+                overlay.querySelector('[data-action="confirm"]').onclick = () => cleanup(true);
+                overlay.addEventListener('click', e => { if (e.target === overlay) cleanup(false); });
+                overlay.addEventListener('keydown', e => { if (e.key === 'Escape') cleanup(false); if (e.key === 'Enter') cleanup(true); });
+                container.appendChild(overlay);
+                overlay.querySelector('[data-action="confirm"]').focus();
+            });
+        }
+
+        function showToast(msg, duration = 3000) {
+            const t = document.createElement('div');
+            t.className = 'cards-toast';
+            t.textContent = msg;
+            container.appendChild(t);
+            setTimeout(() => { t.classList.add('out'); t.addEventListener('animationend', () => t.remove()); }, duration);
+        }
+
+        // ═══════════════════════════════════════
         // 工作板管理
         // ═══════════════════════════════════════
 
@@ -2657,6 +2772,9 @@ registerApp('aether-cards', {
         container.querySelector('#cards-board-mgr').onclick = () => openBoardPanel();
         container.querySelector('#cards-board-close').onclick = () => { boardPanel.style.display = 'none'; };
         container.querySelector('#cards-board-new').onclick = () => createBoard();
+        container.querySelector('#cards-board-export').onclick = () => exportBoard();
+        container.querySelector('#cards-board-import').onclick = () => importBoard();
+        boardPanel.addEventListener('click', e => { if (e.target === boardPanel) boardPanel.style.display = 'none'; });
 
         async function openBoardPanel() {
             boardPanel.style.display = 'flex';
@@ -2666,14 +2784,18 @@ registerApp('aether-cards', {
         async function renderBoardList() {
             const res = await dbQuery(`SELECT b.id, b.title, b.created_at, (SELECT COUNT(*) FROM cards WHERE board_id = b.id) as card_count FROM boards b ORDER BY b.created_at`);
             boardList.innerHTML = '';
-            (res.rows || []).forEach(b => {
+            if (!res.rows || res.rows.length === 0) {
+                boardList.innerHTML = `<div style="padding:32px 16px;text-align:center;color:var(--text-muted);font-size:12px;">暂无工作板</div>`;
+                return;
+            }
+            res.rows.forEach(b => {
                 const item = document.createElement('div');
                 item.className = 'board-mgr-item' + (b.id === currentBoardId ? ' active' : '');
-                const time = new Date(b.created_at).toLocaleDateString('zh-CN');
-                item.innerHTML = `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(b.title)}</span><span class="board-count">${b.card_count} 张</span><div class="board-actions"><button class="cards-tb-btn" data-action="rename" style="padding:2px 4px;font-size:10px;">重命名</button><button class="cards-tb-btn" data-action="delete" style="padding:2px 4px;font-size:10px;color:var(--accent-warm);">删除</button></div>`;
+                item.innerHTML = `<span class="board-icon">${ICO.board_svg}</span><span class="board-title">${esc(b.title)}</span><span class="board-count">${b.card_count} 张</span><div class="board-actions"><button class="board-action-btn" data-action="rename" title="重命名">${ICO.rename_svg}</button><button class="board-action-btn danger" data-action="delete" title="删除">${ICO.trash_svg}</button></div>`;
                 item.addEventListener('click', (e) => {
-                    if (e.target.dataset.action === 'rename') { renameBoard(b.id); e.stopPropagation(); return; }
-                    if (e.target.dataset.action === 'delete') { deleteBoard(b.id, b.title); e.stopPropagation(); return; }
+                    const action = e.target.closest('[data-action]')?.dataset.action;
+                    if (action === 'rename') { renameBoard(b.id); e.stopPropagation(); return; }
+                    if (action === 'delete') { deleteBoard(b.id, b.title); e.stopPropagation(); return; }
                     if (b.id !== currentBoardId) switchBoard(b.id);
                     boardPanel.style.display = 'none';
                 });
@@ -2682,45 +2804,45 @@ registerApp('aether-cards', {
         }
 
         async function createBoard() {
-            const title = prompt('工作板名称：', '新工作板 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+            const title = await showInputPrompt('新建工作板', '新工作板 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
             if (!title) return;
             const id = 'board-' + Date.now();
             await dbExec(`INSERT INTO boards (id, title, created_at, updated_at) VALUES (?,?,?,?)`, [id, title, Date.now(), Date.now()]);
             await switchBoard(id);
             boardPanel.style.display = 'none';
+            showToast('工作板已创建');
         }
 
         async function renameBoard(boardId) {
             const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [boardId]);
             const old = res.rows?.[0]?.title || '';
-            const title = prompt('新名称：', old);
+            const title = await showInputPrompt('重命名工作板', old);
             if (!title || title === old) return;
             await dbExec(`UPDATE boards SET title = ?, updated_at = ? WHERE id = ?`, [title, Date.now(), boardId]);
             if (boardId === currentBoardId) boardNameEl.textContent = title;
             await renderBoardList();
+            showToast('已重命名');
         }
 
         async function deleteBoard(boardId, title) {
-            if (!confirm(`确定删除工作板「${title}」？\n其中的所有卡片和对话将被永久删除。`)) return;
+            const ok = await showConfirmDialog('删除工作板', `确定删除工作板「${title}」？\n其中的所有卡片和对话将被永久删除。`);
+            if (!ok) return;
             await dbExec(`DELETE FROM cards WHERE board_id = ?`, [boardId]);
             await dbExec(`DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE board_id = ?)`, [boardId]);
             await dbExec(`DELETE FROM conversations WHERE board_id = ?`, [boardId]);
             await dbExec(`DELETE FROM card_chat_map WHERE board_id = ?`, [boardId]);
             await dbExec(`DELETE FROM boards WHERE id = ?`, [boardId]);
-            if (boardId === currentBoardId) {
-                await switchBoard('board-default');
-            }
+            if (boardId === currentBoardId) await switchBoard('board-default');
             await renderBoardList();
+            showToast('工作板已删除');
         }
 
         async function switchBoard(boardId) {
-            // 关闭所有窗口化卡片
             for (const [id, ref] of Object.entries(CardsRefs)) { try { ref.win.close(); } catch {} delete CardsRefs[id]; delete AppRegistry['cards-win-' + id]; }
             await save();
             await saveChatHistory();
             currentBoardId = boardId;
             localStorage.setItem('cards-current-board', boardId);
-            // 更新名称
             const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [boardId]);
             boardNameEl.textContent = res.rows?.[0]?.title || '工作板';
             await load();
@@ -2734,6 +2856,74 @@ registerApp('aether-cards', {
                 const res = await dbQuery(`SELECT title FROM boards WHERE id = ?`, [currentBoardId]);
                 boardNameEl.textContent = res.rows?.[0]?.title || '工作板';
             } catch (e) { boardNameEl.textContent = '默认工作板'; }
+        }
+
+        async function exportBoard() {
+            try {
+                const board = await dbQuery(`SELECT * FROM boards WHERE id = ?`, [currentBoardId]);
+                const cards = await dbQuery(`SELECT * FROM cards WHERE board_id = ?`, [currentBoardId]);
+                const convs = await dbQuery(`SELECT * FROM conversations WHERE board_id = ?`, [currentBoardId]);
+                const chatMap = await dbQuery(`SELECT * FROM card_chat_map WHERE board_id = ?`, [currentBoardId]);
+                let messages = [];
+                if (convs.rows?.length) {
+                    const ids = convs.rows.map(c => `'${c.id}'`).join(',');
+                    messages = (await dbQuery(`SELECT * FROM messages WHERE conversation_id IN (${ids})`)).rows || [];
+                }
+                const data = { version: 1, exported_at: Date.now(), board: board.rows?.[0], cards: cards.rows || [], conversations: convs.rows || [], messages, card_chat_map: chatMap.rows || [] };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                const safeName = (data.board?.title || '工作板').replace(/[^\w一-鿿]/g, '_');
+                a.download = `aether-cards-${safeName}-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                showToast('已导出当前工作板');
+            } catch (e) { showToast('导出失败: ' + e.message); }
+        }
+
+        async function importBoard() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json';
+            fileInput.style.display = 'none';
+            fileInput.onchange = async () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    if (!data.version || !data.board) throw new Error('无效的工作板文件');
+                    const newBoardId = 'board-' + Date.now();
+                    const oldBoardId = data.board.id;
+                    await dbExec(`INSERT INTO boards (id, title, canvas_data, created_at, updated_at) VALUES (?,?,?,?,?)`, [newBoardId, data.board.title + ' (导入)', data.board.canvas_data || '{}', Date.now(), Date.now()]);
+                    for (const card of (data.cards || [])) {
+                        const newCardId = card.id?.replace(oldBoardId, newBoardId) || ('card-' + Date.now() + '-' + Math.random().toString(36).slice(2,6));
+                        await dbExec(`INSERT OR REPLACE INTO cards (id, board_id, x, y, w, h, content, cover, z_index, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, [newCardId, newBoardId, card.x, card.y, card.w, card.h, card.content, card.cover, card.z_index, card.created_at || Date.now(), card.updated_at || Date.now()]);
+                    }
+                    for (const conv of (data.conversations || [])) {
+                        const newConvId = conv.id?.replace(oldBoardId, newBoardId) || ('conv-' + Date.now() + '-' + Math.random().toString(36).slice(2,6));
+                        await dbExec(`INSERT OR REPLACE INTO conversations (id, board_id, title, created_at, updated_at) VALUES (?,?,?,?,?)`, [newConvId, newBoardId, conv.title, conv.created_at || Date.now(), conv.updated_at || Date.now()]);
+                        const convMessages = (data.messages || []).filter(m => m.conversation_id === conv.id);
+                        for (const msg of convMessages) {
+                            const newMsgId = msg.id?.replace(oldBoardId, newBoardId) || ('msg-' + Date.now() + '-' + Math.random().toString(36).slice(2,6));
+                            await dbExec(`INSERT OR REPLACE INTO messages (id, conversation_id, role, content, thinking, created_at) VALUES (?,?,?,?,?,?)`, [newMsgId, newConvId, msg.role, msg.content, msg.thinking || null, msg.created_at || Date.now()]);
+                        }
+                    }
+                    for (const map of (data.card_chat_map || [])) {
+                        const newCardId = map.card_id?.replace(oldBoardId, newBoardId);
+                        const newConvId = map.conversation_id?.replace(oldBoardId, newBoardId);
+                        if (newCardId && newConvId) {
+                            await dbExec(`INSERT OR REPLACE INTO card_chat_map (card_id, conversation_id, board_id) VALUES (?,?,?)`, [newCardId, newConvId, newBoardId]);
+                        }
+                    }
+                    await switchBoard(newBoardId);
+                    boardPanel.style.display = 'none';
+                    showToast('工作板已导入');
+                } catch (e) { showToast('导入失败: ' + e.message); }
+                fileInput.remove();
+            };
+            container.appendChild(fileInput);
+            fileInput.click();
         }
 
         // ═══════════════════════════════════════
