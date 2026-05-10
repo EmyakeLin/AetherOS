@@ -17,13 +17,18 @@ class ContextManager:
         self.messages: list[dict] = []
         self.extra_context: dict = {}
 
+        # Context management rules (injected into system prompt)
+        from context_manager import ContextManager as FileContextManager
+        self._context_rules = FileContextManager.get_system_prompt_rules()
+
     def build_messages(self, user_message) -> list[dict]:
         """构建发送给 LLM 的消息列表。user_message 可以是 str 或 list（多模态 content blocks）"""
         messages = []
 
-        # System prompt
+        # System prompt (append context management rules)
         if self.system_prompt:
-            messages.append({"role": "system", "content": self.system_prompt})
+            full_system = self.system_prompt + "\n\n" + self._context_rules
+            messages.append({"role": "system", "content": full_system})
 
         # Inject extra context
         if self.extra_context:

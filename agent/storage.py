@@ -1,8 +1,9 @@
 """
 Eos Agent — 会话持久化存储
-使用 SQLite 存储会话和消息记录
+使用 SQLite 存储完整的会话记录（包括工具调用）
 """
 
+import json
 import time
 import uuid
 from pathlib import Path
@@ -41,7 +42,8 @@ class AgentStorage:
                 title TEXT NOT NULL DEFAULT '新会话',
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL,
-                message_count INTEGER DEFAULT 0
+                message_count INTEGER DEFAULT 0,
+                system_prompt TEXT
             )
         """)
         await db.execute("""
@@ -49,7 +51,11 @@ class AgentStorage:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT NOT NULL,
                 role TEXT NOT NULL,
-                content TEXT NOT NULL,
+                content TEXT,
+                tool_call_id TEXT,
+                tool_calls TEXT,
+                tool_name TEXT,
+                reasoning_content TEXT,
                 timestamp INTEGER NOT NULL,
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             )
@@ -58,20 +64,16 @@ class AgentStorage:
             CREATE INDEX IF NOT EXISTS idx_messages_session
             ON messages(session_id, timestamp)
         """)
-        await db.execute("""
-            CREATE INDEX IF NOT EXISTS idx_messages_role
-            ON messages(role)
-        """)
         await db.commit()
 
-    async def create_session(self, title: str = "新会话") -> dict:
+    async def create_session(self, title: str = "新会话", system_prompt: str = None) -> dict:
         """创建新会话"""
         now = int(time.time() * 1000)
         session_id = f"session-{now}-{uuid.uuid4().hex[:6]}"
         db = await self._get_db()
         await db.execute(
-            "INSERT INTO sessions (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            (session_id, title, now, now)
+            "INSERT INTO sessions (id, title, created_at, updated_at, system_prompt) VALUES (?, ?, ?, ?, ?)",
+            (session_id, title, now, now, system_prompt)
         )
         await db.commit()
         return {"id": session_id, "title": title, "created_at": now, "updated_at": now, "message_count": 0}
@@ -92,7 +94,7 @@ class AgentStorage:
 
     async def update_session(self, session_id: str, updates: dict) -> Optional[dict]:
         """更新会话字段"""
-        allowed = {"title", "message_count"}
+        allowed = {"title", "message_count", "system_prompt"}
         fields = {k: v for k, v in updates.items() if k in allowed}
         if not fields:
             return await self.get_session(session_id)
@@ -113,30 +115,78 @@ class AgentStorage:
         await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
         await db.commit()
 
-    async def add_message(self, session_id: str, role: str, content: str) -> dict:
-        """添加消息"""
+    async def add_message(self, session_id: str, role: str, content: str = None,
+                          tool_call_id: str = None, tool_calls: list = None,
+                          tool_name: str = None, reasoning_content: str = None) -> dict:
+        """添加消息（支持完整的消息结构）"""
         now = int(time.time() * 1000)
         db = await self._get_db()
+
+        # 序列化 tool_calls 为 JSON
+        tool_calls_json = json.dumps(tool_calls, ensure_ascii=False) if tool_calls else None
+
         cursor = await db.execute(
-            "INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
-            (session_id, role, content, now)
+            """INSERT INTO messages
+               (session_id, role, content, tool_call_id, tool_calls, tool_name, reasoning_content, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (session_id, role, content, tool_call_id, tool_calls_json, tool_name, reasoning_content, now)
         )
         await db.execute(
             "UPDATE sessions SET updated_at = ?, message_count = message_count + 1 WHERE id = ?",
             (now, session_id)
         )
         await db.commit()
-        return {"id": cursor.lastrowid, "session_id": session_id, "role": role, "content": content, "timestamp": now}
+
+        return {
+            "id": cursor.lastrowid,
+            "session_id": session_id,
+            "role": role,
+            "content": content,
+            "tool_call_id": tool_call_id,
+            "tool_calls": tool_calls,
+            "tool_name": tool_name,
+            "reasoning_content": reasoning_content,
+            "timestamp": now,
+        }
 
     async def get_messages(self, session_id: str) -> list:
-        """获取会话所有消息，按时间升序"""
+        """获取会话所有消息，按时间升序（完整格式）"""
         db = await self._get_db()
         async with db.execute(
             "SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC",
             (session_id,)
         ) as cursor:
             rows = await cursor.fetchall()
-            return [dict(row) for row in rows]
+            result = []
+            for row in rows:
+                msg = dict(row)
+                # 反序列化 tool_calls
+                if msg.get("tool_calls"):
+                    try:
+                        msg["tool_calls"] = json.loads(msg["tool_calls"])
+                    except (json.JSONDecodeError, TypeError):
+                        msg["tool_calls"] = []
+                else:
+                    msg["tool_calls"] = None
+                result.append(msg)
+            return result
+
+    async def get_messages_as_conversation(self, session_id: str) -> list:
+        """获取消息列表，格式化为 LLM 可用的 conversation 格式"""
+        messages = await self.get_messages(session_id)
+        result = []
+        for msg in messages:
+            entry = {"role": msg["role"]}
+            if msg.get("content"):
+                entry["content"] = msg["content"]
+            if msg.get("tool_call_id"):
+                entry["tool_call_id"] = msg["tool_call_id"]
+            if msg.get("tool_calls"):
+                entry["tool_calls"] = msg["tool_calls"]
+            if msg.get("reasoning_content"):
+                entry["reasoning_content"] = msg["reasoning_content"]
+            result.append(entry)
+        return result
 
 
 # 全局实例

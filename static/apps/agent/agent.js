@@ -1574,7 +1574,7 @@ registerApp('agent', {
             sendBtn.disabled = true;
 
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'message', content: text }));
+                ws.send(JSON.stringify({ type: 'message', content: text, session_id: currentSessionId }));
                 if (!isStreaming) {
                     _setStreaming(true);
                     os.updateAgentPanel(agentId, { status: 'thinking' });
