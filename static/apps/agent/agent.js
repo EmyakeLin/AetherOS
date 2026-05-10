@@ -1743,25 +1743,33 @@ registerApp('agent', {
                 _assistantContent = '';
             }
 
-            // 创建工具调用指示器
-            _toolIndicatorEl = document.createElement('div');
-            _toolIndicatorEl.className = 'tool-call-indicator';
-            _toolIndicatorEl.addEventListener('click', () => openToolModal());
-            _toolIndicatorEl.innerHTML = `
-                <div class="tool-call-content">
-                    <span class="tool-call-icon">⚡</span>
-                    <span class="tool-call-text">Function Calling — 正在调用工具</span>
-                    <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
-                    <span class="tool-call-time"></span>
-                    <span class="tool-call-count">Round ${iterationCount}</span>
-                </div>
-                <div class="tool-call-scan"></div>
-            `;
-            _toolIndicatorEl.dataset.toolName = toolName;
-            _toolIndicatorEl.dataset.iterationCount = iterationCount;
+            // 如果已经存在工具调用指示器，更新它
+            if (_toolIndicatorEl) {
+                _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
+                _toolIndicatorEl.querySelector('.tool-call-count').textContent = `Round ${iterationCount}`;
+                _toolIndicatorEl.dataset.toolName = toolName;
+                _toolIndicatorEl.dataset.iterationCount = iterationCount;
+            } else {
+                // 创建工具调用指示器
+                _toolIndicatorEl = document.createElement('div');
+                _toolIndicatorEl.className = 'tool-call-indicator';
+                _toolIndicatorEl.addEventListener('click', () => openToolModal());
+                _toolIndicatorEl.innerHTML = `
+                    <div class="tool-call-content">
+                        <span class="tool-call-icon">⚡</span>
+                        <span class="tool-call-text">Function Calling — 正在调用工具</span>
+                        <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
+                        <span class="tool-call-time"></span>
+                        <span class="tool-call-count">Round ${iterationCount}</span>
+                    </div>
+                    <div class="tool-call-scan"></div>
+                `;
+                _toolIndicatorEl.dataset.toolName = toolName;
+                _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-            // 插入到消息内容之后
-            _assistantContentEl.appendChild(_toolIndicatorEl);
+                // 插入到消息内容之后
+                _assistantContentEl.appendChild(_toolIndicatorEl);
+            }
 
             // 触发扫描动画
             const settings = loadSettings();
@@ -2007,14 +2015,24 @@ registerApp('agent', {
                 _assistantContent = '';
             }
 
-            // 创建文本容器（如果需要）
-            let textEl = _assistantContentEl.querySelector('.assistant-text:last-child');
-            if (!textEl || _toolIndicatorEl) {
-                // 如果有工具调用指示器，创建新的文本容器
+            // 查找或创建文本容器
+            let textEl = null;
+            if (_toolIndicatorEl) {
+                // 如果有工具调用指示器，在指示器之后创建新的文本容器
                 textEl = document.createElement('div');
                 textEl.className = 'assistant-text';
-                _assistantContentEl.appendChild(textEl);
+                _toolIndicatorEl.after(textEl);
                 _toolIndicatorEl = null; // 重置指示器引用
+                _assistantContent = ''; // 重置内容
+            } else {
+                // 查找最后一个文本容器
+                textEl = _assistantContentEl.querySelector('.assistant-text:last-child');
+                if (!textEl) {
+                    // 如果没有文本容器，创建一个
+                    textEl = document.createElement('div');
+                    textEl.className = 'assistant-text';
+                    _assistantContentEl.appendChild(textEl);
+                }
             }
 
             _assistantContent += text;
