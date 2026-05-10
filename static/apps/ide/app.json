@@ -1,0 +1,13 @@
+{
+    "id": "ide",
+    "title": "IDE",
+    "icon": "/svg/ide.svg",
+    "emoji": "📝",
+    "entry": "ide.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "Monaco Editor 代码编辑器，支持多标签、文件树、代码运行",
+    "dock": true,
+    "width": 1000,
+    "height": 650
+}

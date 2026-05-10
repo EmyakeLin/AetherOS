@@ -1,0 +1,13 @@
+{
+    "id": "terminal",
+    "title": "终端",
+    "icon": "/svg/terminal.svg",
+    "emoji": "⬛",
+    "entry": "terminal.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "xterm.js 终端模拟器，通过 WebSocket 连接后端 PTY",
+    "dock": true,
+    "width": 800,
+    "height": 500
+}

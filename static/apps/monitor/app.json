@@ -1,0 +1,13 @@
+{
+    "id": "monitor",
+    "title": "监控",
+    "icon": "/svg/monitor.svg",
+    "emoji": "📊",
+    "entry": "monitor.js",
+    "version": "1.0.0",
+    "author": "system",
+    "description": "系统监控面板，展示模型调用、Token 消耗、Agent 状态",
+    "dock": true,
+    "width": 900,
+    "height": 600
+}

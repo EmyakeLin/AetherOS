@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N.O.V.A Aether OS</title>
+    <!-- Apply saved theme before paint to avoid flash -->
+    <script>try{if(localStorage.getItem('aether-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+    <!-- Fonts loaded locally from /fonts/ -->
+    <link rel="stylesheet" href="core/os.css">
+</head>
+<body>
+    <!-- Boot screen -->
+    <div id="boot-screen">
+        <div class="boot-logo">
+            <svg viewBox="0 0 120 120" class="boot-hexagon">
+                <polygon points="60,5 110,30 110,90 60,115 10,90 10,30" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+                <polygon points="60,20 95,38 95,82 60,100 25,82 25,38" fill="none" stroke="var(--accent)" stroke-width="0.8" opacity="0.5"/>
+            </svg>
+            <div class="boot-triangle"><svg width="36" height="36" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1L13 11H1L7 1Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="0.8" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="boot-text">N.O.V.A AETHER OS</div>
+        <div class="boot-progress">
+            <div class="boot-progress-bar"></div>
+        </div>
+        <div class="boot-status">Initializing neural core...</div>
+    </div>
+
+    <!-- Main OS -->
+    <div id="os-root" style="display:none;">
+        <!-- Menu bar -->
+        <header id="menu-bar">
+            <div class="menu-left">
+                <button id="system-toggle" class="system-icon" title="系统面板"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1L13 11H1L7 1Z" fill="currentColor" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"/></svg></button>
+                <span class="system-name">N.O.V.A</span>
+                <nav class="menu-items">
+                    <div class="menu-item" data-menu="file">文件</div>
+                    <div class="menu-item" data-menu="edit">编辑</div>
+                    <div class="menu-item" data-menu="view">视图</div>
+                    <div class="menu-item" data-menu="terminal">终端</div>
+                    <div class="menu-item" data-menu="window">窗口</div>
+                    <div class="menu-item" data-menu="help">帮助</div>
+                </nav>
+            </div>
+            <div class="menu-right">
+                <div id="menu-clock"></div>
+            </div>
+        </header>
+
+        <!-- Dropdown menus -->
+        <div id="dropdown-container"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="collapsed">
+            <div class="sidebar-glass">
+            <div class="sidebar-content">
+                <!-- Model calls panel -->
+                <section class="sidebar-section" id="model-calls-section">
+                    <div class="section-header">
+                        <span class="section-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1L11 6L6 11L1 6Z" stroke="var(--accent)" stroke-width="0.8" fill="none"/><circle cx="6" cy="6" r="1.5" fill="var(--accent)"/></svg></span>
+                        <span class="section-title">模型调用</span>
+                    </div>
+                    <div class="section-body" id="model-calls-list">
+                        <div class="glass-card empty-state">暂无活跃调用</div>
+                    </div>
+                    <button class="sidebar-btn" id="view-all-calls">查看全部调用记录 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-left:2px;"><path d="M2 3.5L5 7.5L8 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                </section>
+
+                <!-- Agent panels -->
+                <section class="sidebar-section" id="agent-panels-section">
+                    <div class="section-header">
+                        <span class="section-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1L10.33 3.5V8.5L6 11L1.67 8.5V3.5L6 1Z" stroke="var(--accent)" stroke-width="0.8" fill="none"/></svg></span>
+                        <span class="section-title">Agent 运行</span>
+                    </div>
+                    <div class="section-body" id="agent-panels-list">
+                        <div class="glass-card empty-state">暂无运行中的 Agent</div>
+                    </div>
+                </section>
+
+                <!-- Window preview -->
+                <section class="sidebar-section" id="window-preview-section">
+                    <div class="section-header">
+                        <span class="section-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1L11 6L6 11L1 6Z" stroke="var(--accent)" stroke-width="1" fill="none"/></svg></span>
+                        <span class="section-title">窗口</span>
+                    </div>
+                    <div class="section-body" id="window-preview-list">
+                        <div class="glass-card empty-state">暂无打开的窗口</div>
+                    </div>
+                </section>
+
+                <!-- Custom panels -->
+                <section class="sidebar-section" id="custom-panels-section">
+                    <div class="section-header">
+                        <span class="section-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="4.5" stroke="var(--accent)" stroke-width="0.8" fill="none"/></svg></span>
+                        <span class="section-title">自定义面板</span>
+                    </div>
+                    <div class="section-body" id="custom-panels-list">
+                        <div class="glass-card empty-state">拖拽组件到此处</div>
+                    </div>
+                </section>
+            </div>
+            </div>
+        </aside>
+
+        <!-- Desktop -->
+        <main id="desktop">
+            <canvas id="desktop-canvas"></canvas>
+            <div id="window-stack"></div>
+            <!-- Desktop grid pattern overlay -->
+            <div class="desktop-grid"></div>
+        </main>
+
+        <!-- Dock (dynamically built by os.js) -->
+        <footer id="dock">
+            <div class="dock-container" id="dock-container"></div>
+        </footer>
+
+        <!-- Call history modal -->
+        <div id="call-history-modal" class="modal-overlay" style="display:none;">
+            <div class="modal glass-panel">
+                <div class="modal-header">
+                    <span>模型调用历史</span>
+                    <button class="modal-close" onclick="document.getElementById('call-history-modal').style.display='none'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+                </div>
+                <div class="modal-body" id="call-history-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core scripts (app scripts loaded dynamically by os.js) -->
+    <script src="core/window.js"></script>
+    <script src="core/llm.js"></script>
+    <script src="core/os.js"></script>
+</body>
+</html>

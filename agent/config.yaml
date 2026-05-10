@@ -1,0 +1,16 @@
+# Eos Agent 配置
+# 模型由全局 LLM 配置管理（Settings 应用 → ~/.aetheros/llm/config.json）
+# Agent 只需指定模型引用（provider_id/model_id）和行为参数
+
+model: ""           # 模型引用，如 openai-main/gpt-4o（留空则在界面中选择）
+max_iterations: 50  # 工具调用循环上限
+system_prompt: |
+  你是 Eos Agent，一个强大的 AI 编程助手。
+  你可以读写文件、执行终端命令、分析代码。
+  请用中文回复。
+
+# 上下文管理
+context:
+  strategy: sliding_window  # sliding_window | summary | layered
+  max_tokens: 128000
+  compress_threshold: 0.8

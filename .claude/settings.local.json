@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /home/emyake/projects/AetherOS/start.sh /home/emyake/projects/AetherOS/stop.sh)",
+      "Bash(curl -sL \"https://github.com/lxgw/LxgwWenKai/releases/download/v1.511/LXGWWenKai-Regular.ttf\" -o LXGWWenKai-Regular.ttf)",
+      "Bash(mkdir -p /home/emyake/projects/AetherOS/proxy)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/python3 *)",
+      "Bash(grep -rn \"fetch\\\\|axios\\\\|\\\\$\\\\.ajax\\\\|XMLHttpRequest\" /home/emyake/projects/AetherOS/static/apps/settings/settings.js)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(/home/emyake/projects/AetherOS/.venv/bin/python3 *)",
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:platform.xiaomimimo.com)",
+      "Bash(node *)",
+      "Bash(cp -r ~/.aether/data/ ~/.aetheros/data/)",
+      "Bash(cp -r ~/.aether/llm/ ~/.aetheros/llm/)",
+      "Bash(grep *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

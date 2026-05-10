@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+    <defs>
+        <!-- Filter to create a faint inner neon purple glow effect, imitating the sample -->
+        <filter id="purpleGlowBlur" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur stdDeviation="1.2" />
+        </filter>
+    </defs>
+
+    <!-- 
+      LAYER 1: MAIN CONTAINER (OUTER STROKE)
+      The primary shape of the terminal window, a rounded rectangle with subtle hexagonal facets, retained in cyan.
+    -->
+    <path d="M 14 16
+             L 16 14
+             L 48 14
+             L 50 16
+             L 50 48
+             L 48 50
+             L 16 50
+             L 14 48
+             Z"
+          fill="none" stroke="#00e5ff" stroke-width="1.5"
+          stroke-linejoin="round" stroke-linecap="round" />
+
+    <!-- 
+      LAYER 2: INNER GLOW (PURPLE) & FADE FILL
+      An inset layer that creates the faint purple inner neon glow and adds a very faint purple tint, imitating the sample.
+    -->
+    <path d="M 16 18
+             L 18 16
+             L 46 16
+             L 48 18
+             L 48 46
+             L 46 48
+             L 18 48
+             L 16 46
+             Z"
+          fill="#6c5ce7" fill-opacity="0.08" 
+          stroke="#6c5ce7" stroke-width="2" filter="url(#purpleGlowBlur)" opacity="0.8"
+          stroke-linejoin="round" />
+
+    <!-- 
+      LAYER 3: TERMINAL PROMPT & COMMAND CURSOR
+      The characteristic ">" cursor and "_" prompt line, retained in cyan.
+    -->
+    <!-- Geometric Right-Angle Bracket ">" Cursor -->
+    <path d="M 20 22
+             L 24 26
+             L 20 30"
+          fill="none" stroke="#00e5ff" stroke-width="1.5"
+          stroke-linejoin="round" stroke-linecap="round" />
+    
+    <!-- Geometric Underscore "_" Prompt -->
+    <line x1="27" y1="30" x2="31" y2="30"
+          stroke="#00e5ff" stroke-width="1.5"
+          stroke-linecap="round" />
+
+    <!-- 
+      LAYER 4: CYBERPUNK ACCENTS 
+      Subtle geometric lines and nodes. Includes mixed cyan and purple accents to match the sample style.
+    -->
+    <!-- Data tracks (right side) -->
+    <!-- Keep one cyan for text data look -->
+    <line x1="40" y1="42" x2="46" y2="42"
+          stroke="#00e5ff" stroke-width="1.5"
+          stroke-linecap="round" opacity="0.5" />
+    <!-- Make one purple accent like the sample -->
+    <line x1="40" y1="46" x2="43" y2="46"
+          stroke="#6c5ce7" stroke-width="1.5"
+          stroke-linecap="round" opacity="0.4" />
+
+    <!-- Terminal node (bottom right), now purple like the sample node -->
+    <circle cx="46" cy="46" r="1.2"
+            fill="#6c5ce7" opacity="0.8" />
+</svg>
+
