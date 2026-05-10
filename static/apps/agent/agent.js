@@ -1273,56 +1273,14 @@ registerApp('agent', {
                 position: fixed;
                 pointer-events: none;
                 z-index: 999;
-                overflow: hidden;
+                overflow: visible;
             }
-            .tool-complete-scan {
+            .tool-complete-svg {
                 position: absolute;
+                right: 0;
                 top: 0;
-                left: 0;
-                width: 100%;
+                width: 120px;
                 height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.5), transparent);
-                transform: translateX(-100%);
-            }
-            @keyframes tool-complete-scan {
-                0% { transform: translateX(-100%); }
-                70% { transform: translateX(0%); }
-                100% { transform: translateX(0%); opacity: 0.3; }
-            }
-            .tool-complete-circle {
-                position: absolute;
-                right: 12px;
-                top: 50%;
-                transform: translateY(-50%) scale(0);
-                width: 24px;
-                height: 24px;
-                border: 2px solid var(--accent);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: transparent;
-            }
-            @keyframes tool-complete-circle-in {
-                from { transform: translateY(-50%) scale(0); }
-                to { transform: translateY(-50%) scale(1); }
-            }
-            .tool-complete-circle.done {
-                background: #00e676;
-                border-color: #00e676;
-            }
-            .tool-complete-check {
-                width: 14px;
-                height: 14px;
-                color: white;
-                opacity: 0;
-            }
-            .tool-complete-check.visible {
-                opacity: 1;
-            }
-            @keyframes tool-complete-fade-out {
-                from { opacity: 1; }
-                to { opacity: 0; }
             }
 
             /* ── Light theme overrides ── */
@@ -1745,13 +1703,12 @@ registerApp('agent', {
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
+                _currentTextEl = null;
             }
 
-            // 移除当前文本容器的 .current 类
-            const currentTextEl = _assistantContentEl.querySelector('.assistant-text.current');
-            if (currentTextEl) {
-                currentTextEl.classList.remove('current');
-                currentTextEl.classList.remove('streaming-cursor');
+            // 移除当前文本容器的 streaming-cursor
+            if (_currentTextEl) {
+                _currentTextEl.classList.remove('streaming-cursor');
             }
 
             // 如果已经存在工具调用指示器，更新它
@@ -1778,8 +1735,12 @@ registerApp('agent', {
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
-                // 插入到消息内容之后
-                _assistantContentEl.appendChild(_toolIndicatorEl);
+                // 插入到当前文本容器之后
+                if (_currentTextEl) {
+                    _currentTextEl.after(_toolIndicatorEl);
+                } else {
+                    _assistantContentEl.appendChild(_toolIndicatorEl);
+                }
             }
 
             // 清除旧的定时器
@@ -1919,44 +1880,51 @@ registerApp('agent', {
             const tracker = setInterval(updatePosition, 16); // 60fps
             updatePosition();
 
-            // 动画序列
+            // 动态 SVG 打勾特效
             effect.innerHTML = `
-                <div class="tool-complete-scan"></div>
-                <div class="tool-complete-circle">
-                    <svg class="tool-complete-check" viewBox="0 0 24 24" fill="none">
-                        <polyline points="6 12 10 16 18 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
+                <svg class="tool-complete-svg" viewBox="0 0 100 40" preserveAspectRatio="xMaxYMid meet">
+                    <!-- 扫描光效 -->
+                    <defs>
+                        <linearGradient id="scanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:transparent"/>
+                            <stop offset="50%" style="stop-color:rgba(0,229,255,0.5)"/>
+                            <stop offset="100%" style="stop-color:transparent"/>
+                        </linearGradient>
+                    </defs>
+                    <rect class="svg-scan" x="-100" y="0" width="100" height="40" fill="url(#scanGrad)">
+                        <animate attributeName="x" from="-100" to="0" dur="0.6s" fill="freeze"/>
+                    </rect>
+
+                    <!-- 圆圈 -->
+                    <circle class="svg-circle" cx="88" cy="20" r="10"
+                            fill="none" stroke="var(--accent)" stroke-width="2" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" begin="0.6s" dur="0.2s" fill="freeze"/>
+                        <animate attributeName="r" from="0" to="10" begin="0.6s" dur="0.2s" fill="freeze"/>
+                    </circle>
+
+                    <!-- 打勾 -->
+                    <polyline class="svg-check" points="82,20 86,24 94,16"
+                              fill="none" stroke="white" stroke-width="2.5"
+                              stroke-linecap="round" stroke-linejoin="round"
+                              stroke-dasharray="20" stroke-dashoffset="20" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" begin="0.8s" dur="0.1s" fill="freeze"/>
+                        <animate attributeName="stroke-dashoffset" from="20" to="0" begin="0.8s" dur="0.4s" fill="freeze"/>
+                    </polyline>
+
+                    <!-- 圆圈变绿 -->
+                    <circle class="svg-circle-done" cx="88" cy="20" r="10"
+                            fill="#00e676" stroke="#00e676" stroke-width="2" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.2s" fill="freeze"/>
+                    </circle>
+
+                    <!-- 淡化 -->
+                    <g opacity="1">
+                        <animate attributeName="opacity" from="1" to="0" begin="1.5s" dur="0.3s" fill="freeze"/>
+                        <use href="#scanGrad"/>
+                        <circle cx="88" cy="20" r="10" fill="#00e676"/>
+                    </g>
+                </svg>
             `;
-
-            // 动画时间线
-            const scan = effect.querySelector('.tool-complete-scan');
-            const circle = effect.querySelector('.tool-complete-circle');
-            const check = effect.querySelector('.tool-complete-check');
-
-            // 0.0s: 亮色扫描开始（停留并缓慢浮现）
-            scan.style.animation = 'tool-complete-scan 0.6s ease-out forwards';
-
-            // 0.6s: 扫描到头，圆圈出现
-            setTimeout(() => {
-                circle.style.animation = 'tool-complete-circle-in 0.2s ease-out forwards';
-            }, 600);
-
-            // 0.8s: 显示对勾
-            setTimeout(() => {
-                check.classList.add('visible');
-            }, 800);
-
-            // 1.2s: 对勾消失，圆圈变绿
-            setTimeout(() => {
-                check.classList.remove('visible');
-                circle.classList.add('done');
-            }, 1200);
-
-            // 1.5s: 实心圆淡化
-            setTimeout(() => {
-                circle.style.animation = 'tool-complete-fade-out 0.3s ease-out forwards';
-            }, 1500);
 
             // 1.8s: 清理
             setTimeout(() => {
@@ -2044,6 +2012,7 @@ registerApp('agent', {
         let _currentAssistantEl = null;
         let _assistantContent = '';
         let _assistantContentEl = null;
+        let _currentTextEl = null;
 
         function appendAssistantText(text) {
             if (!_currentAssistantEl) {
@@ -2059,19 +2028,20 @@ registerApp('agent', {
                 messagesEl.appendChild(_currentAssistantEl);
                 _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
+                _currentTextEl = null;
             }
 
-            // 查找或创建文本容器
-            let textEl = _assistantContentEl.querySelector('.assistant-text.current');
-            if (!textEl) {
-                textEl = document.createElement('div');
-                textEl.className = 'assistant-text current';
-                _assistantContentEl.appendChild(textEl);
+            // 如果没有当前文本容器，创建一个
+            if (!_currentTextEl) {
+                _currentTextEl = document.createElement('div');
+                _currentTextEl.className = 'assistant-text';
+                _assistantContentEl.appendChild(_currentTextEl);
+                _assistantContent = '';
             }
 
             _assistantContent += text;
-            textEl.innerHTML = formatContent(_assistantContent);
-            textEl.classList.add('streaming-cursor');
+            _currentTextEl.innerHTML = formatContent(_assistantContent);
+            _currentTextEl.classList.add('streaming-cursor');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
@@ -2087,6 +2057,7 @@ registerApp('agent', {
                 _currentAssistantEl = null;
                 _assistantContent = '';
                 _assistantContentEl = null;
+                _currentTextEl = null;
                 _toolIndicatorEl = null;
             }
         }
