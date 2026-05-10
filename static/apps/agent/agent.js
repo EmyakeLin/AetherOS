@@ -794,6 +794,17 @@ registerApp('agent', {
                 background: var(--bg-elevated);
                 border: 1px solid var(--border);
                 transition: all 0.2s;
+                animation: tool-slide-in 0.4s var(--ease-out);
+            }
+            @keyframes tool-slide-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
             .tool-entry.pending {
                 border-color: var(--accent-dim);
@@ -1047,6 +1058,258 @@ registerApp('agent', {
                 border-radius: 3px;
             }
 
+            /* ── Tool call indicator ── */
+            .tool-call-indicator {
+                display: flex;
+                align-items: center;
+                padding: 10px 24px;
+                max-width: 820px;
+                width: 100%;
+                margin: 0 auto;
+                background: var(--bg-elevated);
+                border: 1px solid var(--accent-dim);
+                border-radius: var(--radius-md);
+                cursor: pointer;
+                position: relative;
+                overflow: hidden;
+                transition: all 0.2s;
+            }
+            .tool-call-indicator:hover {
+                background: var(--bg-hover);
+                border-color: var(--accent);
+            }
+            .tool-call-indicator.completed {
+                opacity: 0.7;
+                border-color: var(--border);
+            }
+            .tool-call-content {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                z-index: 1;
+            }
+            .tool-call-icon {
+                font-size: 14px;
+                color: var(--accent);
+            }
+            .tool-call-text {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+            .tool-call-name {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--accent);
+            }
+            .tool-call-time {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--text-muted);
+            }
+            .tool-call-round {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--text-muted);
+                background: var(--bg-surface);
+                padding: 2px 6px;
+                border-radius: 10px;
+                margin-left: auto;
+            }
+            .tool-call-scan {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.2), transparent);
+                pointer-events: none;
+            }
+            @keyframes tool-scan {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(100%); }
+            }
+
+            /* ── Tool entry round label ── */
+            .tool-entry-round {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--text-muted);
+                background: var(--bg-surface);
+                padding: 1px 5px;
+                border-radius: 8px;
+                flex-shrink: 0;
+            }
+
+            /* ── Tool modal ── */
+            .tool-modal-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: modal-in 0.2s ease-out;
+            }
+            @keyframes modal-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .tool-modal {
+                width: 700px;
+                max-width: 90vw;
+                max-height: 80vh;
+                background: var(--bg-surface);
+                border: 1px solid var(--accent-dim);
+                border-radius: var(--radius-lg);
+                box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 229, 255, 0.1);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .tool-modal-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 20px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .tool-modal-title {
+                font-family: var(--font-display);
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            .tool-modal-round {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--accent);
+                background: var(--accent-glow);
+                padding: 2px 8px;
+                border-radius: 10px;
+            }
+            .tool-modal-close {
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                cursor: pointer;
+                border-radius: var(--radius-sm);
+                margin-left: auto;
+                font-size: 18px;
+                transition: all 0.15s;
+            }
+            .tool-modal-close:hover {
+                color: var(--accent-warm);
+                background: rgba(255, 107, 107, 0.1);
+            }
+            .tool-modal-body {
+                display: flex;
+                gap: 1px;
+                flex: 1;
+                min-height: 0;
+                background: var(--border);
+            }
+            .tool-modal-col {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-surface);
+                min-width: 0;
+            }
+            .tool-modal-col-title {
+                font-family: var(--font-display);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                padding: 10px 16px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .tool-modal-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 12px 16px;
+                margin: 0;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                line-height: 1.6;
+                color: var(--text-primary);
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            .tool-modal-content.error {
+                color: var(--accent-warm);
+            }
+
+            /* ── Tool complete effect ── */
+            .tool-complete-effect {
+                position: fixed;
+                pointer-events: none;
+                z-index: 999;
+                overflow: hidden;
+            }
+            .tool-complete-scan {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.5), transparent);
+                transform: translateX(-100%);
+            }
+            @keyframes tool-complete-scan {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(100%); }
+            }
+            .tool-complete-circle {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%) scale(0);
+                width: 20px;
+                height: 20px;
+                border: 2px solid var(--accent);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            @keyframes tool-complete-circle-in {
+                from { transform: translateY(-50%) scale(0); }
+                to { transform: translateY(-50%) scale(1); }
+            }
+            .tool-complete-circle.done {
+                background: #00e676;
+                border-color: #00e676;
+            }
+            .tool-complete-check {
+                width: 12px;
+                height: 12px;
+                color: white;
+                stroke-dasharray: 20;
+                stroke-dashoffset: 20;
+            }
+            @keyframes tool-complete-check-draw {
+                from { stroke-dashoffset: 20; }
+                to { stroke-dashoffset: 0; }
+            }
+            @keyframes tool-complete-fade-out {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+
             /* ── Light theme overrides ── */
             [data-theme="light"] .agent-root { background: var(--bg-base); }
             [data-theme="light"] .agent-sidebar { background: var(--bg-deep); }
@@ -1089,6 +1352,13 @@ registerApp('agent', {
         let currentSessionId = null;
         let sessionCache = [];
         let _toolCount = 0;
+
+        // Tool call indicator state
+        let _conversationRound = 0;  // 对话轮次，会话内累加
+        let _iterationCount = 0;     // 当前位置累积的工具调用次数
+        let _toolCallHistory = [];   // 工具调用历史
+        let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
+        let _toolStartTime = 0;      // 工具调用开始时间
 
         // ── Register agent panel in sidebar ──
         os.registerAgentPanel({ id: agentId, name: 'Eos Agent', windowId: win.id });
@@ -1183,6 +1453,11 @@ registerApp('agent', {
                 terminalEl.innerHTML = '';
                 renderSessionList();
                 updateSessionTitle('新会话');
+
+                // 通知后端新 session
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'session_id', session_id: session.id }));
+                }
             } catch (e) {
                 console.warn('Failed to create session:', e);
             }
@@ -1197,6 +1472,11 @@ registerApp('agent', {
             toolCountEl.textContent = '0';
             toolsEl.innerHTML = '';
             terminalEl.innerHTML = '';
+
+            // 通知后端切换 session 并加载历史消息
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'session_id', session_id: sessionId }));
+            }
 
             try {
                 const res = await os.api('GET', `/api/agent/sessions/${sessionId}/messages`);
@@ -1292,6 +1572,10 @@ registerApp('agent', {
                     ws.send(JSON.stringify({ type: 'configure', settings: s }));
                     updateModelBadge(s.model);
                 }
+                // 如果有当前 session，发送给后端加载历史消息
+                if (currentSessionId) {
+                    ws.send(JSON.stringify({ type: 'session_id', session_id: currentSessionId }));
+                }
             };
 
             ws.onmessage = (e) => {
@@ -1340,21 +1624,53 @@ registerApp('agent', {
                     break;
                 case 'text':
                     removeThinkingIndicator();
+                    // 模型输出文本，重置迭代计数，完成工具调用指示器
+                    _iterationCount = 0;
+                    if (_toolIndicatorEl) {
+                        updateToolIndicator('工具调用结束');
+                        playCompleteEffect(_toolIndicatorEl);
+                        _toolIndicatorEl = null;
+                    }
                     appendAssistantText(data.content);
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
                 case 'tool_call':
                     removeThinkingIndicator();
-                    addToolEntry(data.name, data.arguments, 'pending');
+                    _iterationCount++;
+                    _toolStartTime = Date.now();
+                    const roundLabel = `R${_conversationRound}-${_iterationCount}`;
+                    _toolCallHistory.push({
+                        name: data.name,
+                        args: data.arguments,
+                        result: null,
+                        error: null,
+                        time: _toolStartTime,
+                        roundLabel: roundLabel,
+                    });
+                    showToolIndicator(data.name, roundLabel);
+                    addToolEntry(data.name, data.arguments, 'pending', roundLabel);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
                 case 'tool_result':
+                    const elapsed = ((Date.now() - _toolStartTime) / 1000).toFixed(1);
+                    updateToolIndicator(data.name, elapsed);
                     updateToolEntry(data.name, data.result, data.error);
+                    // 更新历史记录
+                    const lastCall = _toolCallHistory[_toolCallHistory.length - 1];
+                    if (lastCall && lastCall.name === data.name) {
+                        lastCall.result = data.result;
+                        lastCall.error = data.error;
+                    }
                     os.updateAgentPanel(agentId, { status: 'output' });
                     break;
                 case 'done':
                     removeThinkingIndicator();
+                    if (_toolIndicatorEl) {
+                        updateToolIndicator('工具调用结束');
+                        playCompleteEffect(_toolIndicatorEl);
+                        _toolIndicatorEl = null;
+                    }
                     finishAssistantMessage();
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'idle' });
@@ -1364,6 +1680,11 @@ registerApp('agent', {
                     break;
                 case 'error':
                     removeThinkingIndicator();
+                    if (_toolIndicatorEl) {
+                        updateToolIndicator('工具调用结束');
+                        playCompleteEffect(_toolIndicatorEl);
+                        _toolIndicatorEl = null;
+                    }
                     _finishActiveCall('error', { error: data.message });
                     addSystemMessage('错误: ' + data.message);
                     os.updateAgentPanel(agentId, { status: 'idle' });
@@ -1371,6 +1692,11 @@ registerApp('agent', {
                     break;
                 case 'interrupted':
                     removeThinkingIndicator();
+                    if (_toolIndicatorEl) {
+                        updateToolIndicator('工具调用结束');
+                        playCompleteEffect(_toolIndicatorEl);
+                        _toolIndicatorEl = null;
+                    }
                     addSystemMessage('Agent 已中断');
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
@@ -1379,6 +1705,175 @@ registerApp('agent', {
                     addSystemMessage(`消息已排队 (位置: ${data.position})`);
                     break;
             }
+        }
+
+        /* ══════════════════════════════════════════
+           Tool call indicator
+           ══════════════════════════════════════════ */
+
+        function showToolIndicator(toolName, roundLabel) {
+            if (!_toolIndicatorEl) {
+                _toolIndicatorEl = document.createElement('div');
+                _toolIndicatorEl.className = 'tool-call-indicator';
+                _toolIndicatorEl.addEventListener('click', () => openToolModal());
+                messagesEl.appendChild(_toolIndicatorEl);
+            }
+            _toolIndicatorEl.innerHTML = `
+                <div class="tool-call-content">
+                    <span class="tool-call-icon">⚡</span>
+                    <span class="tool-call-text">Calling Tools — 正在调用工具</span>
+                    <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
+                    <span class="tool-call-time"></span>
+                    <span class="tool-call-round">${escapeHtml(roundLabel)}</span>
+                </div>
+                <div class="tool-call-scan"></div>
+            `;
+            _toolIndicatorEl.dataset.toolName = toolName;
+            _toolIndicatorEl.dataset.roundLabel = roundLabel;
+            // 触发扫描动画
+            const scan = _toolIndicatorEl.querySelector('.tool-call-scan');
+            scan.style.animation = 'none';
+            scan.offsetHeight; // 强制重排
+            scan.style.animation = 'tool-scan 0.6s ease-out';
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function updateToolIndicator(toolName, elapsed) {
+            if (!_toolIndicatorEl) return;
+            const timeEl = _toolIndicatorEl.querySelector('.tool-call-time');
+            const nameEl = _toolIndicatorEl.querySelector('.tool-call-name');
+            if (timeEl && elapsed) {
+                timeEl.textContent = `[${elapsed}s]`;
+            }
+            if (nameEl && toolName && toolName !== '工具调用结束') {
+                nameEl.textContent = `[${escapeHtml(toolName)}]`;
+            }
+            if (toolName === '工具调用结束') {
+                const textEl = _toolIndicatorEl.querySelector('.tool-call-text');
+                if (textEl) textEl.textContent = 'Calling Tools — 工具调用结束';
+                _toolIndicatorEl.classList.add('completed');
+            }
+        }
+
+        function removeToolIndicator() {
+            if (_toolIndicatorEl) {
+                _toolIndicatorEl.remove();
+                _toolIndicatorEl = null;
+            }
+        }
+
+        function openToolModal() {
+            if (!_toolIndicatorEl) return;
+
+            // 获取当前工具调用信息
+            const toolName = _toolIndicatorEl.dataset.toolName || '';
+            const roundLabel = _toolIndicatorEl.dataset.roundLabel || '';
+
+            // 从历史中获取最新的工具调用
+            const latestCall = _toolCallHistory[_toolCallHistory.length - 1] || {};
+            const args = latestCall.args || {};
+            const result = latestCall.result || '等待返回值...';
+            const error = latestCall.error || null;
+
+            // 创建模态框
+            const overlay = document.createElement('div');
+            overlay.className = 'tool-modal-overlay';
+            overlay.innerHTML = `
+                <div class="tool-modal">
+                    <div class="tool-modal-header">
+                        <span class="tool-modal-title">工具调用详情</span>
+                        <span class="tool-modal-round">${escapeHtml(roundLabel)}</span>
+                        <button class="tool-modal-close">×</button>
+                    </div>
+                    <div class="tool-modal-body">
+                        <div class="tool-modal-col">
+                            <div class="tool-modal-col-title">参数</div>
+                            <pre class="tool-modal-content">${escapeHtml(JSON.stringify(args, null, 2))}</pre>
+                        </div>
+                        <div class="tool-modal-col">
+                            <div class="tool-modal-col-title">${error ? '错误' : '返回值'}</div>
+                            <pre class="tool-modal-content ${error ? 'error' : ''}">${escapeHtml(error || result)}</pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 关闭逻辑
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
+            overlay.querySelector('.tool-modal-close').addEventListener('click', () => {
+                overlay.remove();
+            });
+
+            document.body.appendChild(overlay);
+        }
+
+        function playCompleteEffect(indicatorEl) {
+            if (!indicatorEl) return;
+
+            const effect = document.createElement('div');
+            effect.className = 'tool-complete-effect';
+            document.body.appendChild(effect);
+
+            // 追踪位置
+            function updatePosition() {
+                const rect = indicatorEl.getBoundingClientRect();
+                effect.style.left = rect.left + 'px';
+                effect.style.top = rect.top + 'px';
+                effect.style.width = rect.width + 'px';
+                effect.style.height = rect.height + 'px';
+            }
+
+            const tracker = setInterval(updatePosition, 16); // 60fps
+            updatePosition();
+
+            // 动画序列
+            effect.innerHTML = `
+                <div class="tool-complete-scan"></div>
+                <div class="tool-complete-circle">
+                    <svg class="tool-complete-check" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            `;
+
+            // 动画时间线
+            const scan = effect.querySelector('.tool-complete-scan');
+            const circle = effect.querySelector('.tool-complete-circle');
+            const check = effect.querySelector('.tool-complete-check');
+
+            // 0.0s: 亮色扫描开始
+            scan.style.animation = 'tool-complete-scan 0.4s ease-out forwards';
+
+            // 0.4s: 扫描到头，圆圈出现
+            setTimeout(() => {
+                circle.style.animation = 'tool-complete-circle-in 0.2s ease-out forwards';
+            }, 400);
+
+            // 0.6s: 打勾动画
+            setTimeout(() => {
+                check.style.animation = 'tool-complete-check-draw 0.4s ease-out forwards';
+            }, 600);
+
+            // 1.0s: 对勾消失，圆圈变绿
+            setTimeout(() => {
+                check.style.opacity = '0';
+                circle.classList.add('done');
+            }, 1000);
+
+            // 1.2s: 实心圆淡化
+            setTimeout(() => {
+                circle.style.animation = 'tool-complete-fade-out 0.3s ease-out forwards';
+            }, 1200);
+
+            // 1.5s: 清理
+            setTimeout(() => {
+                clearInterval(tracker);
+                effect.remove();
+            }, 1500);
         }
 
         /* ══════════════════════════════════════════
@@ -1509,7 +2004,7 @@ registerApp('agent', {
            Tool entries
            ══════════════════════════════════════════ */
 
-        function addToolEntry(name, args, status) {
+        function addToolEntry(name, args, status, roundLabel) {
             _toolCount++;
             toolCountEl.textContent = _toolCount;
             const el = document.createElement('div');
@@ -1517,14 +2012,19 @@ registerApp('agent', {
             el.dataset.toolName = name;
             const argsStr = typeof args === 'string' ? args : JSON.stringify(args || {});
             el.innerHTML = `
+                <span class="tool-entry-round">${escapeHtml(roundLabel || '')}</span>
                 <span class="tool-icon">${status === 'pending' ? '⏳' : '✅'}</span>
                 <div class="tool-info">
                     <div class="tool-name">${escapeHtml(name)}</div>
                     <div class="tool-status">${escapeHtml(argsStr.slice(0, 60))}</div>
                 </div>
             `;
+            // 智能滚动：仅当用户在底部时才自动滚动
+            const isAtBottom = toolsEl.scrollHeight - toolsEl.scrollTop <= toolsEl.clientHeight + 50;
             toolsEl.appendChild(el);
-            toolsEl.scrollTop = toolsEl.scrollHeight;
+            if (isAtBottom) {
+                toolsEl.scrollTop = toolsEl.scrollHeight;
+            }
         }
 
         function updateToolEntry(name, result, error) {
@@ -1567,6 +2067,10 @@ registerApp('agent', {
             if (!text) return;
 
             if (!currentSessionId) await createNewSession();
+
+            _conversationRound++;
+            _iterationCount = 0;
+            _toolCallHistory = [];
 
             addMessage('user', text);
             inputEl.value = '';
