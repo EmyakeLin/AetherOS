@@ -14,6 +14,7 @@ from typing import AsyncGenerator
 
 from context import ContextManager
 from context_manager import ContextManager as FileContextManager
+from prompt_builder import build_system_prompt
 from tools.registry import registry
 from storage import get_storage
 
@@ -25,14 +26,27 @@ class CustomAgentEngine:
         config = config or {}
         self.model = config.get("model", "")
         self.max_iterations = config.get("max_iterations", 50)
-        self.system_prompt = config.get("system_prompt", "你是 Eos Agent。")
         self.tools = registry
-        self.context = ContextManager(config)
-        self.file_context = FileContextManager()
         self.llm_service = llm_service
         self.session_id = None  # 当前 session ID，由外部设置
         # 中断信号
         self._interrupted = False
+
+        # 构建系统提示词
+        user_system_prompt = config.get("system_prompt", "")
+        project_root = config.get("project_root", str(Path.cwd()))
+        extra_context = config.get("extra_context", {})
+
+        system_prompt = build_system_prompt(
+            user_system_prompt=user_system_prompt,
+            project_root=project_root,
+            extra_context=extra_context,
+        )
+
+        # 初始化上下文管理器（传入构建好的 system_prompt）
+        ctx_config = {**config, "system_prompt": system_prompt}
+        self.context = ContextManager(ctx_config)
+        self.file_context = FileContextManager()
 
     def interrupt(self):
         """请求中断当前运行"""
