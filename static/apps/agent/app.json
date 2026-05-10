@@ -4,7 +4,7 @@
     "icon": "/svg/agent.svg",
     "emoji": "🤖",
     "entry": "agent.js",
-    "version": "1.1.0",
+    "version": "2.0.0",
     "author": "system",
     "description": "AI Agent 对话界面，支持工具调用追踪和终端输出",
     "dock": true,

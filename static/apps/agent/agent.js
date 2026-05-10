@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    N.O.V.A AETHER OS — Agent Application
-   Unified Agent interface with session management & tool panel
+   ChatGPT-inspired layout × Cyberpunk neon aesthetic
    ═══════════════════════════════════════════════════════ */
 
 registerApp('agent', {
@@ -10,55 +10,120 @@ registerApp('agent', {
         const agentId = 'agent-' + Date.now();
 
         container.innerHTML = `
-            <div style="display:flex;height:100%;background:var(--bg-surface);position:relative;overflow:hidden;">
+            <div class="agent-root">
                 <!-- Session sidebar -->
-                <div id="session-sidebar" class="session-sidebar">
-                    <div class="session-header">
-                        <span style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--text-muted);">会话列表</span>
-                        <button id="session-new-btn" class="session-new-btn" title="新建会话">+ 新</button>
+                <aside id="session-sidebar" class="agent-sidebar">
+                    <div class="sidebar-top">
+                        <button id="session-new-btn" class="new-chat-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            <span>新会话</span>
+                        </button>
+                    </div>
+                    <div class="sidebar-search">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        <input id="session-filter" type="text" placeholder="搜索会话..." />
                     </div>
                     <div id="session-list" class="session-list"></div>
-                </div>
-                <!-- Chat panel -->
-                <div style="flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0;">
-                    <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-                        <button id="session-toggle-btn" class="session-toggle-btn" title="切换侧边栏">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="6" width="12" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="10" width="12" height="1.5" rx="0.75" fill="currentColor"/></svg>
+                </aside>
+
+                <!-- Main chat area -->
+                <main class="agent-main">
+                    <!-- Top bar -->
+                    <header class="agent-header">
+                        <button id="session-toggle-btn" class="icon-btn" title="切换侧边栏">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3.5" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="8.25" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="13" width="14" height="1.5" rx="0.75" fill="currentColor"/></svg>
                         </button>
-                        <span id="session-title-display" style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">新会话</span>
-                        <div style="flex:1;"></div>
-                        <button id="agent-settings-btn" class="session-toggle-btn" title="模型设置">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.2"/><path d="M11.8 8.5c0-.2 0-.4-.1-.5l1-1.3-1.2-2.1-1.4.5c-.3-.2-.7-.4-1-.6L8.9 2.3H6.1L5.9 3.5c-.4.1-.7.3-1 .6L3.5 3.6l-1.2 2.1 1 1.3c0 .2-.1.4-.1.5s0 .3.1.5l-1 1.3 1.2 2.1 1.4-.5c.3.2.7.4 1 .6l.2 1.2h2.8l.2-1.2c.4-.1.7-.3 1-.6l1.4.5 1.2-2.1-1-1.3c.1-.2.1-.3.1-.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+                        <div class="header-title">
+                            <span id="session-title-display">Eos Agent</span>
+                            <span class="model-badge" id="model-badge"></span>
+                        </div>
+                        <div style="flex:1"></div>
+                        <button id="panel-toggle-btn" class="icon-btn" title="工具面板">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="16" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="1" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="10" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
                         </button>
+                        <button id="agent-settings-btn" class="icon-btn" title="设置">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.4 3.4l1.4 1.4M13.2 13.2l1.4 1.4M3.4 14.6l1.4-1.4M13.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        </button>
+                    </header>
+
+                    <!-- Messages area -->
+                    <div id="agent-messages" class="agent-messages">
+                        <div id="welcome-screen" class="welcome-screen">
+                            <div class="welcome-glow"></div>
+                            <div class="welcome-icon">
+                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                    <circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="1.5" opacity="0.3"/>
+                                    <circle cx="24" cy="24" r="14" stroke="var(--accent)" stroke-width="1.2" opacity="0.5"/>
+                                    <circle cx="24" cy="24" r="5" fill="var(--accent)" opacity="0.8"/>
+                                    <circle cx="24" cy="24" r="5" fill="var(--accent)">
+                                        <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/>
+                                        <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
+                                    </circle>
+                                </svg>
+                            </div>
+                            <h2 class="welcome-title">Eos Agent</h2>
+                            <p class="welcome-sub">有什么需要帮助的？</p>
+                            <div class="welcome-chips">
+                                <button class="chip" data-prompt="帮我分析当前项目的代码结构">分析代码结构</button>
+                                <button class="chip" data-prompt="读取并解释 server.py 的核心逻辑">解释后端逻辑</button>
+                                <button class="chip" data-prompt="帮我写一个 Python 脚本来处理数据">编写脚本</button>
+                                <button class="chip" data-prompt="检查项目中是否有潜在的安全问题">安全审查</button>
+                            </div>
+                        </div>
                     </div>
-                    <div id="agent-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
-                    <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
-                        <textarea id="agent-input" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" style="flex:1;resize:none;height:40px;max-height:120px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;color:var(--text-primary);font-family:var(--font-body);font-size:13px;outline:none;transition:border-color 0.15s;" rows="1"></textarea>
-                        <button id="agent-stop" style="padding:8px 14px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:var(--radius-md);color:#ff6b6b;font-weight:600;font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;display:none;align-items:center;gap:4px;">停止</button>
-                        <button id="agent-send" style="padding:8px 18px;background:linear-gradient(135deg,var(--accent),var(--accent-secondary));border:none;border-radius:var(--radius-md);color:var(--bg-deep);font-weight:600;font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;display:flex;align-items:center;gap:6px;">发送 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 1.5L10.5 6L1.5 10.5V7L7.5 6L1.5 4.5V1.5Z" fill="currentColor"/></svg></button>
+
+                    <!-- Input area -->
+                    <div class="agent-input-wrap">
+                        <div class="input-container">
+                            <textarea id="agent-input" placeholder="发送消息..." rows="1"></textarea>
+                            <div class="input-actions">
+                                <button id="agent-stop" class="stop-btn" style="display:none">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+                                </button>
+                                <button id="agent-send" class="send-btn" disabled>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3L13 8L3 13V9.5L9 8L3 6.5V3Z" fill="currentColor"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
                     </div>
-                </div>
-                <!-- Tool/terminal panel -->
-                <div style="width:320px;display:flex;flex-direction:column;flex-shrink:0;">
-                    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-                        <div style="padding:8px 12px;font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--text-muted);border-bottom:1px solid var(--border);">工具调用</div>
-                        <div id="agent-tools" style="flex:1;overflow-y:auto;padding:8px;font-size:11px;font-family:var(--font-mono);"></div>
+                </main>
+
+                <!-- Right panel: tools & terminal -->
+                <aside id="agent-panel" class="agent-panel">
+                    <div class="panel-section">
+                        <div class="panel-section-header">
+                            <span class="panel-section-icon">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span>工具调用</span>
+                            <span id="tool-count" class="panel-count">0</span>
+                        </div>
+                        <div id="agent-tools" class="panel-body tools-body"></div>
                     </div>
-                    <div style="height:200px;border-top:1px solid var(--border);display:flex;flex-direction:column;">
-                        <div style="padding:8px 12px;font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--text-muted);border-bottom:1px solid var(--border);">终端输出</div>
-                        <div id="agent-terminal" style="flex:1;overflow-y:auto;padding:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);background:#060a14;"></div>
+                    <div class="panel-divider"></div>
+                    <div class="panel-section" style="flex:1;min-height:0">
+                        <div class="panel-section-header">
+                            <span class="panel-section-icon">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.5L6 7.5L4 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 9.5H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span>终端</span>
+                            <button id="terminal-clear" class="panel-action-btn" title="清空">清空</button>
+                        </div>
+                        <div id="agent-terminal" class="panel-body terminal-body"></div>
                     </div>
-                </div>
+                </aside>
+
                 <!-- Settings drawer -->
                 <div id="agent-settings-overlay" class="settings-overlay"></div>
                 <div id="agent-settings-drawer" class="settings-drawer">
-                    <div class="settings-drawer-header">
-                        <span class="settings-drawer-title">模型设置</span>
-                        <button id="settings-close-btn" class="settings-close-btn">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3L11 11M11 3L3 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <div class="settings-header">
+                        <span class="settings-title">设置</span>
+                        <button id="settings-close-btn" class="icon-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                         </button>
                     </div>
-                    <div class="settings-drawer-body">
+                    <div class="settings-body">
                         <div class="settings-field">
                             <label class="settings-label">模型</label>
                             <select id="settings-model" class="settings-select">
@@ -68,120 +133,969 @@ registerApp('agent', {
                         </div>
                         <div class="settings-field">
                             <label class="settings-label">System Prompt</label>
-                            <textarea id="settings-system-prompt" class="settings-textarea" rows="5" placeholder="你是 Eos Agent，一个强大的 AI 编程助手..."></textarea>
+                            <textarea id="settings-system-prompt" class="settings-textarea" rows="5" placeholder="你是 Eos Agent..."></textarea>
                         </div>
                         <div class="settings-field">
                             <label class="settings-label">最大迭代次数</label>
-                            <input id="settings-max-iter" class="settings-input settings-input-sm" type="number" min="1" max="200" value="50">
+                            <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
                         </div>
                         <div class="settings-actions">
                             <button id="settings-save-btn" class="settings-save-btn">保存</button>
-                            <button id="settings-reset-btn" class="settings-reset-btn">重置默认</button>
+                            <button id="settings-reset-btn" class="settings-reset-btn">重置</button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
 
+        /* ══════════════════════════════════════════
+           STYLES — ChatGPT layout × Cyberpunk neon
+           ══════════════════════════════════════════ */
         const style = document.createElement('style');
         style.textContent = `
-            /* Session sidebar */
-            .session-sidebar{width:240px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;background:var(--bg-surface);transition:width 0.2s ease,opacity 0.15s;overflow:hidden;}
-            .session-sidebar.collapsed{width:0;opacity:0;border-right:none;}
-            .session-header{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-            .session-new-btn{padding:4px 10px;background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--accent);cursor:pointer;font-size:11px;font-family:var(--font-mono);transition:all 0.15s;}
-            .session-new-btn:hover{background:rgba(0,229,255,0.2);}
-            .session-list{flex:1;overflow-y:auto;padding:4px;}
-            .session-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;position:relative;transition:background 0.1s;margin-bottom:2px;}
-            .session-item:hover{background:var(--bg-hover);}
-            .session-item.active{background:var(--accent-glow);border:1px solid var(--accent-dim);}
-            .session-item-title{font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;padding-right:20px;}
-            .session-item-meta{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);display:flex;gap:4px;}
-            .session-item-delete{position:absolute;top:8px;right:8px;opacity:0;background:none;border:none;color:var(--accent-warm);cursor:pointer;padding:2px;transition:opacity 0.15s;}
-            .session-item:hover .session-item-delete{opacity:0.7;}
-            .session-item-delete:hover{opacity:1 !important;}
-            .session-toggle-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;border-radius:var(--radius-sm);transition:all 0.15s;display:flex;align-items:center;}
-            .session-toggle-btn:hover{color:var(--text-primary);background:var(--bg-hover);}
+            /* ── Root layout ── */
+            .agent-root {
+                display: flex;
+                height: 100%;
+                background: var(--bg-base);
+                position: relative;
+                overflow: hidden;
+            }
 
-            /* Existing styles */
-            #agent-input:focus{border-color:var(--accent-dim)!important;box-shadow:0 0 0 1px var(--accent-glow);}
-            #agent-send:hover{box-shadow:0 0 16px rgba(0,229,255,0.3);}
-            #agent-stop:hover{background:rgba(255,107,107,0.25);box-shadow:0 0 12px rgba(255,107,107,0.2);}
-            .agent-msg{max-width:85%;padding:10px 14px;border-radius:var(--radius-lg);line-height:1.6;font-size:13px;word-break:break-word;}
-            .agent-msg.user{align-self:flex-end;background:linear-gradient(135deg,rgba(0,229,255,0.12),rgba(108,92,231,0.12));border:1px solid rgba(0,229,255,0.15);color:var(--text-primary);}
-            .agent-msg.assistant{align-self:flex-start;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);}
-            .agent-msg .msg-role{font-size:10px;color:var(--text-muted);margin-bottom:4px;font-family:var(--font-mono);}
-            .agent-msg pre{background:var(--bg-deep);padding:10px;border-radius:var(--radius-sm);overflow-x:auto;margin:8px 0;font-size:12px;line-height:1.5;}
-            .agent-msg code{font-family:var(--font-mono);}
-            .tool-entry{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);margin-bottom:4px;background:var(--bg-elevated);border:1px solid var(--border);}
-            .tool-entry.pending{border-color:var(--accent-dim);background:var(--accent-glow);}
-            .tool-entry.done{opacity:0.7;}
-            .tool-entry.error{border-color:rgba(255,107,107,0.3);background:rgba(255,107,107,0.05);}
-            .tool-icon{font-size:12px;flex-shrink:0;}
-            .tool-name{font-weight:600;color:var(--text-primary);}
-            .tool-status{font-size:10px;color:var(--text-muted);}
-            #agent-input::-webkit-scrollbar{width:4px;}
-            #agent-input::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:2px;}
+            /* ── Sidebar ── */
+            .agent-sidebar {
+                width: 260px;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-deep);
+                border-right: 1px solid var(--border);
+                flex-shrink: 0;
+                transition: width 0.3s var(--ease-out), opacity 0.2s;
+                overflow: hidden;
+            }
+            .agent-sidebar.collapsed {
+                width: 0;
+                opacity: 0;
+                border-right: none;
+            }
+            .sidebar-top {
+                padding: 12px;
+                flex-shrink: 0;
+            }
+            .new-chat-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 10px 14px;
+                background: var(--accent-glow);
+                border: 1px solid var(--accent-dim);
+                border-radius: var(--radius-md);
+                color: var(--accent);
+                font-family: var(--font-body);
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .new-chat-btn:hover {
+                background: rgba(0, 229, 255, 0.2);
+                border-color: var(--accent);
+                box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+            }
+            .sidebar-search {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 12px 8px;
+                padding: 7px 10px;
+                background: var(--bg-surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-muted);
+                transition: border-color 0.2s;
+            }
+            .sidebar-search:focus-within {
+                border-color: var(--accent-dim);
+            }
+            .sidebar-search input {
+                flex: 1;
+                background: none;
+                border: none;
+                outline: none;
+                color: var(--text-primary);
+                font-family: var(--font-body);
+                font-size: 12px;
+            }
+            .sidebar-search input::placeholder {
+                color: var(--text-muted);
+            }
+            .session-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 4px 8px;
+            }
 
-            /* Settings drawer */
-            .settings-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);z-index:90;opacity:0;pointer-events:none;transition:opacity 0.2s;}
-            .settings-overlay.open{opacity:1;pointer-events:auto;}
-            .settings-drawer{position:absolute;top:0;right:0;bottom:0;width:340px;background:var(--bg-elevated);border-left:1px solid var(--accent-dim);z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);box-shadow:-8px 0 32px rgba(0,0,0,0.4);}
-            .settings-drawer.open{transform:translateX(0);}
-            .settings-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
-            .settings-drawer-title{font-family:var(--font-display);font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;}
-            .settings-close-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;padding:4px;display:flex;align-items:center;transition:all 0.15s;}
-            .settings-close-btn:hover{color:var(--accent-warm);border-color:var(--accent-warm);}
-            .settings-drawer-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;}
-            .settings-field{display:flex;flex-direction:column;gap:6px;}
-            .settings-label{font-family:var(--font-display);font-size:10px;letter-spacing:1.5px;color:var(--text-muted);text-transform:uppercase;}
-            .settings-input{width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font-mono);font-size:12px;outline:none;transition:border-color 0.15s,box-shadow 0.15s;box-sizing:border-box;}
-            .settings-input:focus{border-color:var(--accent-dim);box-shadow:0 0 0 1px var(--accent-glow);}
-            .settings-input::placeholder{color:var(--text-muted);opacity:0.5;}
-            .settings-input-sm{width:100px;}
-            .settings-textarea{width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font-mono);font-size:12px;outline:none;resize:vertical;min-height:80px;transition:border-color 0.15s,box-shadow 0.15s;box-sizing:border-box;line-height:1.5;}
-            .settings-textarea:focus{border-color:var(--accent-dim);box-shadow:0 0 0 1px var(--accent-glow);}
-            .settings-textarea::placeholder{color:var(--text-muted);opacity:0.5;}
-            .settings-select{width:100%;padding:8px 12px;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font-mono);font-size:12px;outline:none;transition:border-color 0.15s,box-shadow 0.15s;box-sizing:border-box;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
-            .settings-select:focus{border-color:var(--accent-dim);box-shadow:0 0 0 1px var(--accent-glow);}
-            .settings-select option{background:var(--bg-deep);color:var(--text-primary);}
-            .settings-select optgroup{color:var(--accent);font-weight:600;}
-            .settings-hint{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;min-height:14px;}
-            .settings-actions{display:flex;gap:8px;margin-top:8px;padding-top:16px;border-top:1px solid var(--border);}
-            .settings-save-btn{flex:1;padding:8px 0;background:linear-gradient(135deg,var(--accent),var(--accent-secondary));border:none;border-radius:var(--radius-sm);color:var(--bg-deep);font-family:var(--font-display);font-size:11px;letter-spacing:1px;font-weight:700;cursor:pointer;transition:all 0.15s;text-transform:uppercase;}
-            .settings-save-btn:hover{box-shadow:0 0 16px rgba(0,229,255,0.3);transform:translateY(-1px);}
-            .settings-reset-btn{padding:8px 14px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-family:var(--font-display);font-size:10px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;}
-            .settings-reset-btn:hover{color:var(--accent-warm);border-color:rgba(255,107,107,0.3);}
-            /* settings saved toast */
-            .settings-toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-deep);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--font-mono);font-size:11px;color:var(--accent);opacity:0;transition:all 0.3s;pointer-events:none;z-index:110;}
-            .settings-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+            /* ── Session items ── */
+            .session-group-label {
+                padding: 8px 8px 4px;
+                font-family: var(--font-display);
+                font-size: 10px;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                color: var(--text-muted);
+            }
+            .session-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border-radius: var(--radius-md);
+                cursor: pointer;
+                transition: all 0.15s;
+                position: relative;
+                margin-bottom: 2px;
+            }
+            .session-item:hover {
+                background: var(--bg-hover);
+            }
+            .session-item.active {
+                background: var(--accent-glow);
+                border: 1px solid rgba(0, 229, 255, 0.15);
+            }
+            .session-item-icon {
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                color: var(--text-muted);
+            }
+            .session-item.active .session-item-icon {
+                color: var(--accent);
+            }
+            .session-item-body {
+                flex: 1;
+                min-width: 0;
+            }
+            .session-item-title {
+                font-size: 13px;
+                color: var(--text-primary);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                line-height: 1.3;
+            }
+            .session-item-time {
+                font-size: 11px;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+            .session-item-delete {
+                opacity: 0;
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                cursor: pointer;
+                padding: 4px;
+                border-radius: var(--radius-sm);
+                display: flex;
+                align-items: center;
+                transition: all 0.15s;
+            }
+            .session-item:hover .session-item-delete {
+                opacity: 0.6;
+            }
+            .session-item-delete:hover {
+                opacity: 1 !important;
+                color: var(--accent-warm);
+                background: rgba(255, 107, 107, 0.1);
+            }
+
+            /* ── Main area ── */
+            .agent-main {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                position: relative;
+            }
+            .agent-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+                background: var(--bg-base);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+            .header-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .header-title span:first-child {
+                font-family: var(--font-body);
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            .model-badge {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--accent);
+                background: var(--accent-glow);
+                border: 1px solid var(--accent-dim);
+                padding: 2px 8px;
+                border-radius: 20px;
+                display: none;
+            }
+            .model-badge.visible {
+                display: inline-block;
+            }
+            .icon-btn {
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: 1px solid transparent;
+                border-radius: var(--radius-sm);
+                color: var(--text-muted);
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .icon-btn:hover {
+                color: var(--text-primary);
+                background: var(--bg-hover);
+                border-color: var(--border);
+            }
+
+            /* ── Messages ── */
+            .agent-messages {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* ── Welcome screen ── */
+            .welcome-screen {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 40px 20px;
+                position: relative;
+            }
+            .welcome-glow {
+                position: absolute;
+                width: 300px;
+                height: 300px;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(0, 229, 255, 0.06) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .welcome-icon {
+                margin-bottom: 20px;
+                filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.2));
+            }
+            .welcome-title {
+                font-family: var(--font-display);
+                font-size: 24px;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 8px;
+                letter-spacing: 2px;
+            }
+            .welcome-sub {
+                font-size: 14px;
+                color: var(--text-muted);
+                margin-bottom: 32px;
+            }
+            .welcome-chips {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                max-width: 420px;
+                width: 100%;
+            }
+            .chip {
+                padding: 14px 16px;
+                background: var(--bg-elevated);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-secondary);
+                font-family: var(--font-body);
+                font-size: 13px;
+                cursor: pointer;
+                text-align: left;
+                transition: all 0.2s;
+                line-height: 1.4;
+            }
+            .chip:hover {
+                background: var(--bg-hover);
+                border-color: var(--accent-dim);
+                color: var(--text-primary);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            }
+
+            /* ── Message rows (ChatGPT style) ── */
+            .msg-row {
+                display: flex;
+                gap: 16px;
+                padding: 20px 24px;
+                animation: msg-in 0.3s var(--ease-out);
+                max-width: 820px;
+                width: 100%;
+                margin: 0 auto;
+            }
+            @keyframes msg-in {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .msg-row.user-row {
+                background: transparent;
+            }
+            .msg-row.assistant-row {
+                background: var(--bg-surface);
+            }
+            .msg-avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: var(--radius-sm);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                font-size: 14px;
+            }
+            .msg-avatar.user-avatar {
+                background: linear-gradient(135deg, var(--accent-dim), var(--accent-secondary));
+            }
+            .msg-avatar.assistant-avatar {
+                background: var(--accent-glow);
+                border: 1px solid var(--accent-dim);
+            }
+            .msg-body {
+                flex: 1;
+                min-width: 0;
+            }
+            .msg-role-label {
+                font-family: var(--font-display);
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--text-secondary);
+                margin-bottom: 6px;
+                letter-spacing: 0.5px;
+            }
+            .msg-content {
+                font-size: 14px;
+                line-height: 1.75;
+                color: var(--text-primary);
+                word-break: break-word;
+            }
+            .msg-content pre {
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 14px 16px;
+                overflow-x: auto;
+                margin: 12px 0;
+                font-size: 12.5px;
+                line-height: 1.6;
+                position: relative;
+            }
+            .msg-content pre code {
+                font-family: var(--font-code);
+            }
+            .msg-content code {
+                font-family: var(--font-code);
+            }
+            .msg-content :not(pre) > code {
+                background: var(--bg-elevated);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 12.5px;
+                border: 1px solid var(--border);
+            }
+            .code-copy-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                padding: 4px 8px;
+                background: var(--bg-hover);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-muted);
+                font-family: var(--font-mono);
+                font-size: 10px;
+                cursor: pointer;
+                opacity: 0;
+                transition: all 0.15s;
+            }
+            .msg-content pre:hover .code-copy-btn {
+                opacity: 1;
+            }
+            .code-copy-btn:hover {
+                color: var(--accent);
+                border-color: var(--accent-dim);
+            }
+
+            /* System messages */
+            .sys-msg {
+                text-align: center;
+                font-size: 12px;
+                color: var(--text-muted);
+                padding: 8px 20px;
+                font-family: var(--font-mono);
+            }
+
+            /* ── Thinking indicator ── */
+            .thinking-indicator {
+                display: flex;
+                gap: 16px;
+                padding: 20px 24px;
+                max-width: 820px;
+                width: 100%;
+                margin: 0 auto;
+                background: var(--bg-surface);
+                animation: msg-in 0.3s var(--ease-out);
+            }
+            .thinking-dots {
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                padding: 8px 0;
+            }
+            .thinking-dots span {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--accent);
+                opacity: 0.4;
+                animation: dot-bounce 1.4s ease-in-out infinite;
+            }
+            .thinking-dots span:nth-child(2) { animation-delay: 0.16s; }
+            .thinking-dots span:nth-child(3) { animation-delay: 0.32s; }
+            @keyframes dot-bounce {
+                0%, 80%, 100% { opacity: 0.4; transform: scale(1); }
+                40% { opacity: 1; transform: scale(1.3); }
+            }
+
+            /* Streaming cursor */
+            .streaming-cursor::after {
+                content: '';
+                display: inline-block;
+                width: 2px;
+                height: 1em;
+                background: var(--accent);
+                margin-left: 2px;
+                vertical-align: text-bottom;
+                animation: cursor-blink 0.8s step-end infinite;
+            }
+            @keyframes cursor-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0; }
+            }
+
+            /* ── Input area ── */
+            .agent-input-wrap {
+                padding: 12px 24px 16px;
+                flex-shrink: 0;
+                max-width: 820px;
+                width: 100%;
+                margin: 0 auto;
+            }
+            .input-container {
+                display: flex;
+                align-items: flex-end;
+                gap: 8px;
+                background: var(--bg-elevated);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                padding: 8px 8px 8px 16px;
+                transition: border-color 0.2s, box-shadow 0.2s;
+            }
+            .input-container:focus-within {
+                border-color: var(--accent-dim);
+                box-shadow: 0 0 0 1px var(--accent-glow), 0 0 20px rgba(0, 229, 255, 0.05);
+            }
+            .input-container textarea {
+                flex: 1;
+                resize: none;
+                background: none;
+                border: none;
+                outline: none;
+                color: var(--text-primary);
+                font-family: var(--font-body);
+                font-size: 14px;
+                line-height: 1.5;
+                max-height: 160px;
+                padding: 4px 0;
+            }
+            .input-container textarea::placeholder {
+                color: var(--text-muted);
+            }
+            .input-actions {
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            .send-btn {
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--accent);
+                border: none;
+                border-radius: 50%;
+                color: var(--bg-deep);
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .send-btn:disabled {
+                opacity: 0.3;
+                cursor: default;
+            }
+            .send-btn:not(:disabled):hover {
+                background: var(--accent-bright);
+                box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+                transform: scale(1.05);
+            }
+            .stop-btn {
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 107, 107, 0.15);
+                border: 1px solid rgba(255, 107, 107, 0.3);
+                border-radius: 50%;
+                color: var(--accent-warm);
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .stop-btn:hover {
+                background: rgba(255, 107, 107, 0.25);
+                box-shadow: 0 0 12px rgba(255, 107, 107, 0.2);
+            }
+            .input-hint {
+                text-align: center;
+                font-size: 11px;
+                color: var(--text-muted);
+                margin-top: 6px;
+                opacity: 0.6;
+            }
+
+            /* ── Right panel ── */
+            .agent-panel {
+                width: 300px;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-deep);
+                border-left: 1px solid var(--border);
+                flex-shrink: 0;
+                transition: width 0.3s var(--ease-out), opacity 0.2s;
+                overflow: hidden;
+            }
+            .agent-panel.collapsed {
+                width: 0;
+                opacity: 0;
+                border-left: none;
+            }
+            .panel-section {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+            .panel-section:first-child {
+                flex: 1;
+            }
+            .panel-section-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 14px;
+                font-family: var(--font-display);
+                font-size: 11px;
+                letter-spacing: 1px;
+                color: var(--text-secondary);
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .panel-section-icon {
+                color: var(--accent);
+                display: flex;
+                align-items: center;
+            }
+            .panel-count {
+                margin-left: auto;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                color: var(--text-muted);
+                background: var(--bg-elevated);
+                padding: 1px 6px;
+                border-radius: 10px;
+            }
+            .panel-action-btn {
+                margin-left: auto;
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                font-family: var(--font-mono);
+                font-size: 10px;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: var(--radius-sm);
+                transition: all 0.15s;
+            }
+            .panel-action-btn:hover {
+                color: var(--accent);
+                background: var(--accent-glow);
+            }
+            .panel-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 8px;
+            }
+            .panel-divider {
+                height: 1px;
+                background: var(--border);
+                flex-shrink: 0;
+            }
+            .terminal-body {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--text-secondary);
+                background: var(--bg-deep);
+                line-height: 1.6;
+            }
+            .tools-body {
+                font-family: var(--font-mono);
+                font-size: 11px;
+            }
+
+            /* ── Tool entries ── */
+            .tool-entry {
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 8px 10px;
+                border-radius: var(--radius-sm);
+                margin-bottom: 4px;
+                background: var(--bg-elevated);
+                border: 1px solid var(--border);
+                transition: all 0.2s;
+            }
+            .tool-entry.pending {
+                border-color: var(--accent-dim);
+                background: var(--accent-glow);
+            }
+            .tool-entry.done {
+                opacity: 0.6;
+            }
+            .tool-entry.error {
+                border-color: rgba(255, 107, 107, 0.3);
+                background: rgba(255, 107, 107, 0.05);
+            }
+            .tool-icon {
+                font-size: 12px;
+                flex-shrink: 0;
+                line-height: 1.4;
+            }
+            .tool-info {
+                flex: 1;
+                min-width: 0;
+            }
+            .tool-name {
+                font-weight: 600;
+                color: var(--text-primary);
+                font-size: 11px;
+            }
+            .tool-status {
+                font-size: 10px;
+                color: var(--text-muted);
+                margin-top: 2px;
+                word-break: break-all;
+            }
+
+            /* ── Settings drawer ── */
+            .settings-overlay {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                z-index: 90;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.25s;
+            }
+            .settings-overlay.open {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .settings-drawer {
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 360px;
+                background: var(--bg-surface);
+                border-left: 1px solid var(--border);
+                z-index: 100;
+                display: flex;
+                flex-direction: column;
+                transform: translateX(100%);
+                transition: transform 0.3s var(--ease-out);
+                box-shadow: -8px 0 40px rgba(0, 0, 0, 0.4);
+            }
+            .settings-drawer.open {
+                transform: translateX(0);
+            }
+            .settings-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .settings-title {
+                font-family: var(--font-display);
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            .settings-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            .settings-field {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .settings-label {
+                font-family: var(--font-display);
+                font-size: 12px;
+                font-weight: 500;
+                color: var(--text-secondary);
+            }
+            .settings-input {
+                width: 100%;
+                padding: 10px 14px;
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-primary);
+                font-family: var(--font-mono);
+                font-size: 13px;
+                outline: none;
+                transition: border-color 0.2s, box-shadow 0.2s;
+                box-sizing: border-box;
+            }
+            .settings-input:focus {
+                border-color: var(--accent-dim);
+                box-shadow: 0 0 0 1px var(--accent-glow);
+            }
+            .settings-textarea {
+                width: 100%;
+                padding: 10px 14px;
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-primary);
+                font-family: var(--font-mono);
+                font-size: 13px;
+                outline: none;
+                resize: vertical;
+                min-height: 100px;
+                transition: border-color 0.2s, box-shadow 0.2s;
+                box-sizing: border-box;
+                line-height: 1.5;
+            }
+            .settings-textarea:focus {
+                border-color: var(--accent-dim);
+                box-shadow: 0 0 0 1px var(--accent-glow);
+            }
+            .settings-select {
+                width: 100%;
+                padding: 10px 14px;
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-primary);
+                font-family: var(--font-mono);
+                font-size: 13px;
+                outline: none;
+                transition: border-color 0.2s, box-shadow 0.2s;
+                box-sizing: border-box;
+                appearance: none;
+                -webkit-appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 12px center;
+                padding-right: 32px;
+            }
+            .settings-select:focus {
+                border-color: var(--accent-dim);
+                box-shadow: 0 0 0 1px var(--accent-glow);
+            }
+            .settings-select option {
+                background: var(--bg-deep);
+                color: var(--text-primary);
+            }
+            .settings-select optgroup {
+                color: var(--accent);
+                font-weight: 600;
+            }
+            .settings-hint {
+                font-size: 11px;
+                color: var(--text-muted);
+                font-family: var(--font-mono);
+            }
+            .settings-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 8px;
+                padding-top: 20px;
+                border-top: 1px solid var(--border);
+            }
+            .settings-save-btn {
+                flex: 1;
+                padding: 10px 0;
+                background: var(--accent);
+                border: none;
+                border-radius: var(--radius-md);
+                color: var(--bg-deep);
+                font-family: var(--font-display);
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s;
+                letter-spacing: 0.5px;
+            }
+            .settings-save-btn:hover {
+                background: var(--accent-bright);
+                box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+            }
+            .settings-reset-btn {
+                padding: 10px 18px;
+                background: none;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-muted);
+                font-family: var(--font-display);
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .settings-reset-btn:hover {
+                color: var(--accent-warm);
+                border-color: rgba(255, 107, 107, 0.3);
+            }
+
+            /* Toast */
+            .agent-toast {
+                position: absolute;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%) translateY(16px);
+                background: var(--bg-deep);
+                border: 1px solid var(--accent-dim);
+                border-radius: var(--radius-md);
+                padding: 8px 20px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                color: var(--accent);
+                opacity: 0;
+                transition: all 0.3s;
+                pointer-events: none;
+                z-index: 120;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            }
+            .agent-toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            /* ── Scrollbar styling ── */
+            .session-list::-webkit-scrollbar,
+            .agent-messages::-webkit-scrollbar,
+            .panel-body::-webkit-scrollbar,
+            .settings-body::-webkit-scrollbar {
+                width: 5px;
+            }
+            .session-list::-webkit-scrollbar-thumb,
+            .agent-messages::-webkit-scrollbar-thumb,
+            .panel-body::-webkit-scrollbar-thumb,
+            .settings-body::-webkit-scrollbar-thumb {
+                background: var(--text-muted);
+                border-radius: 3px;
+            }
+
+            /* ── Light theme overrides ── */
+            [data-theme="light"] .agent-root { background: var(--bg-base); }
+            [data-theme="light"] .agent-sidebar { background: var(--bg-deep); }
+            [data-theme="light"] .agent-panel { background: var(--bg-deep); }
+            [data-theme="light"] .msg-row.assistant-row { background: var(--bg-surface); }
+            [data-theme="light"] .welcome-glow { background: radial-gradient(circle, rgba(184, 134, 11, 0.06) 0%, transparent 70%); }
+            [data-theme="light"] .thinking-dots span { background: var(--accent); }
+            [data-theme="light"] .send-btn { background: var(--accent); color: var(--bg-deep); }
         `;
         container.appendChild(style);
 
+        /* ══════════════════════════════════════════
+           DOM refs
+           ══════════════════════════════════════════ */
         const messagesEl = container.querySelector('#agent-messages');
+        const welcomeEl = container.querySelector('#welcome-screen');
         const inputEl = container.querySelector('#agent-input');
         const sendBtn = container.querySelector('#agent-send');
         const stopBtn = container.querySelector('#agent-stop');
         const toolsEl = container.querySelector('#agent-tools');
+        const toolCountEl = container.querySelector('#tool-count');
         const terminalEl = container.querySelector('#agent-terminal');
         const sessionSidebar = container.querySelector('#session-sidebar');
         const sessionListEl = container.querySelector('#session-list');
         const sessionNewBtn = container.querySelector('#session-new-btn');
         const sessionToggleBtn = container.querySelector('#session-toggle-btn');
         const sessionTitleDisplay = container.querySelector('#session-title-display');
+        const modelBadge = container.querySelector('#model-badge');
+        const panelToggleBtn = container.querySelector('#panel-toggle-btn');
+        const agentPanel = container.querySelector('#agent-panel');
+        const sessionFilter = container.querySelector('#session-filter');
+        const terminalClearBtn = container.querySelector('#terminal-clear');
 
+        /* ══════════════════════════════════════════
+           State
+           ══════════════════════════════════════════ */
         let ws = null;
         let messages = [];
         let isStreaming = false;
         let currentSessionId = null;
         let sessionCache = [];
+        let _toolCount = 0;
 
         // ── Register agent panel in sidebar ──
         os.registerAgentPanel({ id: agentId, name: 'Eos Agent', windowId: win.id });
 
-        // ══════════════════════════════════════
-        // Session management
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Session management
+           ══════════════════════════════════════════ */
 
         async function loadSessions() {
             try {
@@ -193,33 +1107,65 @@ registerApp('agent', {
             }
         }
 
-        function renderSessionList() {
+        function groupSessions(sessions) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const yesterday = today - 86400000;
+            const week = today - 7 * 86400000;
+            const groups = { today: [], yesterday: [], week: [], older: [] };
+            for (const s of sessions) {
+                const t = s.updated_at || 0;
+                if (t >= today) groups.today.push(s);
+                else if (t >= yesterday) groups.yesterday.push(s);
+                else if (t >= week) groups.week.push(s);
+                else groups.older.push(s);
+            }
+            return groups;
+        }
+
+        function renderSessionList(filter = '') {
             sessionListEl.innerHTML = '';
-            for (const session of sessionCache) {
-                const el = document.createElement('div');
-                el.className = `session-item${session.id === currentSessionId ? ' active' : ''}`;
-                el.dataset.sessionId = session.id;
-                const timeStr = formatTime(session.updated_at);
-                el.innerHTML = `
-                    <div class="session-item-title">${escapeHtml(session.title)}</div>
-                    <div class="session-item-meta">
-                        <span>${session.message_count} 条消息</span>
-                        <span>·</span>
-                        <span>${timeStr}</span>
-                    </div>
-                    <button class="session-item-delete" title="删除会话">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    </button>
-                `;
-                el.addEventListener('click', (e) => {
-                    if (e.target.closest('.session-item-delete')) return;
-                    switchSession(session.id);
-                });
-                el.querySelector('.session-item-delete').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deleteSession(session.id);
-                });
-                sessionListEl.appendChild(el);
+            const lf = filter.toLowerCase();
+            const filtered = lf ? sessionCache.filter(s => (s.title || '').toLowerCase().includes(lf)) : sessionCache;
+            const groups = groupSessions(filtered);
+            const labels = { today: '今天', yesterday: '昨天', week: '最近 7 天', older: '更早' };
+
+            for (const [key, list] of Object.entries(groups)) {
+                if (list.length === 0) continue;
+                const label = document.createElement('div');
+                label.className = 'session-group-label';
+                label.textContent = labels[key];
+                sessionListEl.appendChild(label);
+
+                for (const session of list) {
+                    const el = document.createElement('div');
+                    el.className = `session-item${session.id === currentSessionId ? ' active' : ''}`;
+                    el.innerHTML = `
+                        <div class="session-item-icon">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.67 2.67 2 3.5 2h9c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H5l-3 2V3.5z" stroke="currentColor" stroke-width="1.2"/></svg>
+                        </div>
+                        <div class="session-item-body">
+                            <div class="session-item-title">${escapeHtml(session.title)}</div>
+                            <div class="session-item-time">${formatTime(session.updated_at)}</div>
+                        </div>
+                        <button class="session-item-delete" title="删除">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4L10 10M10 4L4 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        </button>
+                    `;
+                    el.addEventListener('click', (e) => {
+                        if (e.target.closest('.session-item-delete')) return;
+                        switchSession(session.id);
+                    });
+                    el.querySelector('.session-item-delete').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteSession(session.id);
+                    });
+                    sessionListEl.appendChild(el);
+                }
+            }
+
+            if (filtered.length === 0) {
+                sessionListEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">无匹配会话</div>';
             }
         }
 
@@ -230,9 +1176,13 @@ registerApp('agent', {
                 currentSessionId = session.id;
                 messagesEl.innerHTML = '';
                 messages = [];
+                showWelcome(true);
+                _toolCount = 0;
+                toolCountEl.textContent = '0';
+                toolsEl.innerHTML = '';
+                terminalEl.innerHTML = '';
                 renderSessionList();
                 updateSessionTitle('新会话');
-                addWelcomeMessage();
             } catch (e) {
                 console.warn('Failed to create session:', e);
             }
@@ -243,12 +1193,21 @@ registerApp('agent', {
             currentSessionId = sessionId;
             messagesEl.innerHTML = '';
             messages = [];
+            _toolCount = 0;
+            toolCountEl.textContent = '0';
+            toolsEl.innerHTML = '';
+            terminalEl.innerHTML = '';
 
             try {
                 const res = await os.api('GET', `/api/agent/sessions/${sessionId}/messages`);
                 const msgs = res.messages || [];
-                for (const msg of msgs) {
-                    addMessage(msg.role, msg.content, true);
+                if (msgs.length === 0) {
+                    showWelcome(true);
+                } else {
+                    showWelcome(false);
+                    for (const msg of msgs) {
+                        addMessage(msg.role, msg.content, true);
+                    }
                 }
                 const session = sessionCache.find(s => s.id === sessionId);
                 if (session) updateSessionTitle(session.title);
@@ -262,7 +1221,6 @@ registerApp('agent', {
             try {
                 await os.api('DELETE', `/api/agent/sessions/${sessionId}`);
                 sessionCache = sessionCache.filter(s => s.id !== sessionId);
-
                 if (currentSessionId === sessionId) {
                     if (sessionCache.length > 0) {
                         await switchSession(sessionCache[0].id);
@@ -281,12 +1239,10 @@ registerApp('agent', {
             if (!currentSessionId) return;
             try {
                 await os.api('POST', `/api/agent/sessions/${currentSessionId}/messages`, { role, content });
-                // Update cache
                 const session = sessionCache.find(s => s.id === currentSessionId);
                 if (session) {
                     session.message_count = (session.message_count || 0) + 1;
                     session.updated_at = Date.now();
-                    // Auto-generate title from first user message
                     if (role === 'user' && session.title === '新会话') {
                         const title = content.slice(0, 30).replace(/\n/g, ' ');
                         await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title });
@@ -302,7 +1258,7 @@ registerApp('agent', {
         }
 
         function updateSessionTitle(title) {
-            sessionTitleDisplay.textContent = title || '新会话';
+            sessionTitleDisplay.textContent = title || 'Eos Agent';
         }
 
         function formatTime(ts) {
@@ -312,19 +1268,17 @@ registerApp('agent', {
             const diffMs = now - d;
             const diffMin = Math.floor(diffMs / 60000);
             const diffHr = Math.floor(diffMs / 3600000);
-
             if (diffMin < 1) return '刚刚';
             if (diffMin < 60) return `${diffMin} 分钟前`;
             if (diffHr < 24) return `${diffHr} 小时前`;
-
             const month = d.getMonth() + 1;
             const day = d.getDate();
             return `${month}/${day}`;
         }
 
-        // ══════════════════════════════════════
-        // WebSocket connection
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           WebSocket connection
+           ══════════════════════════════════════════ */
 
         function connect() {
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -333,18 +1287,17 @@ registerApp('agent', {
             ws.onopen = () => {
                 os.updateAgentPanel(agentId, { status: 'idle', contextTokens: 0 });
                 addSystemMessage('已连接到 Agent 引擎');
-                // Send settings to engine
                 const s = loadSettings();
                 if (s.model) {
                     ws.send(JSON.stringify({ type: 'configure', settings: s }));
+                    updateModelBadge(s.model);
                 }
             };
 
             ws.onmessage = (e) => {
                 try {
-                    const data = JSON.parse(e.data);
-                    handleMessage(data);
-                } catch (err) {
+                    handleMessage(JSON.parse(e.data));
+                } catch {
                     appendAssistantText(e.data);
                 }
             };
@@ -372,6 +1325,7 @@ registerApp('agent', {
                 case 'thinking':
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'thinking' });
+                    showThinkingIndicator();
                     if (data.call_id && data.model) {
                         _activeCallId = data.call_id;
                         os.registerModelCall({
@@ -385,42 +1339,38 @@ registerApp('agent', {
                     }
                     break;
                 case 'text':
+                    removeThinkingIndicator();
                     appendAssistantText(data.content);
-                    _finishActiveCall('done', {
-                        tokens: data.tokens || 0,
-                        latency: data.latency || 0,
-                    });
+                    _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
                 case 'tool_call':
+                    removeThinkingIndicator();
                     addToolEntry(data.name, data.arguments, 'pending');
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
-                    _finishActiveCall('done', {
-                        tokens: data.tokens || 0,
-                        latency: data.latency || 0,
-                    });
+                    _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
                 case 'tool_result':
                     updateToolEntry(data.name, data.result, data.error);
                     os.updateAgentPanel(agentId, { status: 'output' });
                     break;
                 case 'done':
+                    removeThinkingIndicator();
+                    finishAssistantMessage();
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
-                    if (data.tokens) {
-                        os.updateAgentPanel(agentId, { contextTokens: data.tokens });
-                    }
-                    if (data.queued) {
-                        addSystemMessage(`队列中还有 ${data.queued} 条消息等待处理`);
-                    }
+                    if (data.tokens) os.updateAgentPanel(agentId, { contextTokens: data.tokens });
+                    if (data.queued) addSystemMessage(`队列中还有 ${data.queued} 条消息等待处理`);
                     break;
                 case 'error':
+                    removeThinkingIndicator();
                     _finishActiveCall('error', { error: data.message });
                     addSystemMessage('错误: ' + data.message);
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
                     break;
                 case 'interrupted':
+                    removeThinkingIndicator();
                     addSystemMessage('Agent 已中断');
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
@@ -431,15 +1381,40 @@ registerApp('agent', {
             }
         }
 
-        // ══════════════════════════════════════
-        // Message rendering
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Message rendering
+           ══════════════════════════════════════════ */
+
+        function showWelcome(show) {
+            if (!welcomeEl) return;
+            welcomeEl.style.display = show ? 'flex' : 'none';
+        }
 
         function addMessage(role, content, skipPersist = false) {
-            const el = document.createElement('div');
-            el.className = `agent-msg ${role}`;
-            el.innerHTML = `<div class="msg-role">${role === 'user' ? '👤 你' : '🤖 Agent'}</div><div>${formatContent(content)}</div>`;
-            messagesEl.appendChild(el);
+            showWelcome(false);
+            const row = document.createElement('div');
+            row.className = `msg-row ${role === 'user' ? 'user-row' : 'assistant-row'}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = `msg-avatar ${role === 'user' ? 'user-avatar' : 'assistant-avatar'}`;
+            avatar.textContent = role === 'user' ? 'U' : 'E';
+
+            const body = document.createElement('div');
+            body.className = 'msg-body';
+
+            const label = document.createElement('div');
+            label.className = 'msg-role-label';
+            label.textContent = role === 'user' ? '你' : 'Eos Agent';
+
+            const contentEl = document.createElement('div');
+            contentEl.className = 'msg-content';
+            contentEl.innerHTML = formatContent(content);
+
+            body.appendChild(label);
+            body.appendChild(contentEl);
+            row.appendChild(avatar);
+            row.appendChild(body);
+            messagesEl.appendChild(row);
             messagesEl.scrollTop = messagesEl.scrollHeight;
             messages.push({ role, content });
 
@@ -449,63 +1424,104 @@ registerApp('agent', {
         }
 
         function addSystemMessage(text) {
+            showWelcome(false);
             const el = document.createElement('div');
-            el.style.cssText = 'text-align:center;font-size:10.5px;color:var(--text-muted);padding:4px 0;';
+            el.className = 'sys-msg';
             el.textContent = text;
             messagesEl.appendChild(el);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
-        function addWelcomeMessage() {
-            addMessage('assistant', '你好！我是 Eos Agent，有什么需要帮助的？\n\n我可以帮你：\n- 读写和编辑文件\n- 运行终端命令\n- 分析和重构代码\n- 回答技术问题', true);
+        let _thinkingEl = null;
+
+        function showThinkingIndicator() {
+            if (_thinkingEl) return;
+            showWelcome(false);
+            _thinkingEl = document.createElement('div');
+            _thinkingEl.className = 'thinking-indicator';
+            _thinkingEl.innerHTML = `
+                <div class="msg-avatar assistant-avatar">E</div>
+                <div class="msg-body">
+                    <div class="msg-role-label">Eos Agent</div>
+                    <div class="thinking-dots"><span></span><span></span><span></span></div>
+                </div>
+            `;
+            messagesEl.appendChild(_thinkingEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function removeThinkingIndicator() {
+            if (_thinkingEl) {
+                _thinkingEl.remove();
+                _thinkingEl = null;
+            }
         }
 
         let _currentAssistantEl = null;
         let _assistantContent = '';
+        let _assistantContentEl = null;
 
         function appendAssistantText(text) {
             if (!_currentAssistantEl) {
                 _currentAssistantEl = document.createElement('div');
-                _currentAssistantEl.className = 'agent-msg assistant';
-                _currentAssistantEl.innerHTML = `<div class="msg-role">🤖 Agent</div><div class="msg-content"></div>`;
+                _currentAssistantEl.className = 'msg-row assistant-row';
+                _currentAssistantEl.innerHTML = `
+                    <div class="msg-avatar assistant-avatar">E</div>
+                    <div class="msg-body">
+                        <div class="msg-role-label">Eos Agent</div>
+                        <div class="msg-content streaming-cursor"></div>
+                    </div>
+                `;
                 messagesEl.appendChild(_currentAssistantEl);
+                _assistantContentEl = _currentAssistantEl.querySelector('.msg-content');
                 _assistantContent = '';
             }
             _assistantContent += text;
-            _currentAssistantEl.querySelector('.msg-content').innerHTML += formatContent(text);
+            _assistantContentEl.innerHTML = formatContent(_assistantContent);
+            _assistantContentEl.classList.add('streaming-cursor');
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
 
         function finishAssistantMessage() {
             if (_currentAssistantEl) {
-                const content = _assistantContent || _currentAssistantEl.querySelector('.msg-content').textContent;
+                const content = _assistantContent || _assistantContentEl.textContent;
+                _assistantContentEl.classList.remove('streaming-cursor');
                 messages.push({ role: 'assistant', content });
                 persistMessage('assistant', content);
                 _currentAssistantEl = null;
                 _assistantContent = '';
+                _assistantContentEl = null;
             }
         }
 
         function formatContent(text) {
             return text
-                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-                .replace(/`([^`]+)`/g, '<code style="background:var(--bg-deep);padding:1px 4px;border-radius:3px;">$1</code>')
+                .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+                    const escaped = escapeHtml(code);
+                    const langLabel = lang ? `<span style="position:absolute;top:6px;left:10px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">${lang}</span>` : '';
+                    return `<pre style="position:relative">${langLabel}<button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.parentElement.textContent.replace('复制','').trim());this.textContent='已复制';setTimeout(()=>this.textContent='复制',1500)">复制</button><code>${escaped}</code></pre>`;
+                })
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
                 .replace(/\n/g, '<br>');
         }
 
-        // ══════════════════════════════════════
-        // Tool entries
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Tool entries
+           ══════════════════════════════════════════ */
 
         function addToolEntry(name, args, status) {
+            _toolCount++;
+            toolCountEl.textContent = _toolCount;
             const el = document.createElement('div');
             el.className = `tool-entry ${status}`;
             el.dataset.toolName = name;
             const argsStr = typeof args === 'string' ? args : JSON.stringify(args || {});
             el.innerHTML = `
                 <span class="tool-icon">${status === 'pending' ? '⏳' : '✅'}</span>
-                <span class="tool-name">${escapeHtml(name)}</span>
-                <span class="tool-status">${escapeHtml(argsStr.slice(0, 40))}</span>
+                <div class="tool-info">
+                    <div class="tool-name">${escapeHtml(name)}</div>
+                    <div class="tool-status">${escapeHtml(argsStr.slice(0, 60))}</div>
+                </div>
             `;
             toolsEl.appendChild(el);
             toolsEl.scrollTop = toolsEl.scrollHeight;
@@ -518,14 +1534,13 @@ registerApp('agent', {
                     el.classList.remove('pending');
                     el.classList.add(error ? 'error' : 'done');
                     el.querySelector('.tool-icon').textContent = error ? '❌' : '✅';
-                    if (error) {
-                        el.querySelector('.tool-status').textContent = error.slice(0, 50);
-                    }
+                    if (error) el.querySelector('.tool-status').textContent = error.slice(0, 60);
                     break;
                 }
             }
             if (result) {
-                terminalEl.innerHTML += `<div style="color:var(--accent);">$ ${escapeHtml(name)}</div><div>${escapeHtml(typeof result === 'string' ? result : JSON.stringify(result)).slice(0, 500)}</div>`;
+                const r = typeof result === 'string' ? result : JSON.stringify(result);
+                terminalEl.innerHTML += `<div style="color:var(--accent)">$ ${escapeHtml(name)}</div><div>${escapeHtml(r).slice(0, 500)}</div>`;
                 terminalEl.scrollTop = terminalEl.scrollHeight;
             }
         }
@@ -536,28 +1551,27 @@ registerApp('agent', {
             return d.innerHTML;
         }
 
-        // ══════════════════════════════════════
-        // Send message
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Send message
+           ══════════════════════════════════════════ */
 
         function _setStreaming(active) {
             isStreaming = active;
             stopBtn.style.display = active ? 'flex' : 'none';
             sendBtn.style.display = active ? 'none' : 'flex';
+            sendBtn.disabled = !inputEl.value.trim() && !active;
         }
 
         async function sendMessage() {
             const text = inputEl.value.trim();
             if (!text) return;
 
-            // Ensure session exists
-            if (!currentSessionId) {
-                await createNewSession();
-            }
+            if (!currentSessionId) await createNewSession();
 
             addMessage('user', text);
             inputEl.value = '';
-            inputEl.style.height = '40px';
+            inputEl.style.height = '44px';
+            sendBtn.disabled = true;
 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'message', content: text }));
@@ -565,7 +1579,6 @@ registerApp('agent', {
                     _setStreaming(true);
                     os.updateAgentPanel(agentId, { status: 'thinking' });
                 }
-                // Reset assistant state for each new message (queued or fresh)
                 _currentAssistantEl = null;
                 _assistantContent = '';
             } else {
@@ -590,23 +1603,50 @@ registerApp('agent', {
         });
 
         inputEl.addEventListener('input', () => {
-            inputEl.style.height = '40px';
-            inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+            inputEl.style.height = '44px';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+            sendBtn.disabled = !inputEl.value.trim() && !isStreaming;
         });
 
-        // ══════════════════════════════════════
-        // Session sidebar toggle
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Welcome chips
+           ══════════════════════════════════════════ */
+
+        container.querySelectorAll('.chip[data-prompt]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                inputEl.value = chip.dataset.prompt;
+                inputEl.style.height = '44px';
+                inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+                sendBtn.disabled = false;
+                inputEl.focus();
+            });
+        });
+
+        /* ══════════════════════════════════════════
+           Sidebar & panel toggles
+           ══════════════════════════════════════════ */
 
         sessionToggleBtn.addEventListener('click', () => {
             sessionSidebar.classList.toggle('collapsed');
         });
 
+        panelToggleBtn.addEventListener('click', () => {
+            agentPanel.classList.toggle('collapsed');
+        });
+
         sessionNewBtn.addEventListener('click', createNewSession);
 
-        // ══════════════════════════════════════
-        // Settings drawer
-        // ══════════════════════════════════════
+        sessionFilter.addEventListener('input', () => {
+            renderSessionList(sessionFilter.value);
+        });
+
+        terminalClearBtn.addEventListener('click', () => {
+            terminalEl.innerHTML = '';
+        });
+
+        /* ══════════════════════════════════════════
+           Settings drawer
+           ══════════════════════════════════════════ */
 
         const settingsBtn = container.querySelector('#agent-settings-btn');
         const settingsOverlay = container.querySelector('#agent-settings-overlay');
@@ -620,7 +1660,6 @@ registerApp('agent', {
         const settingsResetBtn = container.querySelector('#settings-reset-btn');
 
         const SETTINGS_KEY = 'eos-agent-settings';
-
         const DEFAULT_SETTINGS = {
             model: '',
             systemPrompt: '你是 Eos Agent，一个强大的 AI 编程助手。\n你可以读写文件、执行终端命令、分析代码。\n请用中文回复。',
@@ -639,17 +1678,26 @@ registerApp('agent', {
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
         }
 
+        function updateModelBadge(modelRef) {
+            if (modelRef) {
+                const short = modelRef.split('/').pop() || modelRef;
+                modelBadge.textContent = short;
+                modelBadge.classList.add('visible');
+            } else {
+                modelBadge.classList.remove('visible');
+            }
+        }
+
         async function populateModelSelect() {
             try {
                 const models = await os.llm.getModels();
                 const select = settingsModel;
                 select.innerHTML = '';
                 if (!models || models.length === 0) {
-                    select.innerHTML = '<option value="">未配置模型（请在设置中添加 Provider）</option>';
+                    select.innerHTML = '<option value="">未配置模型</option>';
                     settingsModelHint.textContent = '请在系统设置中配置 LLM Provider';
                     return;
                 }
-                // Group by provider
                 const grouped = {};
                 models.forEach(m => {
                     if (!grouped[m.provider_name]) grouped[m.provider_name] = [];
@@ -671,7 +1719,7 @@ registerApp('agent', {
                     select.appendChild(group);
                 });
                 settingsModelHint.textContent = `共 ${models.length} 个模型`;
-            } catch (e) {
+            } catch {
                 settingsModel.innerHTML = '<option value="">加载失败</option>';
                 settingsModelHint.textContent = '无法获取模型列表';
             }
@@ -704,15 +1752,15 @@ registerApp('agent', {
         }
 
         function showToast(msg) {
-            let toast = container.querySelector('.settings-toast');
+            let toast = container.querySelector('.agent-toast');
             if (!toast) {
                 toast = document.createElement('div');
-                toast.className = 'settings-toast';
-                container.appendChild(toast);
+                toast.className = 'agent-toast';
+                container.querySelector('.agent-root').appendChild(toast);
             }
             toast.textContent = msg;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 1800);
+            setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
         settingsBtn.addEventListener('click', openSettings);
@@ -723,7 +1771,7 @@ registerApp('agent', {
             const s = readSettingsForm();
             saveSettings(s);
             closeSettings();
-            // Apply immediately if connected
+            updateModelBadge(s.model);
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'configure', settings: s }));
                 showToast('设置已保存并生效');
@@ -738,20 +1786,18 @@ registerApp('agent', {
             showToast('已重置为默认值');
         });
 
-        // ══════════════════════════════════════
-        // Cleanup & init
-        // ══════════════════════════════════════
+        /* ══════════════════════════════════════════
+           Cleanup & init
+           ══════════════════════════════════════════ */
 
         win.on('close', () => {
             if (ws) ws.close();
             os.removeAgentPanel(agentId);
         });
 
-        // Connect WebSocket
         addSystemMessage('正在连接 Agent 引擎...');
         connect();
 
-        // Load sessions and restore
         loadSessions().then(() => {
             if (sessionCache.length > 0) {
                 switchSession(sessionCache[0].id);
