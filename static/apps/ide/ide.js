@@ -114,6 +114,7 @@ registerApp('ide', {
         sidebarToggle.addEventListener('click', () => {
             sidebarCollapsed = !sidebarCollapsed;
             sidebar.classList.toggle('collapsed', sidebarCollapsed);
+            saveIdeState();
         });
 
         // ── Panel toggle ──
@@ -121,6 +122,7 @@ registerApp('ide', {
             panelVisible = !panelVisible;
             panelEl.style.display = panelVisible ? '' : 'none';
             panelResize.style.display = panelVisible ? '' : 'none';
+            saveIdeState();
         });
 
         // ── Panel resize ──
@@ -136,7 +138,7 @@ registerApp('ide', {
             const dy = resizeStartY - e.clientY;
             panelEl.style.height = Math.max(60, Math.min(500, resizeStartH + dy)) + 'px';
         });
-        document.addEventListener('mouseup', () => { resizingPanel = false; });
+        document.addEventListener('mouseup', () => { if (resizingPanel) { resizingPanel = false; saveIdeState(); } });
 
         // ── Run button ──
         const runCommands = {
@@ -304,6 +306,16 @@ registerApp('ide', {
             }
         }
 
+        function saveIdeState() {
+            win._ideState = {
+                openTabs: openTabs.map(t => ({ path: t.path, name: t.name })),
+                activeTabPath: activeTab?.path || null,
+                sidebarCollapsed,
+                panelVisible,
+                panelHeight: panelEl?.offsetHeight || 180
+            };
+        }
+
         function activateTab(tab) {
             openTabs.forEach(t => t.tabEl.classList.remove('active'));
             tab.tabEl.classList.add('active');
@@ -316,6 +328,7 @@ registerApp('ide', {
                     os.api('PUT', '/api/fs/write', { path: tab.path, content: tab.model.getValue() });
                 }, 1000);
             });
+            saveIdeState();
         }
 
         function closeTab(tab) {
@@ -328,6 +341,7 @@ registerApp('ide', {
                 if (openTabs.length > 0) activateTab(openTabs[Math.min(idx, openTabs.length - 1)]);
                 else { monacoEditor.setModel(null); activeTab = null; }
             }
+            saveIdeState();
         }
 
         function getLang(name) {
@@ -357,6 +371,40 @@ registerApp('ide', {
             });
         });
 
+        // Restore saved state
+        async function restoreIdeState() {
+            const state = win._ideState;
+            if (!state) return;
+            if (state.sidebarCollapsed) {
+                sidebarCollapsed = true;
+                sidebar.classList.add('collapsed');
+            }
+            if (state.panelVisible === false) {
+                panelVisible = false;
+                panelEl.style.display = 'none';
+                panelResize.style.display = 'none';
+            }
+            if (state.panelHeight) {
+                panelEl.style.height = state.panelHeight + 'px';
+            }
+            if (state.openTabs?.length) {
+                // Wait for Monaco
+                const waitForMonaco = () => new Promise(resolve => {
+                    const check = () => monacoEditor ? resolve() : setTimeout(check, 200);
+                    check();
+                });
+                await waitForMonaco();
+                for (const tab of state.openTabs) {
+                    await openFile(tab.path);
+                }
+                if (state.activeTabPath) {
+                    const target = openTabs.find(t => t.path === state.activeTabPath);
+                    if (target) activateTab(target);
+                }
+            }
+        }
+
         initEditor();
+        restoreIdeState();
     }
 });

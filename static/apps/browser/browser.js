@@ -73,6 +73,7 @@ registerApp('browser', {
             updateNav();
             lastOpened.textContent = '已打开: ' + url;
             urlInput.value = url;
+            win._browserState = { history: [...history], historyIdx };
         }
 
         function updateNav() {
@@ -99,5 +100,16 @@ registerApp('browser', {
         container.querySelectorAll('.br-shortcut').forEach(el => {
             el.addEventListener('click', () => openExternal(el.dataset.url));
         });
+
+        // Restore saved state
+        if (win._browserState) {
+            history.push(...(win._browserState.history || []));
+            historyIdx = win._browserState.historyIdx ?? -1;
+            if (historyIdx >= 0 && history[historyIdx]) {
+                urlInput.value = history[historyIdx];
+                lastOpened.textContent = '已打开: ' + history[historyIdx];
+            }
+            updateNav();
+        }
     }
 });

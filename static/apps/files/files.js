@@ -99,17 +99,23 @@ registerApp('files', {
         const hiddenBtn = container.querySelector('#fm-toggle-hidden');
 
         // ── View mode toggle ──
+        function saveFilesState() {
+            win._filesState = { currentPath, viewMode, showHidden };
+        }
+
         viewListBtn.addEventListener('click', () => {
             viewMode = 'list';
             viewListBtn.classList.add('active');
             viewGridBtn.classList.remove('active');
             renderItems();
+            saveFilesState();
         });
         viewGridBtn.addEventListener('click', () => {
             viewMode = 'icon';
             viewGridBtn.classList.add('active');
             viewListBtn.classList.remove('active');
             renderItems();
+            saveFilesState();
         });
 
         // ── Hidden files toggle ──
@@ -118,6 +124,7 @@ registerApp('files', {
             hiddenBtn.innerHTML = showHidden ? SVG_ICONS.eye : SVG_ICONS.eyeOff;
             hiddenBtn.classList.toggle('active', showHidden);
             renderItems();
+            saveFilesState();
         });
 
         // ── Filter items ──
@@ -212,6 +219,7 @@ registerApp('files', {
                 allItems = data.items || [];
                 renderItems();
                 loadTree(currentPath);
+                saveFilesState();
             } catch (e) {
                 list.innerHTML = `<div style="padding:20px;color:var(--accent-warm);">连接失败: ${e.message}</div>`;
             }
@@ -280,7 +288,20 @@ registerApp('files', {
             }
         });
 
-        // Init
-        loadDir('');
+        // Init - restore state if available
+        if (win._filesState) {
+            currentPath = win._filesState.currentPath || '';
+            viewMode = win._filesState.viewMode || 'list';
+            showHidden = win._filesState.showHidden || false;
+            hiddenBtn.innerHTML = showHidden ? SVG_ICONS.eye : SVG_ICONS.eyeOff;
+            hiddenBtn.classList.toggle('active', showHidden);
+            if (viewMode === 'icon') {
+                viewGridBtn.classList.add('active');
+                viewListBtn.classList.remove('active');
+            }
+            loadDir(currentPath);
+        } else {
+            loadDir('');
+        }
     }
 });
