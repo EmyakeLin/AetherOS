@@ -1443,6 +1443,7 @@ registerApp('agent', {
         async function switchSession(sessionId) {
             if (sessionId === currentSessionId) return;
             currentSessionId = sessionId;
+            win._agentSessionId = sessionId;
             messagesEl.innerHTML = '';
             messages = [];
             _toolCount = 0;
@@ -2694,7 +2695,10 @@ registerApp('agent', {
         connect();
 
         loadSessions().then(() => {
-            if (sessionCache.length > 0) {
+            // Restore saved session if available
+            if (win._agentSessionId && sessionCache.some(s => s.id === win._agentSessionId)) {
+                switchSession(win._agentSessionId);
+            } else if (sessionCache.length > 0) {
                 switchSession(sessionCache[0].id);
             } else {
                 createNewSession();
