@@ -1560,13 +1560,14 @@ registerApp('agent', {
                                 // 添加工具面板到文本位置
                                 const toolIndicator = document.createElement('div');
                                 toolIndicator.className = 'tool-call-indicator completed';
+                                const mergedCount = segment.calls.length;
                                 toolIndicator.innerHTML = `
                                     <div class="tool-call-content">
                                         <span class="tool-call-icon">⚡</span>
                                         <span class="tool-call-text">Function Calling — 工具调用结束</span>
                                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                                         <span class="tool-call-time"></span>
-                                        <span class="tool-call-count" data-full-round="Round ${currentIteration}">Round ${currentIteration}</span>
+                                        <span class="tool-call-count" data-full-round="Round ${mergedCount}">Round ${mergedCount}</span>
                                     </div>
                                 `;
                                 toolIndicator.addEventListener('click', () => {
@@ -1643,6 +1644,8 @@ registerApp('agent', {
                                     document.body.appendChild(overlay);
                                 });
                                 textContainer.appendChild(toolIndicator);
+                                // 立即触发响应式更新
+                                updateToolIndicatorResponsive();
 
                                 _toolCallHistory.push({
                                     name: toolName,
@@ -1930,10 +1933,10 @@ registerApp('agent', {
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
                 const countEl = _toolIndicatorEl.querySelector('.tool-call-count');
-                countEl.textContent = `Round ${iterationCount}`;
-                countEl.dataset.fullRound = `Round ${iterationCount}`;
+                countEl.textContent = `Round ${_iterationInRound}`;
+                countEl.dataset.fullRound = `Round ${_iterationInRound}`;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = iterationCount;
+                _toolIndicatorEl.dataset.iterationCount = _iterationInRound;
             } else {
                 // 先渲染缓冲区的文本
                 flushPendingText();
@@ -1953,12 +1956,12 @@ registerApp('agent', {
                         <span class="tool-call-text">Function Calling — 正在调用工具</span>
                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                         <span class="tool-call-time"></span>
-                        <span class="tool-call-count" data-full-round="Round ${iterationCount}">Round ${iterationCount}</span>
+                        <span class="tool-call-count" data-full-round="Round ${_iterationInRound}">Round ${_iterationInRound}</span>
                     </div>
                     <div class="tool-call-scan"></div>
                 `;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = iterationCount;
+                _toolIndicatorEl.dataset.iterationCount = _iterationInRound;
 
                 // 创建或复用 assistant 消息块
                 if (!_currentAssistantEl) {
@@ -1982,6 +1985,9 @@ registerApp('agent', {
 
                 // 将工具调用指示器插入到 msg-text 容器中（在当前文本之后）
                 _assistantTextEl.appendChild(_toolIndicatorEl);
+
+                // 立即触发响应式更新
+                updateToolIndicatorResponsive();
 
                 // 智能滚动
                 const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 100;
