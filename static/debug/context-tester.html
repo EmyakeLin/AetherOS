@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eos-Context 对话测试器</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-panel: #111118;
+    --bg-card: #16161e;
+    --bg-hover: #1a1a24;
+    --bg-input: #0d0d14;
+    --border: #2a2a3a;
+    --border-active: #3d3d55;
+    --text: #e0e0e8;
+    --text-dim: #8a8aa0;
+    --text-muted: #4a4a60;
+    --accent: #00e5ff;
+    --accent-dim: rgba(0, 229, 255, 0.12);
+    --accent-glow: rgba(0, 229, 255, 0.25);
+    --success: #00e676;
+    --success-dim: rgba(0, 230, 118, 0.12);
+    --warning: #ffab40;
+    --warning-dim: rgba(255, 171, 64, 0.12);
+    --error: #ff5252;
+    --error-dim: rgba(255, 82, 82, 0.12);
+    --purple: #b388ff;
+    --purple-dim: rgba(179, 136, 255, 0.12);
+    --yellow: #ffd740;
+    --yellow-dim: rgba(255, 215, 64, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+    background: var(--bg-deep);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: 48px 1fr;
+    height: 100vh;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  header {
+    grid-column: 1 / -1;
+    background: var(--bg-panel);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header .logo {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  header .sep { width: 1px; height: 20px; background: var(--border); }
+
+  header .title { font-size: 12px; color: var(--text-dim); }
+
+  header .actions { margin-left: auto; display: flex; gap: 6px; }
+
+  button {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.12s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  button:hover { background: var(--bg-hover); border-color: var(--border-active); }
+  button.primary { background: var(--accent-dim); border-color: rgba(0, 229, 255, 0.3); color: var(--accent); }
+  button.primary:hover { background: var(--accent-glow); }
+  button.danger { color: var(--error); border-color: rgba(255, 82, 82, 0.3); }
+  button.danger:hover { background: var(--error-dim); }
+  button.success { color: var(--success); border-color: rgba(0, 230, 118, 0.3); }
+
+  input, select, textarea {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.12s;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; }
+
+  label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+    display: block;
+  }
+
+  /* ── Chat Area ──────────────────────────────────────── */
+  .chat-area {
+    background: var(--bg-deep);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    position: relative;
+    animation: fadeIn 0.15s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .msg.user { align-self: flex-end; background: var(--accent-dim); border: 1px solid rgba(0, 229, 255, 0.2); }
+  .msg.assistant { align-self: flex-start; background: var(--bg-card); border: 1px solid var(--border); }
+  .msg.tool { align-self: flex-start; background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--success); max-width: 90%; }
+
+  .msg .msg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .msg .msg-role { font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .msg.user .msg-role { color: var(--accent); }
+  .msg.assistant .msg-role { color: var(--purple); }
+  .msg.tool .msg-role { color: var(--success); }
+
+  .msg .msg-content { white-space: pre-wrap; word-break: break-word; }
+
+  .msg .tool-calls-block {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  .msg .tool-call-item {
+    margin-bottom: 6px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+
+  .msg .tool-call-item:last-child { margin-bottom: 0; }
+
+  .msg .tc-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .msg .tc-name { color: var(--yellow); font-weight: 600; font-size: 11px; }
+  .msg .tc-id { color: var(--text-muted); font-size: 9px; }
+  .msg .tc-args { color: var(--text-dim); font-size: 10px; white-space: pre-wrap; word-break: break-all; }
+
+  .msg .remove-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text-muted);
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .msg:hover .remove-btn { display: flex; }
+  .msg .remove-btn:hover { background: var(--error-dim); color: var(--error); border-color: var(--error); }
+
+  /* ── Input Bar ──────────────────────────────────────── */
+  .input-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-panel);
+  }
+
+  .input-section {
+    margin-bottom: 12px;
+  }
+
+  .input-section:last-child { margin-bottom: 0; }
+
+  .input-section .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .input-section .section-label::before {
+    content: '';
+    width: 3px;
+    height: 10px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .input-row:last-child { margin-bottom: 0; }
+
+  .input-row textarea { flex: 1; min-height: 36px; max-height: 100px; }
+  .input-row .role-select { width: 90px; }
+
+  /* ── Right Panel ────────────────────────────────────── */
+  .right-panel {
+    background: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid var(--border);
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  /* ── Template Section ───────────────────────────────── */
+  .template-section {
+    margin-bottom: 16px;
+  }
+
+  .template-section .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .template-btn {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  .template-btn .tpl-name { color: var(--yellow); font-weight: 600; }
+  .template-btn .tpl-desc { color: var(--text-muted); font-size: 9px; margin-top: 2px; }
+
+  /* ── Output Panel ───────────────────────────────────── */
+  .output-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .output-block .block-header {
+    padding: 6px 10px;
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .output-block .block-header .idx {
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+  }
+
+  .output-block .block-header .role { text-transform: uppercase; letter-spacing: 0.3px; }
+  .output-block .block-header .role.user { color: var(--accent); }
+  .output-block .block-header .role.assistant { color: var(--purple); }
+  .output-block .block-header .role.tool { color: var(--success); }
+  .output-block .block-header .role.system { color: var(--warning); }
+
+  .output-block .block-content {
+    padding: 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+    color: var(--text-dim);
+  }
+
+  .output-block .block-content .k { color: var(--accent); }
+  .output-block .block-content .s { color: var(--success); }
+  .output-block .block-content .n { color: var(--yellow); }
+  .output-block .block-content .e { color: var(--error); }
+
+  .stats-bar {
+    padding: 8px 12px;
+    background: var(--bg-deep);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .stats-bar .stat-val { color: var(--text-dim); font-weight: 600; }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .empty-state svg { width: 40px; height: 40px; opacity: 0.2; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+  /* ── Diff styling ───────────────────────────────────── */
+  .diff-add { color: var(--success); background: rgba(0, 230, 118, 0.05); }
+  .diff-del { color: var(--error); background: rgba(255, 82, 82, 0.05); }
+  .diff-hunk { color: var(--purple); }
+  .diff-file { color: var(--yellow); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      Eos-Context
+    </div>
+    <div class="sep"></div>
+    <div class="title">对话测试器 — 扮演模型编写 function calling</div>
+    <div class="actions">
+      <button onclick="resetAll()" class="danger">重置</button>
+      <button onclick="processAndShow()" class="primary">处理输出</button>
+    </div>
+  </header>
+
+  <!-- Chat Area -->
+  <div class="chat-area">
+    <div id="chatMessages" class="chat-messages">
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        添加消息或加载模板开始测试
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <!-- User / System message -->
+      <div class="input-section">
+        <div class="section-label">添加消息</div>
+        <div class="input-row">
+          <select id="msgRole" class="role-select" onchange="onRoleChange()">
+            <option value="user">User</option>
+            <option value="assistant">Assistant</option>
+            <option value="tool">Tool</option>
+          </select>
+          <textarea id="msgContent" placeholder="消息内容..." rows="1"></textarea>
+          <button onclick="addMessage()" class="primary">添加</button>
+        </div>
+      </div>
+
+      <!-- Assistant: function calling -->
+      <div class="input-section" id="assistantSection" style="display:none">
+        <div class="section-label">Function Calling (JSON 数组)</div>
+        <div class="input-row">
+          <textarea id="toolCallsJson" placeholder='[{"id":"call_1","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"test.py\"}"}}]' rows="3" style="flex:1"></textarea>
+        </div>
+        <div class="input-row" style="margin-top:4px">
+          <button onclick="addAssistantWithTools()" class="primary" style="flex:1">添加 Assistant + Function Calling</button>
+        </div>
+      </div>
+
+      <!-- Tool: result -->
+      <div class="input-section" id="toolSection" style="display:none">
+        <div class="section-label">工具返回</div>
+        <div class="input-row">
+          <input id="toolCallId" placeholder="tool_call_id (如 call_1)" style="width:120px">
+          <textarea id="toolResult" placeholder="工具返回结果..." rows="2" style="flex:1"></textarea>
+        </div>
+        <div class="input-row" style="margin-top:4px">
+          <button onclick="addToolResult()" class="primary" style="flex:1">添加 Tool Result</button>
+          <button onclick="callRealTool()" style="flex:1">调用真实工具</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="panel-header">
+      <span class="panel-title">模板 & 输出</span>
+    </div>
+    <div class="panel-content">
+      <!-- Templates -->
+      <div class="template-section">
+        <div class="section-title">快速模板</div>
+        <button class="template-btn" onclick="loadTemplate('basic_read')">
+          <div class="tpl-name">基本读取</div>
+          <div class="tpl-desc">user → assistant(read_file) → tool → assistant</div>
+        </button>
+        <button class="template-btn" onclick="loadTemplate('write_then_read')">
+          <div class="tpl-name">写后读取</div>
+          <div class="tpl-desc">write_file → read_file，触发墓碑化</div>
+        </button>
+        <button class="template-btn" onclick="loadTemplate('chunked_read')">
+          <div class="tpl-name">分块读取</div>
+          <div class="tpl-desc">多次 read_file 不同区域，触发碎片整理</div>
+        </button>
+        <button class="template-btn" onclick="loadTemplate('retry_failed')">
+          <div class="tpl-name">失败重试</div>
+          <div class="tpl-desc">工具失败后重试，旧调用被移除</div>
+        </button>
+        <button class="template-btn" onclick="loadTemplate('multi_parallel')">
+          <div class="tpl-name">并行工具</div>
+          <div class="tpl-desc">assistant 同时调用多个工具</div>
+        </button>
+        <button class="template-btn" onclick="loadTemplate('complex')">
+          <div class="tpl-name">复杂流程</div>
+          <div class="tpl-desc">读取→写入→再读取→测试</div>
+        </button>
+      </div>
+
+      <!-- Output -->
+      <div id="outputArea">
+        <div class="empty-state" style="height:auto;padding:40px 0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          点击「处理输出」查看结果
+        </div>
+      </div>
+      <div class="stats-bar">
+        <span>消息: <span id="statMsgs" class="stat-val">0</span></span>
+        <span>墓碑: <span id="statTomb" class="stat-val">0</span></span>
+        <span>通知: <span id="statNotif" class="stat-val">0</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const conversation = [];
+let msgIdCounter = 0;
+let callIdCounter = 0;
+const API_BASE = location.origin;
+
+
+// ═══════════════════════════════════════════════════════════════
+// UI Logic
+// ═══════════════════════════════════════════════════════════════
+
+function onRoleChange() {
+  const role = document.getElementById('msgRole').value;
+  document.getElementById('assistantSection').style.display = role === 'assistant' ? 'block' : 'none';
+  document.getElementById('toolSection').style.display = role === 'tool' ? 'block' : 'none';
+}
+
+function renderChat() {
+  const el = document.getElementById('chatMessages');
+  if (!conversation.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      添加消息或加载模板开始测试
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = conversation.map(msg => {
+    let content = '';
+
+    if (msg.content) {
+      content = `<div class="msg-content">${esc(msg.content)}</div>`;
+    }
+
+    if (msg.tool_calls?.length) {
+      content += `<div class="tool-calls-block">`;
+      for (const tc of msg.tool_calls) {
+        const name = tc.function?.name || '?';
+        let args = tc.function?.arguments || '{}';
+        if (typeof args === 'object') args = JSON.stringify(args, null, 2);
+        content += `<div class="tool-call-item">
+          <div class="tc-header">
+            <span class="tc-name">${esc(name)}</span>
+            <span class="tc-id">${esc(tc.id)}</span>
+          </div>
+          <div class="tc-args">${esc(args)}</div>
+        </div>`;
+      }
+      content += `</div>`;
+    }
+
+    const meta = msg.tool_call_id ? `<span style="color:var(--text-muted)">${esc(msg.tool_call_id)}</span>` : '';
+
+    return `<div class="msg ${msg.role}">
+      <button class="remove-btn" onclick="removeMsg(${msg.id})">×</button>
+      <div class="msg-header">
+        <span class="msg-role">${msg.role}</span>
+        ${meta}
+      </div>
+      ${content}
+    </div>`;
+  }).join('');
+
+  el.scrollTop = el.scrollHeight;
+}
+
+function addMessage() {
+  const role = document.getElementById('msgRole').value;
+  const content = document.getElementById('msgContent').value.trim();
+  if (!content && role !== 'assistant') return;
+
+  if (role === 'assistant') {
+    // Assistant without tool_calls
+    conversation.push({ id: ++msgIdCounter, role: 'assistant', content });
+  } else {
+    conversation.push({ id: ++msgIdCounter, role, content });
+  }
+
+  document.getElementById('msgContent').value = '';
+  renderChat();
+}
+
+function addAssistantWithTools() {
+  const content = document.getElementById('msgContent').value.trim();
+  const toolCallsStr = document.getElementById('toolCallsJson').value.trim();
+
+  if (!toolCallsStr) {
+    alert('请输入 function calling JSON');
+    return;
+  }
+
+  let toolCalls;
+  try {
+    toolCalls = JSON.parse(toolCallsStr);
+  } catch (e) {
+    alert('JSON 格式错误: ' + e.message);
+    return;
+  }
+
+  conversation.push({
+    id: ++msgIdCounter,
+    role: 'assistant',
+    content: content || '',
+    tool_calls: toolCalls
+  });
+
+  document.getElementById('msgContent').value = '';
+  document.getElementById('toolCallsJson').value = '';
+  renderChat();
+}
+
+function addToolResult() {
+  const callId = document.getElementById('toolCallId').value.trim();
+  const result = document.getElementById('toolResult').value.trim();
+
+  if (!callId) {
+    alert('请输入 tool_call_id');
+    return;
+  }
+
+  conversation.push({
+    id: ++msgIdCounter,
+    role: 'tool',
+    content: result,
+    tool_call_id: callId
+  });
+
+  document.getElementById('toolCallId').value = '';
+  document.getElementById('toolResult').value = '';
+  renderChat();
+}
+
+async function callRealTool() {
+  const callId = document.getElementById('toolCallId').value.trim();
+  if (!callId) {
+    alert('请输入 tool_call_id');
+    return;
+  }
+
+  // 找到对应的 tool_call
+  let toolName = '', toolArgs = {};
+  for (const msg of conversation) {
+    if (msg.role === 'assistant' && msg.tool_calls) {
+      for (const tc of msg.tool_calls) {
+        if (tc.id === callId) {
+          toolName = tc.function?.name || '';
+          try {
+            toolArgs = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+          } catch { toolArgs = {}; }
+          break;
+        }
+      }
+    }
+  }
+
+  if (!toolName) {
+    alert(`未找到 tool_call_id: ${callId}`);
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/agent/tool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: toolName, params: toolArgs })
+    });
+    const data = await resp.json();
+    const result = data.result || data.error || JSON.stringify(data);
+
+    conversation.push({
+      id: ++msgIdCounter,
+      role: 'tool',
+      content: result,
+      tool_call_id: callId
+    });
+
+    document.getElementById('toolCallId').value = '';
+    document.getElementById('toolResult').value = '';
+    renderChat();
+  } catch (e) {
+    alert('调用失败: ' + e.message);
+  }
+}
+
+function removeMsg(id) {
+  const idx = conversation.findIndex(m => m.id === id);
+  if (idx >= 0) conversation.splice(idx, 1);
+  renderChat();
+}
+
+function resetAll() {
+  if (!confirm('确定重置？')) return;
+  conversation.length = 0;
+  msgIdCounter = 0;
+  callIdCounter = 0;
+  renderChat();
+  document.getElementById('outputArea').innerHTML = `<div class="empty-state" style="height:auto;padding:40px 0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+      <line x1="8" y1="21" x2="16" y2="21"/>
+      <line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    点击「处理输出」查看结果
+  </div>`;
+  ['statMsgs', 'statTomb', 'statNotif'].forEach(id => document.getElementById(id).textContent = '0');
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// Process & Display (调用后端 API)
+// ═══════════════════════════════════════════════════════════════
+
+async function processAndShow() {
+  if (!conversation.length) { alert('对话为空'); return; }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/agent/context/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: conversation })
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      alert('处理错误: ' + data.error + '\n\n' + (data.traceback || ''));
+      return;
+    }
+
+    renderOutput(data.processed, data.stats);
+  } catch (e) {
+    alert('请求失败: ' + e.message);
+  }
+}
+
+function renderOutput(processed, stats) {
+  const area = document.getElementById('outputArea');
+
+  if (!processed?.length) {
+    area.innerHTML = '<div class="empty-state">处理结果为空</div>';
+    return;
+  }
+
+  area.innerHTML = processed.map((msg, i) => {
+    let content = '';
+
+    if (msg.content) {
+      content += `<span class="k">content</span>: `;
+      // 高亮 diff 内容
+      const lines = msg.content.split('\n');
+      const formatted = lines.map(line => {
+        if (line.startsWith('+')) return `<span class="diff-add">${esc(line)}</span>`;
+        if (line.startsWith('-')) return `<span class="diff-del">${esc(line)}</span>`;
+        if (line.startsWith('@@')) return `<span class="diff-hunk">${esc(line)}</span>`;
+        if (line.startsWith('---') || line.startsWith('+++')) return `<span class="diff-file">${esc(line)}</span>`;
+        return esc(line);
+      }).join('\n');
+      content += `<span class="s">"${formatted}"</span>\n`;
+    }
+
+    if (msg.tool_calls?.length) {
+      content += `<span class="k">tool_calls</span>: [\n`;
+      for (const tc of msg.tool_calls) {
+        let args = tc.function?.arguments || '{}';
+        content += `  {\n`;
+        content += `    <span class="k">id</span>: <span class="s">"${esc(tc.id)}"</span>\n`;
+        content += `    <span class="k">function</span>: {\n`;
+        content += `      <span class="k">name</span>: <span class="s">"${esc(tc.function?.name)}"</span>\n`;
+        content += `      <span class="k">arguments</span>: <span class="s">"${esc(args)}"</span>\n`;
+        content += `    }\n`;
+        content += `  }\n`;
+      }
+      content += `]`;
+    }
+
+    if (msg.tool_call_id) {
+      content += `<span class="k">tool_call_id</span>: <span class="s">"${esc(msg.tool_call_id)}"</span>\n`;
+    }
+
+    return `<div class="output-block">
+      <div class="block-header">
+        <span class="idx">#${i + 1}</span>
+        <span class="role ${msg.role}">${msg.role}</span>
+      </div>
+      <div class="block-content">${content}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('statMsgs').textContent = stats?.message_count || processed.length;
+  document.getElementById('statTomb').textContent = stats?.tombstoned || 0;
+  document.getElementById('statNotif').textContent = stats?.has_notifications ? '✓' : '0';
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// Templates
+// ═══════════════════════════════════════════════════════════════
+
+function loadTemplate(name) {
+  conversation.length = 0;
+  msgIdCounter = 0;
+  callIdCounter = 0;
+
+  const templates = {
+    basic_read: [
+      { id: ++msgIdCounter, role: 'user', content: '帮我看看 test.py 里有什么' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"test.py"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: 'def hello():\n    print("Hello, World!")\n\nif __name__ == "__main__":\n    hello()', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '这是一个简单的 Python 脚本，定义了一个 hello 函数并执行。' }
+    ],
+
+    write_then_read: [
+      { id: ++msgIdCounter, role: 'user', content: '创建 hello.py' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'write_file', arguments: '{"path":"hello.py","content":"def greet(name):\\n    print(f\\"Hello, {name}!\\")\\n\\ngreet(\\"World\\")"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: '已创建新文件: hello.py (65 字符)', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'user', content: '读取确认' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"hello.py"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: 'def greet(name):\n    print(f"Hello, {name}!")\n\ngreet("World")', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '文件已创建，内容如上。' }
+    ],
+
+    chunked_read: [
+      { id: ++msgIdCounter, role: 'user', content: '读取 big.py 前 100 行' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"big.py","offset":1,"limit":100}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: Array.from({length: 100}, (_, i) => `# Line ${i+1}`).join('\n'), tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'user', content: '继续读 101-200 行' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"big.py","offset":101,"limit":100}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: Array.from({length: 100}, (_, i) => `# Line ${i+101}`).join('\n'), tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '已读取 101-200 行。' }
+    ],
+
+    retry_failed: [
+      { id: ++msgIdCounter, role: 'user', content: '运行命令' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'run_command', arguments: '{"command":"invalid_cmd"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: '错误: 命令未找到', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '抱歉，重试。', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'run_command', arguments: '{"command":"echo hello"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: 'hello', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '成功！' }
+    ],
+
+    multi_parallel: [
+      { id: ++msgIdCounter, role: 'user', content: '同时看两个文件' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"file1.py"}' } },
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"file2.py"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: '# File 1\nprint("hello")', tool_call_id: `call_${callIdCounter - 1}` },
+      { id: ++msgIdCounter, role: 'tool', content: '# File 2\nprint("world")', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '两个文件都已读取。' }
+    ],
+
+    complex: [
+      { id: ++msgIdCounter, role: 'user', content: '修改 main.py 并验证' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"main.py"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: 'print("old version")', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '现在修改。', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'patch', arguments: '{"path":"main.py","old_text":"print(\\"old version\\")","new_text":"print(\\"new version\\")"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: '已修改: main.py (第 1 行, 替换了 1 行)\n\n```diff\n--- a/main.py\n+++ b/main.py\n@@ -1 +1 @@\n-print("old version")\\n+print("new version")\n```', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'user', content: '再次确认' },
+      { id: ++msgIdCounter, role: 'assistant', content: '', tool_calls: [
+        { id: `call_${++callIdCounter}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"main.py"}' } }
+      ]},
+      { id: ++msgIdCounter, role: 'tool', content: 'print("new version")', tool_call_id: `call_${callIdCounter}` },
+      { id: ++msgIdCounter, role: 'assistant', content: '修改已确认。' }
+    ]
+  };
+
+  if (templates[name]) {
+    for (const msg of templates[name]) {
+      conversation.push(msg);
+    }
+  }
+
+  renderChat();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// Utils
+// ═══════════════════════════════════════════════════════════════
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Init
+renderChat();
+onRoleChange();
+</script>
+
+</body>
+</html>
