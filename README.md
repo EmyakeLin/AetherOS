@@ -11,13 +11,16 @@
 - **AI Agent** - 支持 Anthropic/OpenAI API 的智能助手
 - **应用商店** - 可扩展的应用架构
 - **主题系统** - 暗色/亮色主题切换
+- **低性能模式** - 禁用毛玻璃和动画，提升老旧设备流畅度
 
 ## 系统要求
 
 - Python 3.10+
 - 现代浏览器（Chrome/Firefox/Safari/Edge）
 
-## 安装
+## 快速开始
+
+### Linux / macOS
 
 ```bash
 # 克隆仓库
@@ -28,12 +31,25 @@ cd AetherOS
 ./start.sh
 ```
 
+### Windows
+
+```cmd
+# 克隆仓库
+git clone https://github.com/EmyakeLin/AetherOS.git
+cd AetherOS
+
+# 启动（自动创建虚拟环境和安装依赖）
+start.bat
+```
+
 首次运行会自动：
 1. 创建 Python 虚拟环境（`.venv/`）
 2. 安装所需依赖
 3. 启动服务器并打开浏览器
 
 ## 启动选项
+
+### Linux / macOS
 
 ```bash
 # 默认端口 8411
@@ -42,11 +58,56 @@ cd AetherOS
 # 自定义端口
 ./start.sh 8420
 
+# 低性能模式启动
+./start-lowperf.sh
+
 # 停止服务器
 ./stop.sh
 ```
 
+### Windows
+
+```cmd
+# 默认端口 8411
+start.bat
+
+# 自定义端口
+start.bat 8420
+
+# 低性能模式启动
+start-lowperf.bat
+
+# 停止服务器
+stop.bat
+```
+
 启动后访问 `http://localhost:8411`（或自定义端口）。
+
+## 低性能模式
+
+低性能模式专为老旧设备或资源受限环境设计，通过以下优化提升流畅度：
+
+- **禁用毛玻璃效果** - 移除 `backdrop-filter`，减少 GPU 负载
+- **简化动画** - 减少或禁用过渡动画
+- **移除背景效果** - 隐藏桌面网格和 canvas 动画
+- **减少阴影** - 简化多层阴影效果
+- **加速启动** - Boot 动画时间缩短 4 倍
+
+### 使用方式
+
+1. **启动脚本** - 使用 `start-lowperf.sh`（Linux/macOS）或 `start-lowperf.bat`（Windows）
+2. **系统设置** - 在 设置 → 外观 → 性能模式 中手动切换
+3. **自动检测** - 系统会自动检测移动设备和低核心数 CPU
+
+### 启动参数
+
+```bash
+# 通过命令行参数启用
+python server.py --port 8411 --low-perf
+
+# 通过 URL 参数启用
+http://localhost:8411/?low_perf=1
+```
 
 ## 手动安装
 
@@ -55,7 +116,9 @@ cd AetherOS
 ```bash
 # 创建虚拟环境
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Linux/macOS
+# 或
+.venv\Scripts\activate.bat  # Windows
 
 # 安装依赖
 pip install -r requirements.txt
@@ -80,15 +143,26 @@ providers:
 
 ### 主题
 
-在系统设置中切换暗色/亮色主题，或通过 CSS 自定义变量修改。
+在系统设置中切换暗色/亮色主题，或通过 CSS 自定义变量修改。默认主题为亮色。
+
+### LLM 模型
+
+在 设置 → LLM 模型 中配置 Provider 和模型，支持：
+- OpenAI 兼容 API
+- Anthropic API
+- 自定义 API 端点
 
 ## 项目结构
 
 ```
 AetherOS/
 ├── server.py           # FastAPI 后端服务
-├── start.sh            # 启动脚本
-├── stop.sh             # 停止脚本
+├── start.sh            # Linux/macOS 启动脚本
+├── start.bat           # Windows 启动脚本
+├── start-lowperf.sh    # Linux/macOS 低性能模式启动
+├── start-lowperf.bat   # Windows 低性能模式启动
+├── stop.sh             # Linux/macOS 停止脚本
+├── stop.bat            # Windows 停止脚本
 ├── requirements.txt    # Python 依赖
 ├── static/
 │   ├── index.html      # 主页面
@@ -98,6 +172,7 @@ AetherOS/
 ├── agent/              # AI Agent 引擎
 │   ├── engine.py       # Agent 循环
 │   ├── context.py      # 上下文管理
+│   ├── storage.py      # 会话持久化存储
 │   └── tools/          # 工具注册表
 └── docs/               # 文档
 ```
@@ -107,7 +182,7 @@ AetherOS/
 - **文件管理** - 浏览和管理服务器文件
 - **终端** - 命令行终端
 - **代码编辑** - Monaco Editor 代码编辑器
-- **AI 助手** - 智能对话助手
+- **AI 助手** - 智能对话助手（支持流式传输、工具调用、会话持久化）
 - **浏览器** - 内嵌网页浏览器
 - **系统监控** - 资源监控面板
 - **设置** - 系统配置
@@ -123,6 +198,24 @@ AetherOS/
 3. 实现 `{app-id}.js` 入口文件
 
 详见 `CLAUDE.md` 开发指南。
+
+## 更新日志
+
+### v1.1.1 (2026-05-12)
+
+- **Windows 适配** - 新增 `start.bat`、`stop.bat`、`start-lowperf.bat` 启动脚本
+- **低性能模式** - 新增低性能模式，禁用毛玻璃和动画，提升老旧设备流畅度
+- **默认亮色主题** - 默认主题从暗色改为亮色，提升可读性
+- **自动性能检测** - 自动检测移动设备和低核心数 CPU，启用低性能模式
+- **Agent 优化** - 修复 Windows 平台 GBK 编码问题
+
+### v1.0.0
+
+- 初始版本发布
+- 桌面环境、窗口管理、多应用支持
+- AI Agent 引擎，支持 Anthropic/OpenAI API
+- 会话持久化存储
+- Monaco Editor 集成
 
 ## 许可证
 

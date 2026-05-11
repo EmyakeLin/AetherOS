@@ -137,15 +137,25 @@ class ContextManager:
 
         elif tool_name == "patch":
             mode = tool_args.get("mode", "replace")
+            result = {**tool_args}
+
             if mode == "replace":
-                old_str = tool_args.get("old_string", "")
-                new_str = tool_args.get("new_string", "")
-                result = {**tool_args}
+                # Support both old_string/new_string and old_text/new_text
+                old_str = tool_args.get("old_string", tool_args.get("old_text", ""))
+                new_str = tool_args.get("new_string", tool_args.get("new_text", ""))
+
                 if len(old_str) > 200:
-                    result["old_string"] = f"[omitted: {len(old_str)} chars]"
+                    if "old_string" in tool_args:
+                        result["old_string"] = f"[omitted: {len(old_str)} chars]"
+                    else:
+                        result["old_text"] = f"[omitted: {len(old_str)} chars]"
                 if len(new_str) > 200:
-                    result["new_string"] = f"[omitted: {len(new_str)} chars]"
+                    if "new_string" in tool_args:
+                        result["new_string"] = f"[omitted: {len(new_str)} chars]"
+                    else:
+                        result["new_text"] = f"[omitted: {len(new_str)} chars]"
                 return result
+
             elif mode == "patch":
                 patch_content = tool_args.get("patch", "")
                 if len(patch_content) > 200:
@@ -306,11 +316,25 @@ class ContextManager:
         """
         Process messages before sending to LLM:
 
-        1. Remove failed calls that were retried
-        2. Shrink successful write_file/patch arguments
-        3. Apply tombstoned results
-        4. Append file change notifications to last user message
+        1. Tombstone stale reads for modified files
+        2. Defragment chunked reads
+        3. Remove failed calls that were retried
+        4. Shrink successful write_file/patch arguments
+        5. Apply tombstoned results
+        6. Append file change notifications to last user message
         """
+        # Tombstone stale reads for files that were modified
+        for path, fs in list(self._files.items()):
+            if fs.is_dirty:
+                self.tombstone_stale_reads(path)
+
+        # Defragment chunked reads
+        for path, fs in list(self._files.items()):
+            if len(fs.read_call_ids) > 1:
+                last_id = fs.read_call_ids[-1]
+                last_content = fs.read_contents[-1] if fs.read_contents else ""
+                self.defragment_read(path, last_id, last_content)
+
         failed_ids = self.get_failed_call_ids()
         result = []
 

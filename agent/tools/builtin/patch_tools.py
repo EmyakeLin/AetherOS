@@ -4,6 +4,20 @@ patch — 查找并替换文件中的指定文本
 """
 
 from pathlib import Path
+import difflib
+
+
+def _generate_diff(old_content: str, new_content: str, path: str) -> str:
+    """生成 unified diff"""
+    old_lines = old_content.splitlines(keepends=True)
+    new_lines = new_content.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        old_lines, new_lines,
+        fromfile=f"a/{path}",
+        tofile=f"b/{path}",
+        n=3
+    )
+    return "".join(diff)
 
 
 async def _patch(params: dict) -> str:
@@ -39,7 +53,10 @@ async def _patch(params: dict) -> str:
         line_no = before.count('\n') + 1
         lines_affected = old_text.count('\n') + 1
 
-        return f"已修改: {path} (第 {line_no} 行, 替换了 {lines_affected} 行)"
+        # 生成 diff
+        diff = _generate_diff(content, new_content, path)
+
+        return f"已修改: {path} (第 {line_no} 行, 替换了 {lines_affected} 行)\n\n```diff\n{diff}\n```"
 
     except Exception as e:
         return f"错误: {e}"

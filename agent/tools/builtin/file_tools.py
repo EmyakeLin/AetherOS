@@ -4,6 +4,7 @@ read_file, write_file, list_dir
 """
 
 from pathlib import Path
+import difflib
 
 
 async def _read_file(params: dict) -> str:
@@ -21,6 +22,19 @@ async def _read_file(params: dict) -> str:
         return f"错误: {e}"
 
 
+def _generate_diff(old_content: str, new_content: str, path: str) -> str:
+    """生成 unified diff"""
+    old_lines = old_content.splitlines(keepends=True)
+    new_lines = new_content.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        old_lines, new_lines,
+        fromfile=f"a/{path}",
+        tofile=f"b/{path}",
+        n=3
+    )
+    return "".join(diff)
+
+
 async def _write_file(params: dict) -> str:
     path = params.get("path", "")
     content = params.get("content", "")
@@ -29,8 +43,24 @@ async def _write_file(params: dict) -> str:
     try:
         p = Path(path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
+
+        # 读取旧内容（如果存在）
+        old_content = ""
+        file_existed = p.exists()
+        if file_existed:
+            old_content = p.read_text(encoding="utf-8", errors="replace")
+
+        # 写入新内容
         p.write_text(content, encoding="utf-8")
-        return f"已写入: {path} ({len(content)} 字符)"
+
+        # 生成 diff
+        if file_existed and old_content != content:
+            diff = _generate_diff(old_content, content, path)
+            return f"已写入: {path} ({len(content)} 字符)\n\n```diff\n{diff}\n```"
+        elif not file_existed:
+            return f"已创建新文件: {path} ({len(content)} 字符)"
+        else:
+            return f"文件未变化: {path}"
     except Exception as e:
         return f"错误: {e}"
 

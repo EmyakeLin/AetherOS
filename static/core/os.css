@@ -297,6 +297,26 @@ html, body {
 }
 .boot-status { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1px; }
 
+/* Boot screen: low performance */
+.low-perf #boot-screen {
+    transition: opacity 0.3s var(--ease-out);
+}
+.low-perf .boot-hexagon {
+    animation-duration: 4s;
+}
+.low-perf .boot-hexagon polygon:first-child {
+    filter: none;
+}
+.low-perf .boot-triangle {
+    filter: drop-shadow(0 0 8px var(--accent));
+}
+.low-perf .boot-text {
+    text-shadow: none;
+}
+.low-perf .boot-progress-bar {
+    box-shadow: none;
+}
+
 /* ═══════════════════════════════
    BACKGROUND
    ═══════════════════════════════ */
@@ -740,4 +760,89 @@ html, body {
     position: fixed; z-index: 9999; border: 2px solid var(--accent);
     border-radius: var(--radius-lg); background: rgba(0, 229, 255, 0.05);
     pointer-events: none; transition: all 0.2s var(--ease-out);
+}
+
+/* ═══════════════════════════════
+   PERFORMANCE OPTIMIZATIONS
+   ═══════════════════════════════ */
+
+/* Reduced motion for accessibility & performance */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .boot-hexagon { animation: none; }
+    .boot-triangle { animation: none; }
+    .dock-item { transition: none; }
+    .dock-item:hover { transform: none; margin: 0; }
+    .dock-item:hover + .dock-item,
+    .dock-item:has(+ .dock-item:hover) { transform: none; margin: 0; }
+    .dock-indicator { animation: none; }
+}
+
+/* Low performance mode - reduce expensive effects */
+.low-perf #menu-bar,
+.low-perf .sidebar-glass,
+.low-perf .dock-container,
+.low-perf .dropdown-menu,
+.low-perf .glass-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.low-perf #os-root {
+    background: var(--bg-deep);
+}
+
+.low-perf .desktop-grid {
+    display: none;
+}
+
+.low-perf #desktop-canvas {
+    display: none;
+}
+
+.low-perf .boot-hexagon,
+.low-perf .boot-triangle {
+    animation: none;
+}
+
+.low-perf .dock-item {
+    transition: none;
+}
+
+.low-perf .dock-item:hover {
+    transform: translateY(-4px) scale(1.1);
+    margin: 0 2px;
+}
+
+.low-perf .dock-item:hover + .dock-item,
+.low-perf .dock-item:has(+ .dock-item:hover) {
+    transform: none;
+    margin: 0;
+}
+
+.low-perf .dock-indicator {
+    animation: none;
+}
+
+.low-perf .os-window {
+    transition: none;
+}
+
+.low-perf .os-window.opening,
+.low-perf .os-window.closing,
+.low-perf .os-window.minimizing,
+.low-perf .os-window.restoring {
+    animation: none;
+}
+
+/* Light theme performance: simpler shadows */
+[data-theme="light"] .low-perf .dock-container,
+[data-theme="light"] .low-perf .sidebar-glass,
+[data-theme="light"] .low-perf .os-window,
+[data-theme="light"] .low-perf .os-window.focused {
+    box-shadow: 0 2px 8px rgba(80,60,30,0.1);
 }

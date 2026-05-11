@@ -10,6 +10,25 @@ AetherOS is a browser-based desktop operating system with an integrated AI Agent
 
 You MUST USE MULTIPLE TOOLS WHENEVER POSSIBLE to reduce the cost of development. 
 
+## 硬约束 - 单次 Edit 规则
+
+**任何文件修改必须在一次 Edit 调用中完成。禁止调用第二次 Edit 或 Update。**
+
+### 执行流程
+1. 读取所有相关代码（可并发读取多个文件/多个区域）
+2. 列出全部修改点（old_string → new_string）
+3. 确认每个 old_string 在文件中唯一
+4. 一次 Edit 调用完成全部修改
+
+### 违规记录（2026-05-12）
+在 Agent app 前端优化任务中，单次会话使用了 7+ 次 Edit 调用，导致：
+- 代码被改废，最终需要 git 回滚
+- 每次只改一部分，前后修改互相冲突
+- 浪费了大量用户时间和 token
+
+### 根本原因
+边读边改，没有完整规划。违反了"严谨思维策略"中的"有序"原则。
+
 ## Commands
 
 ```bash

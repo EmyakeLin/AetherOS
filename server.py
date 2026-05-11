@@ -514,7 +514,7 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
         config = {}
         if config_path.exists():
             import yaml
-            config = yaml.safe_load(config_path.read_text()) or {}
+            config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 
         engine = CustomAgentEngine(config, llm_service=llm_service)
         agent_engines[agent_id] = engine
@@ -668,6 +668,92 @@ async def agent_tools():
 async def agent_tools_register(body: dict = Body(...)):
     """注册自定义工具"""
     return {"ok": True, "message": "工具注册功能待连接 Agent 引擎"}
+
+
+@app.post("/api/agent/tool")
+async def agent_tool_call(body: dict = Body(...)):
+    """直接调用 Agent 工具（用于调试）"""
+    tool_name = body.get("name", "")
+    tool_params = body.get("params", {})
+
+    if not tool_name:
+        return JSONResponse(status_code=400, content={"error": "未指定工具名称"})
+
+    try:
+        sys.path.insert(0, str(BASE_DIR / "agent"))
+        from model_tools import handle_function_call
+        result = await handle_function_call(tool_name, tool_params)
+        return {"result": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/agent/context/process")
+async def agent_context_process(body: dict = Body(...)):
+    """处理消息列表，返回 ContextManager 处理后的结果（用于调试）"""
+    messages = body.get("messages", [])
+    options = body.get("options", {})
+
+    try:
+        sys.path.insert(0, str(BASE_DIR / "agent"))
+        from context_manager import ContextManager
+
+        cm = ContextManager()
+
+        # 记录所有工具调用
+        for msg in messages:
+            if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                for tc in msg["tool_calls"]:
+                    tc_id = tc.get("id", "")
+                    tool_name = tc.get("function", {}).get("name", tc.get("name", ""))
+                    args_str = tc.get("function", {}).get("arguments", tc.get("arguments", "{}"))
+
+                    import json
+                    try:
+                        args = json.loads(args_str) if isinstance(args_str, str) else args_str
+                    except:
+                        args = {}
+
+                    # 查找对应的 tool result
+                    result_msg = next((m for m in messages if m.get("role") == "tool" and m.get("tool_call_id") == tc_id), None)
+                    if result_msg:
+                        result_content = result_msg.get("content", "")
+                        is_success = not result_content.startswith("错误") and not result_content.startswith("Error")
+                        cm.record_tool_call(tc_id, tool_name, args, result_content, is_success)
+
+        # 检测 retry 映射
+        tool_calls_info = []
+        for msg in messages:
+            if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                for tc in msg["tool_calls"]:
+                    tc_id = tc.get("id", "")
+                    tool_name = tc.get("function", {}).get("name", tc.get("name", ""))
+                    info = cm._tool_calls.get(tc_id, {})
+                    tool_calls_info.append({"id": tc_id, "name": tool_name, "success": info.get("success", True)})
+
+        for i in range(len(tool_calls_info) - 1):
+            curr = tool_calls_info[i]
+            next_tc = tool_calls_info[i + 1]
+            if not curr["success"] and next_tc["success"] and curr["name"] == next_tc["name"]:
+                cm.record_retry(curr["id"], next_tc["id"])
+
+        # 处理消息
+        processed = cm.process_messages(messages, options)
+
+        # 统计信息
+        tombstoned = sum(1 for c in cm._tool_calls.values() if c.get("result", "").startswith("[此文件内容已过期"))
+
+        return {
+            "processed": processed,
+            "stats": {
+                "message_count": len(processed),
+                "tombstoned": tombstoned,
+                "has_notifications": any("[文件状态变更通知]" in (m.get("content") or "") for m in processed if m.get("role") == "user")
+            }
+        }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 
 @app.get("/api/agent/context")
@@ -1282,6 +1368,26 @@ app.mount("/aether-cards-images", StaticFiles(directory=str(CARDS_IMG_DIR)), nam
 app.mount("/lib", StaticFiles(directory=str(STATIC_DIR / "lib")), name="lib")
 app.mount("/fonts", StaticFiles(directory=str(BASE_DIR / "fonts")), name="fonts")
 app.mount("/svg", StaticFiles(directory=str(BASE_DIR / "svg")), name="svg")
+app.mount("/debug", StaticFiles(directory=str(STATIC_DIR / "debug")), name="debug")
+
+
+# ═══════════════════════════════════════════════
+# 性能模式 API
+# ═══════════════════════════════════════════════
+
+# 全局低性能模式标志
+LOW_PERF_MODE = False
+
+
+@app.get("/api/system/perf-mode")
+async def get_perf_mode():
+    """获取系统性能模式"""
+    marker_path = STATIC_DIR / "perf-mode.json"
+    marker_exists = marker_path.exists()
+    return {
+        "low_perf": LOW_PERF_MODE or marker_exists,
+        "source": "flag" if LOW_PERF_MODE else ("marker" if marker_exists else "default")
+    }
 
 
 # ═══════════════════════════════════════════════
@@ -1293,11 +1399,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="N.O.V.A Aether OS Server")
     parser.add_argument("--port", type=int, default=8420)
     parser.add_argument("--host", type=str, default="0.0.0.0")
+    parser.add_argument("--low-perf", action="store_true", help="Enable low performance mode")
     args = parser.parse_args()
+
+    # Set low performance mode flag
+    LOW_PERF_MODE = args.low_perf
 
     print(f"\n  ▽ N.O.V.A Aether OS")
     print(f"  ├─ Server: http://localhost:{args.port}")
     print(f"  ├─ Static: {STATIC_DIR}")
-    print(f"  └─ Agent:  {BASE_DIR / 'agent'}\n")
+    print(f"  ├─ Agent:  {BASE_DIR / 'agent'}")
+    if LOW_PERF_MODE:
+        print(f"  └─ Mode:   LOW PERFORMANCE (reduced effects)")
+    else:
+        print(f"  └─ Mode:   Normal")
+    print()
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

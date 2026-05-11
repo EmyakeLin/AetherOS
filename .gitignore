@@ -107,3 +107,8 @@ Eos Agent System Prompt Manage.md
 Eos Agent Development/
 development_files/
 docs/
+
+# Fonts (download separately via fonts/download.sh)
+fonts/*.ttf
+fonts/*.otf
+fonts/iosevka-charon/

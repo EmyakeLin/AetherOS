@@ -1161,12 +1161,12 @@ registerApp('agent', {
 
             /* ── Tool modal ── */
             .tool-modal-overlay {
-                position: fixed;
+                position: absolute;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-                z-index: 1000;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(2px);
+                -webkit-backdrop-filter: blur(2px);
+                z-index: 100;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -1177,10 +1177,8 @@ registerApp('agent', {
                 to { opacity: 1; }
             }
             .tool-modal {
-                width: 700px;
-                max-width: 90vw;
-                height: 500px;
-                max-height: 80vh;
+                width: min(700px, 90%);
+                height: min(500px, 80%);
                 background: var(--bg-surface);
                 border: 1px solid var(--accent-dim);
                 border-radius: var(--radius-lg);
@@ -1569,6 +1567,7 @@ registerApp('agent', {
                                         <span class="tool-call-time"></span>
                                         <span class="tool-call-count" data-full-round="Round ${mergedCount}">Round ${mergedCount}</span>
                                     </div>
+                                    <div class="tool-call-scan"></div>
                                 `;
                                 toolIndicator.addEventListener('click', () => {
                                     // 获取当前 round 的所有工具调用
@@ -1641,11 +1640,21 @@ registerApp('agent', {
                                         if (e.target === overlay) overlay.remove();
                                     });
                                     renderModalContent(currentIndex);
-                                    document.body.appendChild(overlay);
+                                    container.querySelector('.agent-root').appendChild(overlay);
                                 });
                                 textContainer.appendChild(toolIndicator);
                                 // 立即触发响应式更新
                                 updateToolIndicatorResponsive();
+                                // 扫描光效
+                                const settings = loadSettings();
+                                const scanSpeed = settings.toolScanSpeed || 1.0;
+                                const scan = toolIndicator.querySelector('.tool-call-scan');
+                                if (scan) {
+                                    scan.style.animation = `tool-scan ${scanSpeed}s ease-out forwards`;
+                                    scan.addEventListener('animationend', () => {
+                                        // 保持最终状态
+                                    }, { once: true });
+                                }
 
                                 _toolCallHistory.push({
                                     name: toolName,
@@ -2141,7 +2150,7 @@ registerApp('agent', {
             });
 
             renderModalContent(currentIndex);
-            document.body.appendChild(overlay);
+            container.querySelector('.agent-root').appendChild(overlay);
         }
 
         function playCompleteEffect(indicatorEl) {
@@ -2802,7 +2811,7 @@ registerApp('agent', {
 
         function updateToolIndicatorResponsive() {
             const indicators = container.querySelectorAll('.tool-call-indicator');
-            const width = container.clientWidth;
+            const width = messagesEl.clientWidth;
 
             indicators.forEach(indicator => {
                 const textEl = indicator.querySelector('.tool-call-text');
@@ -2831,7 +2840,9 @@ registerApp('agent', {
             });
         }
 
-        const _resizeObserver = new ResizeObserver(() => updateToolIndicatorResponsive());
+        const _resizeObserver = new ResizeObserver((entries) => {
+            updateToolIndicatorResponsive();
+        });
         _resizeObserver.observe(container);
 
         /* ══════════════════════════════════════════

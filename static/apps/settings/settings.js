@@ -191,8 +191,15 @@ registerApp('settings', {
                     <div class="settings-row">
                         <div><div class="settings-label">主题</div><div class="settings-desc">系统颜色主题</div></div>
                         <select class="settings-select" id="settings-theme-select">
-                            <option value="dark">深色 (Dark)</option>
                             <option value="light">浅色 · 米色 (Light)</option>
+                            <option value="dark">深色 (Dark)</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <div><div class="settings-label">性能模式</div><div class="settings-desc">低性能模式禁用毛玻璃和复杂动画，提升流畅度</div></div>
+                        <select class="settings-select" id="settings-perf-select">
+                            <option value="normal">正常模式</option>
+                            <option value="low">低性能模式</option>
                         </select>
                     </div>
                     <div class="settings-row">
@@ -309,6 +316,11 @@ registerApp('settings', {
                 if (themeSelect) {
                     themeSelect.value = os.theme;
                     themeSelect.addEventListener('change', () => os.setTheme(themeSelect.value));
+                }
+                const perfSelect = contentEl.querySelector('#settings-perf-select');
+                if (perfSelect) {
+                    perfSelect.value = document.documentElement.classList.contains('low-perf') ? 'low' : 'normal';
+                    perfSelect.addEventListener('change', () => os.setPerformanceMode(perfSelect.value));
                 }
             }
             // Bind apps section

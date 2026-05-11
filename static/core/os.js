@@ -79,8 +79,8 @@ class AetherOS {
         // Agent panels
         this.agentPanels = new Map();
 
-        // Theme
-        this.theme = localStorage.getItem('aether-theme') || 'dark';
+        // Theme (default: light for better performance)
+        this.theme = localStorage.getItem('aether-theme') || 'light';
 
         // Unified LLM client
         this.llm = new LLMClient(this);
@@ -94,6 +94,24 @@ class AetherOS {
     // ═══════════════════════════════════════
 
     async boot() {
+        // Detect performance mode early for faster boot
+        const urlParams = new URLSearchParams(window.location.search);
+        const isLowPerfFromUrl = urlParams.get('low_perf') === '1';
+
+        const isLowPerf = isLowPerfFromUrl ||
+            localStorage.getItem('aether-perf-mode') === 'low' ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+
+        if (isLowPerf) {
+            document.documentElement.classList.add('low-perf');
+            // Save preference if detected from URL or auto-detect
+            if (isLowPerfFromUrl) {
+                localStorage.setItem('aether-perf-mode', 'low');
+            }
+        }
+
         const bar = document.querySelector('.boot-progress-bar');
         const status = document.querySelector('.boot-status');
         const steps = [
@@ -106,19 +124,24 @@ class AetherOS {
             ['System ready.', 100],
         ];
 
+        // Faster boot in low performance mode
+        const baseDelay = isLowPerf ? 50 : 200;
+        const randomDelay = isLowPerf ? 50 : 200;
+
         for (const [text, pct] of steps) {
             status.textContent = text;
             bar.style.width = pct + '%';
-            await this._sleep(200 + Math.random() * 200);
+            await this._sleep(baseDelay + Math.random() * randomDelay);
         }
 
-        await this._sleep(400);
+        await this._sleep(isLowPerf ? 100 : 400);
         document.getElementById('boot-screen').classList.add('fade-out');
         document.getElementById('os-root').style.display = '';
-        await this._sleep(800);
+        await this._sleep(isLowPerf ? 200 : 800);
         document.getElementById('boot-screen').remove();
 
         this._initTheme();
+        this._initPerformanceMode();
         this._initClock();
         this._initMenus();
         this._initSidebar();
@@ -147,6 +170,46 @@ class AetherOS {
             document.documentElement.setAttribute('data-theme', 'light');
         } else {
             document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // PERFORMANCE MODE
+    // ═══════════════════════════════════════
+
+    _initPerformanceMode() {
+        // Check saved preference
+        const savedPref = localStorage.getItem('aether-perf-mode');
+        if (savedPref === 'low') {
+            document.documentElement.classList.add('low-perf');
+            return;
+        }
+
+        // Auto-detect: check if user prefers reduced motion
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('low-perf');
+            localStorage.setItem('aether-perf-mode', 'low');
+            return;
+        }
+
+        // Auto-detect: simple performance heuristic
+        // Check if device likely has low performance (mobile, old hardware)
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const hasLowCores = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2;
+
+        if (isMobile || hasLowCores) {
+            document.documentElement.classList.add('low-perf');
+            localStorage.setItem('aether-perf-mode', 'low');
+        }
+    }
+
+    setPerformanceMode(mode) {
+        if (mode === 'low') {
+            document.documentElement.classList.add('low-perf');
+            localStorage.setItem('aether-perf-mode', 'low');
+        } else {
+            document.documentElement.classList.remove('low-perf');
+            localStorage.setItem('aether-perf-mode', 'normal');
         }
     }
 

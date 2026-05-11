@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>N.O.V.A Aether OS</title>
-    <!-- Apply saved theme before paint to avoid flash -->
-    <script>try{if(localStorage.getItem('aether-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+    <!-- Apply saved theme before paint to avoid flash. Default: light -->
+    <script>try{if(localStorage.getItem('aether-theme')!=='dark')document.documentElement.setAttribute('data-theme','light')}catch(e){document.documentElement.setAttribute('data-theme','light')}</script>
     <!-- Fonts loaded locally from /fonts/ -->
     <link rel="stylesheet" href="core/os.css">
 </head>
