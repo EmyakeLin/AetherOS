@@ -1566,7 +1566,7 @@ registerApp('agent', {
                                         <span class="tool-call-text">Function Calling — 工具调用结束</span>
                                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                                         <span class="tool-call-time"></span>
-                                        <span class="tool-call-count">Round ${currentIteration}</span>
+                                        <span class="tool-call-count" data-full-round="Round ${currentIteration}">Round ${currentIteration}</span>
                                     </div>
                                 `;
                                 toolIndicator.addEventListener('click', () => {
@@ -1929,7 +1929,9 @@ registerApp('agent', {
             // 如果已经存在工具调用指示器，更新它
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
-                _toolIndicatorEl.querySelector('.tool-call-count').textContent = `Round ${iterationCount}`;
+                const countEl = _toolIndicatorEl.querySelector('.tool-call-count');
+                countEl.textContent = `Round ${iterationCount}`;
+                countEl.dataset.fullRound = `Round ${iterationCount}`;
                 _toolIndicatorEl.dataset.toolName = toolName;
                 _toolIndicatorEl.dataset.iterationCount = iterationCount;
             } else {
@@ -1951,7 +1953,7 @@ registerApp('agent', {
                         <span class="tool-call-text">Function Calling — 正在调用工具</span>
                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                         <span class="tool-call-time"></span>
-                        <span class="tool-call-count">Round ${iterationCount}</span>
+                        <span class="tool-call-count" data-full-round="Round ${iterationCount}">Round ${iterationCount}</span>
                     </div>
                     <div class="tool-call-scan"></div>
                 `;
@@ -2029,6 +2031,8 @@ registerApp('agent', {
                 const textEl = _toolIndicatorEl.querySelector('.tool-call-text');
                 if (textEl) textEl.textContent = 'Function Calling — 工具调用结束';
                 _toolIndicatorEl.classList.add('completed');
+                // 触发响应式更新
+                updateToolIndicatorResponsive();
             }
         }
 
@@ -2787,10 +2791,49 @@ registerApp('agent', {
         });
 
         /* ══════════════════════════════════════════
+           Responsive tool indicator
+           ══════════════════════════════════════════ */
+
+        function updateToolIndicatorResponsive() {
+            const indicators = container.querySelectorAll('.tool-call-indicator');
+            const width = container.clientWidth;
+
+            indicators.forEach(indicator => {
+                const textEl = indicator.querySelector('.tool-call-text');
+                const countEl = indicator.querySelector('.tool-call-count');
+                if (!textEl || !countEl) return;
+
+                const isCompleted = indicator.classList.contains('completed');
+                const fullText = isCompleted ? 'Function Calling — 工具调用结束' : 'Function Calling — 正在调用工具';
+                const shortText = isCompleted ? '已完成' : '调用中';
+                const fullRound = countEl.dataset.fullRound || countEl.textContent;
+                const shortRound = fullRound.replace('Round ', '');
+
+                if (width > 600) {
+                    textEl.textContent = fullText;
+                    countEl.textContent = fullRound;
+                } else if (width > 450) {
+                    textEl.textContent = fullText.replace('Function Calling — ', '');
+                    countEl.textContent = fullRound;
+                } else if (width > 350) {
+                    textEl.textContent = shortText;
+                    countEl.textContent = fullRound;
+                } else {
+                    textEl.textContent = shortText;
+                    countEl.textContent = shortRound;
+                }
+            });
+        }
+
+        const _resizeObserver = new ResizeObserver(() => updateToolIndicatorResponsive());
+        _resizeObserver.observe(container);
+
+        /* ══════════════════════════════════════════
            Cleanup & init
            ══════════════════════════════════════════ */
 
         win.on('close', () => {
+            _resizeObserver.disconnect();
             if (ws) ws.close();
             os.removeAgentPanel(agentId);
         });
