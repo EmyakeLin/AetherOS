@@ -44,7 +44,7 @@ registerApp('agent', {
                             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="16" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="1" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="10" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
                         </button>
                         <button id="agent-settings-btn" class="icon-btn" title="设置">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.4 3.4l1.4 1.4M13.2 13.2l1.4 1.4M3.4 14.6l1.4-1.4M13.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
                         </button>
                     </header>
 
@@ -1179,6 +1179,7 @@ registerApp('agent', {
             .tool-modal {
                 width: 700px;
                 max-width: 90vw;
+                height: 500px;
                 max-height: 80vh;
                 background: var(--bg-surface);
                 border: 1px solid var(--accent-dim);
@@ -1209,6 +1210,37 @@ registerApp('agent', {
                 background: var(--accent-glow);
                 padding: 2px 8px;
                 border-radius: 10px;
+            }
+            .tool-modal-nav {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin-left: auto;
+            }
+            .tool-modal-prev,
+            .tool-modal-next {
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-muted);
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .tool-modal-prev:hover:not(:disabled),
+            .tool-modal-next:hover:not(:disabled) {
+                color: var(--accent);
+                border-color: var(--accent-dim);
+                background: var(--accent-glow);
+            }
+            .tool-modal-prev:disabled,
+            .tool-modal-next:disabled {
+                opacity: 0.3;
+                cursor: default;
             }
             .tool-modal-close {
                 width: 28px;
@@ -1538,32 +1570,76 @@ registerApp('agent', {
                                     </div>
                                 `;
                                 toolIndicator.addEventListener('click', () => {
-                                    const argsParsed = typeof toolArgs === 'string' ? JSON.parse(toolArgs) : toolArgs;
+                                    // 获取当前 round 的所有工具调用
+                                    const roundCalls = segment.calls.map(tc => {
+                                        const tcName = tc.function?.name || tc.name || 'unknown';
+                                        const tcArgs = tc.function?.arguments || tc.arguments || {};
+                                        const tcResult = toolResults[tc.id];
+                                        const tcResultContent = tcResult?.content || '';
+                                        const tcIsError = tcResultContent.startsWith('错误:') || tcResultContent.startsWith('Error:');
+                                        return {
+                                            name: tcName,
+                                            args: typeof tcArgs === 'string' ? JSON.parse(tcArgs) : tcArgs,
+                                            result: tcResultContent,
+                                            error: tcIsError ? tcResultContent : null,
+                                            iteration: currentIteration
+                                        };
+                                    });
+
+                                    let currentIndex = roundCalls.length - 1;
                                     const overlay = document.createElement('div');
                                     overlay.className = 'tool-modal-overlay';
-                                    overlay.innerHTML = `
-                                        <div class="tool-modal">
-                                            <div class="tool-modal-header">
-                                                <span class="tool-modal-title">工具调用详情</span>
-                                                <span class="tool-modal-count">Round ${currentIteration}</span>
-                                                <button class="tool-modal-close">×</button>
-                                            </div>
-                                            <div class="tool-modal-body">
-                                                <div class="tool-modal-col">
-                                                    <div class="tool-modal-col-title">参数</div>
-                                                    <pre class="tool-modal-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</pre>
+
+                                    function renderModalContent(index) {
+                                        const call = roundCalls[index];
+                                        overlay.innerHTML = `
+                                            <div class="tool-modal">
+                                                <div class="tool-modal-header">
+                                                    <span class="tool-modal-title">工具调用详情</span>
+                                                    <div class="tool-modal-nav">
+                                                        <button class="tool-modal-prev" ${index === 0 ? 'disabled' : ''}>
+                                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                        </button>
+                                                        <span class="tool-modal-count">${index + 1} / ${roundCalls.length}</span>
+                                                        <button class="tool-modal-next" ${index === roundCalls.length - 1 ? 'disabled' : ''}>
+                                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                        </button>
+                                                    </div>
+                                                    <button class="tool-modal-close">×</button>
                                                 </div>
-                                                <div class="tool-modal-col">
-                                                    <div class="tool-modal-col-title">${isError ? '错误' : '返回值'}</div>
-                                                    <pre class="tool-modal-content ${isError ? 'error' : ''}">${escapeHtml(resultContent)}</pre>
+                                                <div class="tool-modal-body">
+                                                    <div class="tool-modal-col">
+                                                        <div class="tool-modal-col-title">参数</div>
+                                                        <pre class="tool-modal-content">${escapeHtml(JSON.stringify(call.args, null, 2))}</pre>
+                                                    </div>
+                                                    <div class="tool-modal-col">
+                                                        <div class="tool-modal-col-title">${call.error ? '错误' : '返回值'}</div>
+                                                        <pre class="tool-modal-content ${call.error ? 'error' : ''}">${escapeHtml(call.error || call.result)}</pre>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    `;
+                                        `;
+                                        overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
+                                        const prevBtn = overlay.querySelector('.tool-modal-prev');
+                                        const nextBtn = overlay.querySelector('.tool-modal-next');
+                                        if (prevBtn && !prevBtn.disabled) {
+                                            prevBtn.addEventListener('click', () => {
+                                                currentIndex--;
+                                                renderModalContent(currentIndex);
+                                            });
+                                        }
+                                        if (nextBtn && !nextBtn.disabled) {
+                                            nextBtn.addEventListener('click', () => {
+                                                currentIndex++;
+                                                renderModalContent(currentIndex);
+                                            });
+                                        }
+                                    }
+
                                     overlay.addEventListener('click', (e) => {
                                         if (e.target === overlay) overlay.remove();
                                     });
-                                    overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
+                                    renderModalContent(currentIndex);
                                     document.body.appendChild(overlay);
                                 });
                                 textContainer.appendChild(toolIndicator);
@@ -1984,49 +2060,77 @@ registerApp('agent', {
         function openToolModal() {
             if (!_toolIndicatorEl) return;
 
-            // 获取当前工具调用信息
-            const toolName = _toolIndicatorEl.dataset.toolName || '';
-            const iterationCount = _toolIndicatorEl.dataset.iterationCount || '';
+            // 获取当前 round 的所有工具调用
+            const currentRound = _conversationRound;
+            const roundCalls = _toolCallHistory.filter(call => call.roundLabel.startsWith(`R${currentRound}-`));
+            if (roundCalls.length === 0) return;
 
-            // 从历史中获取最新的工具调用
-            const latestCall = _toolCallHistory[_toolCallHistory.length - 1] || {};
-            const args = latestCall.args || {};
-            const result = latestCall.result || '等待返回值...';
-            const error = latestCall.error || null;
+            // 当前显示的索引
+            let currentIndex = roundCalls.length - 1;
 
             // 创建模态框
             const overlay = document.createElement('div');
             overlay.className = 'tool-modal-overlay';
-            overlay.innerHTML = `
-                <div class="tool-modal">
-                    <div class="tool-modal-header">
-                        <span class="tool-modal-title">工具调用详情</span>
-                        <span class="tool-modal-count">Round ${escapeHtml(iterationCount)}</span>
-                        <button class="tool-modal-close">×</button>
-                    </div>
-                    <div class="tool-modal-body">
-                        <div class="tool-modal-col">
-                            <div class="tool-modal-col-title">参数</div>
-                            <pre class="tool-modal-content">${escapeHtml(JSON.stringify(args, null, 2))}</pre>
+
+            function renderModalContent(index) {
+                const call = roundCalls[index];
+                const args = call.args || {};
+                const result = call.result || '等待返回值...';
+                const error = call.error || null;
+                const iterationLabel = call.roundLabel || '';
+
+                overlay.innerHTML = `
+                    <div class="tool-modal">
+                        <div class="tool-modal-header">
+                            <span class="tool-modal-title">工具调用详情</span>
+                            <div class="tool-modal-nav">
+                                <button class="tool-modal-prev" ${index === 0 ? 'disabled' : ''}>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                                <span class="tool-modal-count">${index + 1} / ${roundCalls.length}</span>
+                                <button class="tool-modal-next" ${index === roundCalls.length - 1 ? 'disabled' : ''}>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3L9 7L5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                            </div>
+                            <button class="tool-modal-close">×</button>
                         </div>
-                        <div class="tool-modal-col">
-                            <div class="tool-modal-col-title">${error ? '错误' : '返回值'}</div>
-                            <pre class="tool-modal-content ${error ? 'error' : ''}">${escapeHtml(error || result)}</pre>
+                        <div class="tool-modal-body">
+                            <div class="tool-modal-col">
+                                <div class="tool-modal-col-title">参数</div>
+                                <pre class="tool-modal-content">${escapeHtml(JSON.stringify(args, null, 2))}</pre>
+                            </div>
+                            <div class="tool-modal-col">
+                                <div class="tool-modal-col-title">${error ? '错误' : '返回值'}</div>
+                                <pre class="tool-modal-content ${error ? 'error' : ''}">${escapeHtml(error || result)}</pre>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+
+                // 绑定事件
+                overlay.querySelector('.tool-modal-close').addEventListener('click', () => overlay.remove());
+                const prevBtn = overlay.querySelector('.tool-modal-prev');
+                const nextBtn = overlay.querySelector('.tool-modal-next');
+                if (prevBtn && !prevBtn.disabled) {
+                    prevBtn.addEventListener('click', () => {
+                        currentIndex--;
+                        renderModalContent(currentIndex);
+                    });
+                }
+                if (nextBtn && !nextBtn.disabled) {
+                    nextBtn.addEventListener('click', () => {
+                        currentIndex++;
+                        renderModalContent(currentIndex);
+                    });
+                }
+            }
 
             // 关闭逻辑
             overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    overlay.remove();
-                }
-            });
-            overlay.querySelector('.tool-modal-close').addEventListener('click', () => {
-                overlay.remove();
+                if (e.target === overlay) overlay.remove();
             });
 
+            renderModalContent(currentIndex);
             document.body.appendChild(overlay);
         }
 
