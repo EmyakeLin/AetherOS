@@ -110,6 +110,46 @@ async def fs_write(body: dict = Body(...)):
         return {"error": str(e)}
 
 
+@app.post("/api/fs/edit")
+async def fs_edit(body: dict = Body(...)):
+    """编辑文件（定点替换）"""
+    try:
+        path = body.get("path", "")
+        old_string = body.get("old_string", "")
+        new_string = body.get("new_string", "")
+        replace_all = body.get("replace_all", False)
+
+        target = Path(path)
+        if not target.exists():
+            return {"error": f"文件不存在: {path}"}
+
+        content = target.read_text(encoding="utf-8")
+        if old_string not in content:
+            return {"error": f"未找到匹配文本"}
+
+        if replace_all:
+            new_content = content.replace(old_string, new_string)
+        else:
+            new_content = content.replace(old_string, new_string, 1)
+
+        target.write_text(new_content, encoding="utf-8")
+
+        # 计算 diff 信息
+        old_lines = content.splitlines()
+        new_lines = new_content.splitlines()
+        line_delta = len(new_lines) - len(old_lines)
+
+        return {
+            "ok": True,
+            "path": str(target),
+            "line_delta": line_delta,
+            "old_line_count": len(old_lines),
+            "new_line_count": len(new_lines)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.post("/api/fs/mkdir")
 async def fs_mkdir(body: dict = Body(...)):
     """创建目录"""
@@ -120,6 +160,70 @@ async def fs_mkdir(body: dict = Body(...)):
         return {"ok": True, "path": str(target)}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ═══════════════════════════════════════════════
+# 区域 1.5: 工具执行 API (Eos-Tools)
+# ═══════════════════════════════════════════════
+
+sys.path.insert(0, str(BASE_DIR / "Eos-Tools"))
+from read_file import read_file as tool_read_file
+from write_file import write_file as tool_write_file
+from edit_file import edit_file as tool_edit_file
+from trace_file import trace_file as tool_trace_file
+
+@app.post("/api/tools/execute")
+async def tools_execute(body: dict = Body(...)):
+    """执行 Eos-Tools 工具"""
+    tool_name = body.get("tool", "")
+    args = body.get("args", {})
+    try:
+        if tool_name == "read_file":
+            result = tool_read_file(
+                path=args.get("path", ""),
+                offset=args.get("offset", 1),
+                limit=args.get("limit", 500),
+                trace=args.get("trace", False),
+                error_fix_id=args.get("error_fix_id")
+            )
+        elif tool_name == "write_file":
+            result = tool_write_file(
+                path=args.get("path", ""),
+                content=args.get("content", ""),
+                error_fix_id=args.get("error_fix_id")
+            )
+        elif tool_name == "edit_file":
+            result = tool_edit_file(
+                path=args.get("path", ""),
+                mode=args.get("mode", "replace"),
+                old_string=args.get("old_string", ""),
+                new_string=args.get("new_string", ""),
+                replace_all=args.get("replace_all", False),
+                patch=args.get("patch", ""),
+                trace_update=args.get("trace_update", True),
+                error_fix_id=args.get("error_fix_id")
+            )
+        elif tool_name == "trace_file":
+            result = tool_trace_file(
+                path=args.get("path", ""),
+                operation=args.get("operation", "trace")
+            )
+        else:
+            return {"status": "error", "error": f"Unknown tool: {tool_name}"}
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/api/tools/definitions")
+async def tools_definitions():
+    """获取工具定义"""
+    return {
+        "read_file": tool_read_file.__doc__ or "读取文件内容",
+        "write_file": tool_write_file.__doc__ or "用完整文本覆盖文件",
+        "edit_file": tool_edit_file.__doc__ or "局部编辑文件",
+        "trace_file": tool_trace_file.__doc__ or "控制文件 trace 状态"
+    }
 
 
 # ═══════════════════════════════════════════════
@@ -1353,6 +1457,195 @@ async def db_batch(database: str, body: dict = Body(...)):
 
 # ═══════════════════════════════════════════════
 # 静态文件 & 入口
+# ═══════════════════════════════════════════════
+# 区域 12: 存储管理
+# ═══════════════════════════════════════════════
+
+import shutil
+
+
+def _get_data_root() -> Path:
+    """获取数据根目录，优先读取配置，否则使用默认 ~/.aetheros"""
+    config_path = Path.home() / ".aetheros" / "data_dir.json"
+    if config_path.exists():
+        try:
+            cfg = json.loads(config_path.read_text(encoding="utf-8"))
+            custom = cfg.get("data_dir")
+            if custom:
+                p = Path(custom)
+                if p.exists():
+                    return p
+        except Exception:
+            pass
+    return Path.home() / ".aetheros"
+
+
+def _dir_size(path: Path) -> int:
+    """递归计算目录大小（字节）"""
+    total = 0
+    try:
+        for entry in path.rglob("*"):
+            if entry.is_file():
+                total += entry.stat().st_size
+    except (PermissionError, OSError):
+        pass
+    return total
+
+
+def _format_size(size_bytes: int) -> str:
+    """格式化文件大小"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+
+@app.get("/api/storage/usage")
+async def storage_usage():
+    """获取存储空间使用情况"""
+    root = _get_data_root()
+    if not root.exists():
+        return {"root": str(root), "total": 0, "formatted_total": "0 B", "breakdown": []}
+
+    breakdown = []
+    try:
+        entries = sorted(root.iterdir(), key=lambda e: e.name)
+    except PermissionError:
+        entries = []
+
+    for entry in entries:
+        if entry.is_dir():
+            size = _dir_size(entry)
+            # 统计文件数
+            file_count = sum(1 for _ in entry.rglob("*") if _.is_file())
+            breakdown.append({
+                "name": entry.name,
+                "path": str(entry),
+                "size": size,
+                "formatted_size": _format_size(size),
+                "file_count": file_count,
+            })
+        elif entry.is_file():
+            size = entry.stat().st_size
+            breakdown.append({
+                "name": entry.name,
+                "path": str(entry),
+                "size": size,
+                "formatted_size": _format_size(size),
+                "file_count": 1,
+            })
+
+    # 按大小降序排列
+    breakdown.sort(key=lambda x: x["size"], reverse=True)
+    total = sum(b["size"] for b in breakdown)
+
+    # 计算磁盘总空间和可用空间
+    disk_total = 0
+    disk_free = 0
+    try:
+        usage = shutil.disk_usage(root)
+        disk_total = usage.total
+        disk_free = usage.free
+    except Exception:
+        pass
+
+    return {
+        "root": str(root),
+        "total": total,
+        "formatted_total": _format_size(total),
+        "breakdown": breakdown,
+        "disk_total": disk_total,
+        "disk_free": disk_free,
+        "formatted_disk_total": _format_size(disk_total),
+        "formatted_disk_free": _format_size(disk_free),
+    }
+
+
+@app.get("/api/storage/config")
+async def storage_config():
+    """获取存储配置信息"""
+    root = _get_data_root()
+    default_path = str(Path.home() / ".aetheros")
+    config_path = Path.home() / ".aetheros" / "data_dir.json"
+    is_custom = config_path.exists()
+    custom_dir = None
+    if is_custom:
+        try:
+            cfg = json.loads(config_path.read_text(encoding="utf-8"))
+            custom_dir = cfg.get("data_dir")
+        except Exception:
+            pass
+    return {
+        "current_dir": str(root),
+        "default_dir": default_path,
+        "is_custom": is_custom and custom_dir is not None,
+        "custom_dir": custom_dir,
+    }
+
+
+@app.post("/api/storage/migrate")
+async def storage_migrate(body: dict = Body(...)):
+    """迁移数据目录到新位置"""
+    new_dir = body.get("target_dir", "").strip()
+    if not new_dir:
+        return {"error": "目标目录不能为空"}
+
+    target = Path(new_dir).expanduser().resolve()
+    source = _get_data_root()
+
+    if str(target) == str(source):
+        return {"error": "目标目录与当前目录相同"}
+
+    if target.exists() and any(target.iterdir()):
+        # 目标目录非空，检查是否已有 aetheros 数据
+        if (target / "data").exists() or (target / "agent").exists() or (target / "llm").exists():
+            return {"error": f"目标目录 {target} 已包含 AetherOS 数据，请选择空目录或手动处理"}
+
+    try:
+        # 创建目标目录
+        target.mkdir(parents=True, exist_ok=True)
+
+        # 复制数据到新位置
+        if source.exists():
+            for item in source.iterdir():
+                dest = target / item.name
+                if item.is_dir():
+                    if dest.exists():
+                        shutil.rmtree(dest)
+                    shutil.copytree(item, dest)
+                else:
+                    shutil.copy2(item, dest)
+
+        # 保存配置
+        config_path = Path.home() / ".aetheros" / "data_dir.json"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(
+            json.dumps({"data_dir": str(target)}, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+
+        return {
+            "ok": True,
+            "message": f"数据已迁移到 {target}。请重启服务器以使更改生效。",
+            "new_dir": str(target),
+        }
+    except Exception as e:
+        return {"error": f"迁移失败: {str(e)}"}
+
+
+@app.post("/api/storage/reset-path")
+async def storage_reset_path():
+    """重置数据目录为默认路径"""
+    config_path = Path.home() / ".aetheros" / "data_dir.json"
+    if config_path.exists():
+        config_path.unlink()
+    return {"ok": True, "message": "已重置为默认目录。请重启服务器以使更改生效。"}
+
+
 # ═══════════════════════════════════════════════
 
 @app.get("/")

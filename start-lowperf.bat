@@ -31,8 +31,13 @@ REM Check dependencies
 echo   [INFO] Checking dependencies...
 pip show fastapi >nul 2>&1
 if errorlevel 1 (
-    echo   [INFO] Installing dependencies...
-    pip install -r requirements.txt
+    if exist "deps" (
+        echo   [INFO] Installing dependencies from local deps/...
+        pip install --no-index --find-links=deps/ -r requirements.txt
+    ) else (
+        echo   [INFO] Installing dependencies from PyPI...
+        pip install -r requirements.txt
+    )
 ) else (
     echo   [OK] Dependencies satisfied
 )

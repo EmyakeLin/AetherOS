@@ -3,11 +3,11 @@ Eos Context Manager — Dynamic File State & Defragmentation
 
 Core mechanisms:
   1. Cache-Aware State Notification: notify model of file changes at user prompt end
-  2. Tombstoning & Lazy-Loading: replace stale read_file results when model re-reads
+  2. Tombstoning & Lazy-Loading: replace stale eos_read_file results when model re-reads
   3. Context Defragmentation: merge chunked reads of the same file
   4. Local Delta Injection: append current chunk at response end, clear on next call
   5. Forced Refresh on Modified files: trigger full refresh after file modification
-  6. Tool call argument shrinking: omit write_file/patch content for successful calls
+  6. Tool call argument shrinking: omit eos_write_file content for successful calls
 """
 
 import hashlib
@@ -20,11 +20,11 @@ class FileState:
 
     def __init__(self, path: str):
         self.path = path
-        self.read_call_ids: list[str] = []  # All read_file call_ids for this file
+        self.read_call_ids: list[str] = []  # All eos_read_file call_ids for this file
         self.read_ranges: list[tuple[int, int]] = []  # (offset, limit) pairs
         self.read_contents: list[str] = []  # Content returned for each read
         self.content_hash: Optional[str] = None  # Hash of latest version
-        self.modified_by_call_id: Optional[str] = None  # Last write/patch call_id
+        self.modified_by_call_id: Optional[str] = None  # Last write/edit call_id
         self.merged_content: Optional[str] = None  # Current merged global view
         self.is_dirty: bool = False  # File modified since last read
         self.last_read_call_id: Optional[str] = None  # Most recent read call_id
@@ -78,7 +78,7 @@ class ContextManager:
             "success": success,
         }
 
-        if tool_name == "read_file" and success:
+        if tool_name == "eos_read_file" and success:
             path = tool_args.get("path", "")
             offset = tool_args.get("offset", 1)
             limit = tool_args.get("limit", 500)
@@ -88,7 +88,7 @@ class ContextManager:
             fs.read_contents.append(result)
             fs.last_read_call_id = call_id
 
-        elif tool_name == "write_file" and success:
+        elif tool_name == "eos_write_file" and success:
             path = tool_args.get("path", "")
             content = tool_args.get("content", "")
             fs = self._get_file(path)
@@ -96,16 +96,16 @@ class ContextManager:
             fs.modified_by_call_id = call_id
             fs.is_dirty = True
             self._pending_notifications.append(
-                f"文件已被 write_file 修改: {path}"
+                f"文件已被 eos_write_file 修改: {path}"
             )
 
-        elif tool_name == "patch" and success:
+        elif tool_name == "eos_edit_file" and success:
             path = tool_args.get("path", "")
             fs = self._get_file(path)
             fs.modified_by_call_id = call_id
             fs.is_dirty = True
             self._pending_notifications.append(
-                f"文件已被 patch 修改: {path}"
+                f"文件已被 eos_edit_file 修改: {path}"
             )
 
     def record_retry(self, original_call_id: str, new_call_id: str):
@@ -126,7 +126,7 @@ class ContextManager:
         if not success:
             return tool_args  # Keep failed calls intact
 
-        if tool_name == "write_file":
+        if tool_name == "eos_write_file":
             content = tool_args.get("content", "")
             if len(content) > 200:
                 return {
@@ -135,25 +135,18 @@ class ContextManager:
                 }
             return tool_args
 
-        elif tool_name == "patch":
+        elif tool_name == "eos_edit_file":
             mode = tool_args.get("mode", "replace")
             result = {**tool_args}
 
             if mode == "replace":
-                # Support both old_string/new_string and old_text/new_text
-                old_str = tool_args.get("old_string", tool_args.get("old_text", ""))
-                new_str = tool_args.get("new_string", tool_args.get("new_text", ""))
+                old_str = tool_args.get("old_string", "")
+                new_str = tool_args.get("new_string", "")
 
                 if len(old_str) > 200:
-                    if "old_string" in tool_args:
-                        result["old_string"] = f"[omitted: {len(old_str)} chars]"
-                    else:
-                        result["old_text"] = f"[omitted: {len(old_str)} chars]"
+                    result["old_string"] = f"[omitted: {len(old_str)} chars]"
                 if len(new_str) > 200:
-                    if "new_string" in tool_args:
-                        result["new_string"] = f"[omitted: {len(new_str)} chars]"
-                    else:
-                        result["new_text"] = f"[omitted: {len(new_str)} chars]"
+                    result["new_string"] = f"[omitted: {len(new_str)} chars]"
                 return result
 
             elif mode == "patch":
@@ -319,7 +312,7 @@ class ContextManager:
         1. Tombstone stale reads for modified files
         2. Defragment chunked reads
         3. Remove failed calls that were retried
-        4. Shrink successful write_file/patch arguments
+        4. Shrink successful eos_write_file arguments
         5. Apply tombstoned results
         6. Append file change notifications to last user message
         """
@@ -417,7 +410,7 @@ class ContextManager:
 ## Context Management Rules
 
 1. **Failed tool calls**: If a tool call fails, you MUST reference the failed call's ID when retrying. Example: "Retrying call_001 with corrected arguments."
-2. **File state awareness**: After a file is modified (via write_file or patch), you will receive a file change notification. If you need the updated content, call read_file again.
-3. **Stale content**: Historical read_file results may be marked as outdated. Do not rely on outdated content — re-read the file if needed.
+2. **File state awareness**: After a file is modified (via eos_write_file or eos_edit_file), you will receive a file change notification. If you need the updated content, call eos_read_file again.
+3. **Stale content**: Historical eos_read_file results may be marked as outdated. Do not rely on outdated content — re-read the file if needed.
 4. **Chunked reads**: When reading a file in chunks, previous chunks are merged automatically. The merged view includes gap markers for unread sections.
 """

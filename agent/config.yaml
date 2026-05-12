@@ -23,3 +23,11 @@ context:
   strategy: sliding_window  # sliding_window | summary | layered
   max_tokens: 128000
   compress_threshold: 0.8
+
+# Eos-Context 文件上下文管理
+eos_context_enabled: true  # 启用 Eos-Context 文件上下文管理器
+
+# 工具集配置（可选）
+# toolset: null  # 加载所有工具（默认）
+# toolset: "eos-tools-file-management"  # 只加载 Eos-Tools 文件管理工具集
+toolset: "default"  # 加载默认工具集（文件 + 终端 + Eos-Tools）

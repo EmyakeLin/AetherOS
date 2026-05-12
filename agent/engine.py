@@ -9,6 +9,8 @@ LLM 调用统一通过 llm_service（全局 LLM 配置），引擎自身不管�
 import json
 import time
 import logging
+import sys
+from pathlib import Path
 from typing import AsyncGenerator
 
 from context import ContextManager
@@ -16,6 +18,11 @@ from context_manager import ContextManager as FileContextManager
 from prompt_builder import build_system_prompt, clear_section_cache
 from model_tools import get_tool_definitions, handle_function_call
 from storage import get_storage
+
+# 添加 Eos-Context 目录到路径
+eos_context_dir = Path(__file__).parent.parent / "Eos-Context"
+sys.path.insert(0, str(eos_context_dir))
+from eos_context_manager import FileContextManager as EosContextManager
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +37,12 @@ class CustomAgentEngine:
         # 中断信号
         self._interrupted = False
 
+        # Eos-Context 配置
+        self.eos_context_enabled = config.get("eos_context_enabled", True)
+
+        # 工具集配置
+        self.toolset = config.get("toolset", None)  # None 表示加载所有工具
+
         # 构建系统提示词（支持模块化架构）
         user_system_prompt = config.get("system_prompt", "")
         extra_context = config.get("extra_context", {})
@@ -40,7 +53,7 @@ class CustomAgentEngine:
         system_prompt = build_system_prompt(
             user_system_prompt=user_system_prompt,
             extra_context=extra_context,
-            tools_schema=get_tool_definitions(),
+            tools_schema=get_tool_definitions(self.toolset),
             language=language,
             override_system_prompt=override_system_prompt,
             append_system_prompt=append_system_prompt,
@@ -50,6 +63,7 @@ class CustomAgentEngine:
         ctx_config = {**config, "system_prompt": system_prompt}
         self.context = ContextManager(ctx_config)
         self.file_context = FileContextManager()
+        self.eos_context = EosContextManager()
 
     def interrupt(self):
         """请求中断当前运行"""
@@ -86,8 +100,8 @@ class CustomAgentEngine:
         # 持久化用户消息
         await self._persist_message("user", user_message)
 
-        # 获取工具定义
-        tools_schema = get_tool_definitions()
+        # 获取工具定义（支持工具集过滤）
+        tools_schema = get_tool_definitions(self.toolset)
 
         if not self.llm_service or not self.model:
             yield {
@@ -110,7 +124,10 @@ class CustomAgentEngine:
                 yield {"type": "thinking", "call_id": call_id, "model": self.model}
 
                 # 处理消息（缩减参数、清理失败调用、注入通知）
-                processed_messages = self.file_context.process_messages(messages)
+                if self.eos_context_enabled:
+                    processed_messages = self.eos_context.process_messages(messages)
+                else:
+                    processed_messages = self.file_context.process_messages(messages)
 
                 # 调用 LLM（流式传输，统一通过 llm_service.chat_stream）
                 start_time = time.time()
@@ -221,6 +238,11 @@ class CustomAgentEngine:
                             self.file_context.record_tool_call(
                                 tc_id, tool_name, tool_args, result_str, True
                             )
+                            # 记录到 EosContextManager
+                            if self.eos_context_enabled:
+                                self.eos_context.record_tool_call(
+                                    tc_id, tool_name, tool_args, result_str, True
+                                )
                         except Exception as e:
                             error_str = str(e)
                             yield {
@@ -244,6 +266,11 @@ class CustomAgentEngine:
                             self.file_context.record_tool_call(
                                 tc_id, tool_name, tool_args, error_str, False
                             )
+                            # 记录到 EosContextManager
+                            if self.eos_context_enabled:
+                                self.eos_context.record_tool_call(
+                                    tc_id, tool_name, tool_args, error_str, False
+                                )
 
                     # 一次性添加 assistant 消息和所有工具结果
                     messages.append(assistant_msg)

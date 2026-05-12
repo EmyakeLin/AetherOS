@@ -52,7 +52,19 @@
       "Bash(curl -L -o /tmp/git-filter-repo https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo.py)",
       "Bash(chmod +x /tmp/git-filter-repo)",
       "Bash(/tmp/git-filter-repo --version)",
-      "Bash(chmod +x *)"
+      "Bash(chmod +x *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(pipx --version)",
+      "Bash(sudo -S apt install -y pipx)",
+      "Bash(pipx ensurepath *)",
+      "Bash(pipx install *)",
+      "Bash(graphify install *)",
+      "Bash(graphify *)",
+      "Bash(.venv/bin/pip show *)",
+      "WebFetch(domain:pypi.org)",
+      "Bash(pip index *)"
     ]
   }
 }

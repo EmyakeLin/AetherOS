@@ -89,7 +89,7 @@ class LLMClient {
                                 this.os.updateModelCall(callId, {
                                     status: 'done',
                                     endTime: Date.now(),
-                                    tokens: d.usage ? d.usage.total_tokens : 0,
+                                    tokens: d.tokens || (d.usage ? d.usage.total_tokens : 0),
                                 });
                                 if (options.onDone) options.onDone(d);
                                 break;

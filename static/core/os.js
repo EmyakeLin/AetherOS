@@ -381,6 +381,13 @@ class AetherOS {
         sidebar.classList.toggle('collapsed', !this.sidebarExpanded);
         toggle.classList.toggle('active', this.sidebarExpanded);
         if (this.sidebarExpanded) this._renderWindowPreview();
+
+        // Update toast positions
+        if (this._toastStack) {
+            this._toastStack.forEach(toast => {
+                toast.classList.toggle('sidebar-expanded', this.sidebarExpanded);
+            });
+        }
     }
 
     // ── Model call tracking ──
@@ -392,6 +399,46 @@ class AetherOS {
         this.modelCalls.push(call);
         this.callHistory.push(call);
         this._renderModelCalls();
+        this._showModelToast(call);
+    }
+
+    _showModelToast(call) {
+        const toast = document.createElement('div');
+        toast.className = 'model-toast';
+        if (this.sidebarExpanded) toast.classList.add('sidebar-expanded');
+        toast.innerHTML = `
+            <div class="toast-header">
+                <div class="toast-dot"></div>
+                <span class="toast-model">${this._esc(call.model)}</span>
+            </div>
+            <div class="toast-app">${this._esc(call.app || '—')}</div>
+            <div class="toast-progress"></div>
+        `;
+        document.body.appendChild(toast);
+
+        // Add to stack (newest first)
+        this._toastStack = this._toastStack || [];
+        this._toastStack.unshift(toast);
+        this._updateToastPositions();
+
+        setTimeout(() => {
+            toast.classList.add('toast-out');
+            toast.addEventListener('animationend', () => {
+                this._toastStack = this._toastStack.filter(t => t !== toast);
+                toast.remove();
+                this._updateToastPositions();
+            });
+        }, 3000);
+    }
+
+    _updateToastPositions() {
+        if (!this._toastStack) return;
+        const baseTop = 52;
+        const spacing = 70;
+        this._toastStack.forEach((toast, index) => {
+            const offset = spacing * Math.sqrt(index);
+            toast.style.top = (baseTop + offset) + 'px';
+        });
     }
 
     updateModelCall(id, updates) {
@@ -685,6 +732,12 @@ class AetherOS {
         });
 
         this._renderWindowPreview();
+    }
+
+    _updateDockCollapsed() {
+        const hasMaximized = [...this.windows.values()].some(w => w.state === 'maximized');
+        const dock = document.getElementById('dock');
+        if (dock) dock.classList.toggle('dock-collapsed', hasMaximized);
     }
 
     _renderWindowPreview() {
@@ -1036,6 +1089,7 @@ class AetherOS {
         // Focus
         this.focusWindow(win.id);
         this._updateDockIndicators();
+        this._updateDockCollapsed();
 
         // Init app
         if (reg.factory) {
@@ -1076,6 +1130,7 @@ class AetherOS {
             });
             if (this.focusedId === id) this.focusedId = null;
             this._updateDockIndicators();
+            this._updateDockCollapsed();
             this._saveLayoutDebounced();
             // Save app state one final time before close
             const reg = AppRegistry[win.appId];
@@ -1210,6 +1265,7 @@ class AetherOS {
             }
 
             this._updateDockIndicators();
+            this._updateDockCollapsed();
         } catch (e) {
             console.warn('Layout restore failed:', e);
         }

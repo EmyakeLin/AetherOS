@@ -542,7 +542,7 @@ html, body {
 
 #dock {
     position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
-    z-index: 800; pointer-events: none;
+    z-index: 800;
 }
 .dock-container {
     display: inline-flex; align-items: center; gap: 4px;
@@ -626,6 +626,25 @@ html, body {
     50% { transform: translateY(-4px) scale(1.02); }
     70% { transform: translateY(-10px) scale(1.08); }
     100% { transform: translateY(0) scale(1); }
+}
+
+/* ── Dock collapsed state (when a window is maximized) ── */
+#dock.dock-collapsed {
+    transform: translateX(-50%) translateY(28px);
+    transition: transform 0.4s var(--ease-out);
+}
+#dock.dock-collapsed .dock-container {
+    transform: scale(0.65);
+    opacity: 0.35;
+    transform-origin: bottom center;
+    transition: all 0.4s var(--ease-out);
+}
+#dock.dock-collapsed:hover {
+    transform: translateX(-50%) translateY(0);
+}
+#dock.dock-collapsed:hover .dock-container {
+    transform: scale(1);
+    opacity: 1;
 }
 
 /* ═══════════════════════════════
@@ -755,6 +774,86 @@ html, body {
 /* ═══════════════════════════════
    UTILITY
    ═══════════════════════════════ */
+
+/* ── Model call toast ── */
+.model-toast {
+    position: fixed;
+    left: 16px;
+    width: 220px;
+    background: rgba(20, 26, 46, 0.95);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    z-index: 9000;
+    animation: toast-in 0.3s var(--ease-out);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 12px rgba(0, 229, 255, 0.1);
+    overflow: hidden;
+    transition: top 0.3s var(--ease-out), left 0.3s var(--ease-out);
+}
+.model-toast.sidebar-expanded {
+    left: 306px;
+}
+[data-theme="light"] .model-toast {
+    background: rgba(240, 235, 226, 0.95);
+    border-color: rgba(184, 134, 11, 0.25);
+    box-shadow: 0 4px 20px rgba(80,60,30,0.2), 0 0 12px rgba(184, 134, 11, 0.1);
+}
+.model-toast.toast-out {
+    animation: toast-out 0.3s var(--ease-out) forwards;
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+.toast-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.toast-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: dot-pulse 1.5s ease-in-out infinite;
+}
+.toast-model {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.toast-app {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+    width: 100%;
+    animation: toast-progress 2s linear forwards;
+    box-shadow: 0 0 6px var(--accent);
+}
+@keyframes toast-progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
 
 .snap-preview {
     position: fixed; z-index: 9999; border: 2px solid var(--accent);

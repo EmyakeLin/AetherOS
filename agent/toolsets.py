@@ -9,17 +9,23 @@ TOOLSETS = {
     # ── 基础工具集 ──
     "file": {
         "description": "文件操作",
-        "tools": ["read_file", "write_file", "list_dir", "search_files", "patch"],
+        "tools": ["search_files"],
     },
     "terminal": {
         "description": "终端执行",
-        "tools": ["run_command"],
+        "tools": ["terminal"],
+    },
+
+    # ── Eos-Tools 文件管理工具集 ──
+    "eos-tools-file-management": {
+        "description": "Eos-Tools 文件管理工具集（支持上下文管理）",
+        "tools": ["eos_read_file", "eos_write_file", "eos_edit_file"],
     },
 
     # ── 组合工具集 ──
     "default": {
-        "description": "默认工具集（文件 + 终端）",
-        "includes": ["file", "terminal"],
+        "description": "默认工具集（文件 + 终端 + Eos-Tools）",
+        "includes": ["file", "terminal", "eos-tools-file-management"],
     },
 
     # ── 预留工具集（待实现） ──

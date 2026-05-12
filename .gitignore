@@ -112,3 +112,7 @@ docs/
 fonts/*.ttf
 fonts/*.otf
 fonts/iosevka-charon/
+
+# Graphify
+.graphifyignore
+graphify-out/

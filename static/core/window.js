@@ -300,7 +300,10 @@ class OSWindow {
         this.w = this._normalGeom.w;
         this.h = this._normalGeom.h;
         this._applyGeom();
-        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
+        if (typeof windowOS !== 'undefined') {
+            windowOS._updateDockCollapsed();
+            windowOS._saveLayoutDebounced();
+        }
     }
 
     toggleMaximize() {
@@ -353,7 +356,10 @@ class OSWindow {
             };
             this.element.addEventListener('transitionend', onEnd);
         }
-        if (typeof windowOS !== 'undefined') windowOS._saveLayoutDebounced();
+        if (typeof windowOS !== 'undefined') {
+            windowOS._updateDockCollapsed();
+            windowOS._saveLayoutDebounced();
+        }
     }
 
     snap(side) {

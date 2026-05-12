@@ -209,6 +209,19 @@ def _get_output_efficiency_section() -> str:
     return _get_config_value("output_efficiency", "# Output efficiency\nGo straight to the point.")
 
 
+def _get_eos_tools_section() -> Optional[str]:
+    """Eos-Tools 文件管理工具集提示词"""
+    eos_tools_prompt_file = Path(__file__).parent / "eos_tools_prompt.md"
+    if not eos_tools_prompt_file.exists():
+        return None
+    try:
+        content = eos_tools_prompt_file.read_text(encoding="utf-8")
+        return _scan_context_content(content, "eos_tools_prompt.md")
+    except Exception as e:
+        logger.warning(f"Failed to load eos_tools_prompt.md: {e}")
+        return None
+
+
 # =========================================================================
 # 动态段落函数 — 每轮变化的内容
 # =========================================================================
@@ -315,6 +328,7 @@ def build_system_prompt(
     sections.append(system_prompt_section("tool_usage", lambda: _get_tool_usage_section(tools_schema)))
     sections.append(system_prompt_section("tone_style", _get_tone_style_section))
     sections.append(system_prompt_section("output_efficiency", _get_output_efficiency_section))
+    sections.append(system_prompt_section("eos_tools", _get_eos_tools_section))
 
     # 动态段落（每轮重新计算）
     sections.append(uncached_system_prompt_section(

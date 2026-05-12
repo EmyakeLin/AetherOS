@@ -142,6 +142,16 @@ registerApp('agent', {
                             <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
                         </div>
                         <div class="settings-field">
+                            <label class="settings-label">工具集</label>
+                            <select id="settings-toolset" class="settings-select">
+                                <option value="">所有工具</option>
+                                <option value="default">默认工具集（文件 + 终端）</option>
+                                <option value="file">文件操作</option>
+                                <option value="terminal">终端执行</option>
+                                <option value="eos-tools-file-management">Eos-Tools 文件管理</option>
+                            </select>
+                        </div>
+                        <div class="settings-field">
                             <label class="settings-label">工具调用扫描动画速度（秒）</label>
                             <input id="settings-scan-speed" class="settings-input" type="number" min="0.2" max="5" step="0.1" value="1.0">
                         </div>
@@ -342,11 +352,46 @@ registerApp('agent', {
                 align-items: center;
                 gap: 8px;
             }
-            .header-title span:first-child {
+            .header-title span:first-child,
+            .header-title .title-edit {
                 font-family: var(--font-body);
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--text-primary);
+            }
+            .header-title .title-edit {
+                background: var(--bg-surface);
+                border: 1px solid var(--accent);
+                border-radius: var(--radius-sm);
+                padding: 2px 8px;
+                outline: none;
+                width: 200px;
+                box-shadow: 0 0 0 2px var(--accent-glow);
+            }
+            #session-title-display {
+                cursor: pointer;
+                padding: 2px 4px;
+                border-radius: var(--radius-sm);
+                transition: background 0.15s;
+            }
+            #session-title-display:hover {
+                background: var(--bg-surface);
+            }
+            .session-item-title {
+                cursor: pointer;
+                padding: 1px 2px;
+                border-radius: 2px;
+                transition: background 0.15s;
+            }
+            .session-item-title:hover {
+                background: var(--bg-surface);
+            }
+            .session-item-title.editing {
+                background: var(--bg-surface);
+                border: 1px solid var(--accent);
+                outline: none;
+                padding: 0 4px;
+                min-width: 60px;
             }
             .model-badge {
                 font-family: var(--font-mono);
@@ -1305,14 +1350,59 @@ registerApp('agent', {
                 position: fixed;
                 pointer-events: none;
                 z-index: 999;
-                overflow: visible;
+                overflow: hidden;
+                border-radius: 6px;
             }
-            .tool-complete-svg {
+            .tool-complete-scan {
                 position: absolute;
-                right: 0;
                 top: 0;
-                width: 120px;
+                left: -100%;
+                width: 100%;
                 height: 100%;
+                background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.3) 50%, transparent 100%);
+                animation: toolScan 0.6s ease-out forwards;
+            }
+            @keyframes toolScan {
+                to { left: 100%; }
+            }
+            .tool-complete-check {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%) scale(0);
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #00e676;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: checkPop 0.3s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            @keyframes checkPop {
+                to { transform: translateY(-50%) scale(1); }
+            }
+            .tool-complete-check svg {
+                width: 14px;
+                height: 14px;
+                opacity: 0;
+                animation: checkDraw 0.3s 0.6s ease-out forwards;
+            }
+            @keyframes checkDraw {
+                to { opacity: 1; }
+            }
+            .tool-complete-border {
+                position: absolute;
+                inset: 0;
+                border-radius: 6px;
+                border: 2px solid transparent;
+                animation: borderGlow 1.4s 0.3s ease-out forwards;
+            }
+            @keyframes borderGlow {
+                0% { border-color: var(--accent); }
+                30% { border-color: #00e676; }
+                70% { border-color: rgba(0, 230, 118, 0.4); }
+                100% { border-color: rgba(0, 230, 118, 0); }
             }
 
             /* ── Light theme overrides ── */
@@ -1341,7 +1431,8 @@ registerApp('agent', {
         const sessionListEl = container.querySelector('#session-list');
         const sessionNewBtn = container.querySelector('#session-new-btn');
         const sessionToggleBtn = container.querySelector('#session-toggle-btn');
-        const sessionTitleDisplay = container.querySelector('#session-title-display');
+        let sessionTitleDisplay = container.querySelector('#session-title-display');
+        sessionTitleDisplay.addEventListener('dblclick', enableTitleEdit);
         const modelBadge = container.querySelector('#model-badge');
         const panelToggleBtn = container.querySelector('#panel-toggle-btn');
         const agentPanel = container.querySelector('#agent-panel');
@@ -1362,6 +1453,7 @@ registerApp('agent', {
         let _conversationRound = 0;  // 对话轮次，会话内累加
         let _iterationInRound = 0;   // 当前轮次中的迭代次数
         let _iterationCount = 0;     // 当前位置累积的工具调用次数
+        let _segmentToolCount = 0;   // 当前连续工具调用段的计数
         let _toolCallHistory = [];   // 工具调用历史
         let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
         let _toolStartTime = 0;      // 工具调用开始时间
@@ -1422,7 +1514,7 @@ registerApp('agent', {
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.67 2.67 2 3.5 2h9c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H5l-3 2V3.5z" stroke="currentColor" stroke-width="1.2"/></svg>
                         </div>
                         <div class="session-item-body">
-                            <div class="session-item-title">${escapeHtml(session.title)}</div>
+                            <div class="session-item-title" data-session-id="${session.id}">${escapeHtml(session.title)}</div>
                             <div class="session-item-time">${formatTime(session.updated_at)}</div>
                         </div>
                         <button class="session-item-delete" title="删除">
@@ -1431,7 +1523,14 @@ registerApp('agent', {
                     `;
                     el.addEventListener('click', (e) => {
                         if (e.target.closest('.session-item-delete')) return;
+                        if (e.target.closest('.session-item-title.editing')) return;
                         switchSession(session.id);
+                    });
+                    // 双击标题重命名
+                    const titleEl = el.querySelector('.session-item-title');
+                    titleEl.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+                        startSidebarRename(titleEl, session);
                     });
                     el.querySelector('.session-item-delete').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -1741,7 +1840,7 @@ registerApp('agent', {
                     session.message_count = (session.message_count || 0) + 1;
                     session.updated_at = Date.now();
                     if (role === 'user' && session.title === '新会话') {
-                        const title = content.slice(0, 30).replace(/\n/g, ' ');
+                        const title = generateTitle(content);
                         await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title });
                         session.title = title;
                         updateSessionTitle(title);
@@ -1756,6 +1855,117 @@ registerApp('agent', {
 
         function updateSessionTitle(title) {
             sessionTitleDisplay.textContent = title || 'Eos Agent';
+        }
+
+        function generateTitle(content) {
+            // 清理内容：去除多余空白、换行、markdown标记
+            let text = content
+                .replace(/```[\s\S]*?```/g, '[代码]')  // 代码块
+                .replace(/`[^`]+`/g, '')                 // 行内代码
+                .replace(/[#*_~\[\]()]/g, '')            // markdown符号
+                .replace(/\s+/g, ' ')                    // 合并空白
+                .trim();
+
+            // 如果内容太短，直接返回
+            if (text.length <= 20) return text || '新会话';
+
+            // 尝试在标点处截断
+            const punctuations = ['。', '？', '！', '，', '；', '.', '?', '!', ',', ';'];
+            let cutPos = 30;
+            for (const p of punctuations) {
+                const pos = text.indexOf(p, 10);
+                if (pos > 0 && pos < 40) {
+                    cutPos = pos + 1;
+                    break;
+                }
+            }
+
+            return text.slice(0, cutPos).trim() + (text.length > cutPos ? '...' : '');
+        }
+
+        function enableTitleEdit() {
+            const currentTitle = sessionTitleDisplay.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'title-edit';
+            input.value = currentTitle === 'Eos Agent' ? '' : currentTitle;
+            input.placeholder = '输入标题...';
+
+            const finishEdit = async (save) => {
+                const newTitle = input.value.trim();
+                if (save && newTitle && newTitle !== currentTitle) {
+                    try {
+                        await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title: newTitle });
+                        const session = sessionCache.find(s => s.id === currentSessionId);
+                        if (session) session.title = newTitle;
+                        updateSessionTitle(newTitle);
+                        renderSessionList();
+                    } catch (e) {
+                        console.warn('Failed to rename session:', e);
+                        updateSessionTitle(currentTitle);
+                    }
+                } else {
+                    updateSessionTitle(currentTitle);
+                }
+            };
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); finishEdit(true); }
+                if (e.key === 'Escape') finishEdit(false);
+            });
+            input.addEventListener('blur', () => finishEdit(true));
+
+            sessionTitleDisplay.replaceWith(input);
+            input.focus();
+            input.select();
+
+            // 编辑完成后恢复原始元素
+            input.addEventListener('blur', () => {
+                const span = document.createElement('span');
+                span.id = 'session-title-display';
+                span.textContent = input.value.trim() || 'Eos Agent';
+                span.addEventListener('dblclick', enableTitleEdit);
+                input.replaceWith(span);
+                // 更新引用
+                sessionTitleDisplay = span;
+            }, { once: true });
+        }
+
+        function startSidebarRename(titleEl, session) {
+            const currentTitle = session.title;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'session-item-title editing';
+            input.value = currentTitle;
+            input.style.width = '100%';
+
+            const finishEdit = async (save) => {
+                const newTitle = input.value.trim();
+                if (save && newTitle && newTitle !== currentTitle) {
+                    try {
+                        await os.api('PUT', `/api/agent/sessions/${session.id}`, { title: newTitle });
+                        session.title = newTitle;
+                        if (session.id === currentSessionId) {
+                            updateSessionTitle(newTitle);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to rename session:', e);
+                    }
+                }
+                renderSessionList();
+            };
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); finishEdit(true); }
+                if (e.key === 'Escape') finishEdit(false);
+                e.stopPropagation();
+            });
+            input.addEventListener('blur', () => finishEdit(true));
+            input.addEventListener('click', (e) => e.stopPropagation());
+
+            titleEl.replaceWith(input);
+            input.focus();
+            input.select();
         }
 
         function formatTime(ts) {
@@ -1785,8 +1995,9 @@ registerApp('agent', {
                 os.updateAgentPanel(agentId, { status: 'idle', contextTokens: 0 });
                 addSystemMessage('已连接到 Agent 引擎');
                 const s = loadSettings();
+                // 始终发送配置（包括 toolset、eos_context_enabled 等）
+                ws.send(JSON.stringify({ type: 'configure', settings: s }));
                 if (s.model) {
-                    ws.send(JSON.stringify({ type: 'configure', settings: s }));
                     updateModelBadge(s.model);
                 }
                 // 如果有当前 session，发送给后端加载历史消息
@@ -1843,6 +2054,7 @@ registerApp('agent', {
                     removeThinkingIndicator();
                     // 模型输出文本，重置迭代计数
                     _iterationCount = 0;
+                    _segmentToolCount = 0;  // 文本打断连续工具调用段
                     // 如果有正在进行的工具调用，标记完成
                     if (_toolIndicatorEl) {
                         updateToolIndicator('工具调用结束');
@@ -1856,6 +2068,7 @@ registerApp('agent', {
                     removeThinkingIndicator();
                     _iterationCount++;
                     _iterationInRound++;
+                    _segmentToolCount++;
                     _toolStartTime = Date.now();
                     _toolCallHistory.push({
                         name: data.name,
@@ -1942,10 +2155,10 @@ registerApp('agent', {
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
                 const countEl = _toolIndicatorEl.querySelector('.tool-call-count');
-                countEl.textContent = `Round ${_iterationInRound}`;
-                countEl.dataset.fullRound = `Round ${_iterationInRound}`;
+                countEl.textContent = `Round ${_segmentToolCount}`;
+                countEl.dataset.fullRound = `Round ${_segmentToolCount}`;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = _iterationInRound;
+                _toolIndicatorEl.dataset.iterationCount = _segmentToolCount;
             } else {
                 // 先渲染缓冲区的文本
                 flushPendingText();
@@ -1965,12 +2178,12 @@ registerApp('agent', {
                         <span class="tool-call-text">Function Calling — 正在调用工具</span>
                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                         <span class="tool-call-time"></span>
-                        <span class="tool-call-count" data-full-round="Round ${_iterationInRound}">Round ${_iterationInRound}</span>
+                        <span class="tool-call-count" data-full-round="Round ${_segmentToolCount}">Round ${_segmentToolCount}</span>
                     </div>
                     <div class="tool-call-scan"></div>
                 `;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = _iterationInRound;
+                _toolIndicatorEl.dataset.iterationCount = _segmentToolCount;
 
                 // 创建或复用 assistant 消息块
                 if (!_currentAssistantEl) {
@@ -2160,69 +2373,25 @@ registerApp('agent', {
             effect.className = 'tool-complete-effect';
             document.body.appendChild(effect);
 
-            // 追踪位置
-            function updatePosition() {
-                const rect = indicatorEl.getBoundingClientRect();
-                effect.style.left = rect.left + 'px';
-                effect.style.top = rect.top + 'px';
-                effect.style.width = rect.width + 'px';
-                effect.style.height = rect.height + 'px';
-            }
+            // 一次性定位
+            const rect = indicatorEl.getBoundingClientRect();
+            effect.style.left = rect.left + 'px';
+            effect.style.top = rect.top + 'px';
+            effect.style.width = rect.width + 'px';
+            effect.style.height = rect.height + 'px';
 
-            const tracker = setInterval(updatePosition, 16); // 60fps
-            updatePosition();
-
-            // 动态 SVG 打勾特效
             effect.innerHTML = `
-                <svg class="tool-complete-svg" viewBox="0 0 100 40" preserveAspectRatio="xMaxYMid meet">
-                    <!-- 扫描光效 -->
-                    <defs>
-                        <linearGradient id="scanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" style="stop-color:transparent"/>
-                            <stop offset="50%" style="stop-color:rgba(0,229,255,0.5)"/>
-                            <stop offset="100%" style="stop-color:transparent"/>
-                        </linearGradient>
-                    </defs>
-                    <rect class="svg-scan" x="-100" y="0" width="100" height="40" fill="url(#scanGrad)">
-                        <animate attributeName="x" from="-100" to="0" dur="0.6s" fill="freeze"/>
-                    </rect>
-
-                    <!-- 圆圈 -->
-                    <circle class="svg-circle" cx="88" cy="20" r="10"
-                            fill="none" stroke="var(--accent)" stroke-width="2" opacity="0">
-                        <animate attributeName="opacity" from="0" to="1" begin="0.6s" dur="0.2s" fill="freeze"/>
-                        <animate attributeName="r" from="0" to="10" begin="0.6s" dur="0.2s" fill="freeze"/>
-                    </circle>
-
-                    <!-- 打勾 -->
-                    <polyline class="svg-check" points="82,20 86,24 94,16"
-                              fill="none" stroke="white" stroke-width="2.5"
-                              stroke-linecap="round" stroke-linejoin="round"
-                              stroke-dasharray="20" stroke-dashoffset="20" opacity="0">
-                        <animate attributeName="opacity" from="0" to="1" begin="0.8s" dur="0.1s" fill="freeze"/>
-                        <animate attributeName="stroke-dashoffset" from="20" to="0" begin="0.8s" dur="0.4s" fill="freeze"/>
-                    </polyline>
-
-                    <!-- 圆圈变绿 -->
-                    <circle class="svg-circle-done" cx="88" cy="20" r="10"
-                            fill="#00e676" stroke="#00e676" stroke-width="2" opacity="0">
-                        <animate attributeName="opacity" from="0" to="1" begin="1.2s" dur="0.2s" fill="freeze"/>
-                    </circle>
-
-                    <!-- 淡化 -->
-                    <g opacity="1">
-                        <animate attributeName="opacity" from="1" to="0" begin="1.5s" dur="0.3s" fill="freeze"/>
-                        <use href="#scanGrad"/>
-                        <circle cx="88" cy="20" r="10" fill="#00e676"/>
-                    </g>
-                </svg>
+                <div class="tool-complete-scan"></div>
+                <div class="tool-complete-border"></div>
+                <div class="tool-complete-check">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 12 10 16 18 8"/>
+                    </svg>
+                </div>
             `;
 
-            // 1.8s: 清理
-            setTimeout(() => {
-                clearInterval(tracker);
-                effect.remove();
-            }, 1800);
+            // 1.5s 后清理
+            setTimeout(() => effect.remove(), 1500);
         }
 
         /* ══════════════════════════════════════════
@@ -2578,6 +2747,7 @@ registerApp('agent', {
             _conversationRound++;
             _iterationInRound = 0;
             _iterationCount = 0;
+            _segmentToolCount = 0;
             _toolCallHistory = [];
 
             addMessage('user', text, true);  // skipPersist=true，后端会持久化
@@ -2672,6 +2842,7 @@ registerApp('agent', {
         const settingsSystemPrompt = container.querySelector('#settings-system-prompt');
         const settingsMaxIter = container.querySelector('#settings-max-iter');
         const settingsScanSpeed = container.querySelector('#settings-scan-speed');
+        const settingsToolset = container.querySelector('#settings-toolset');
         const settingsSaveBtn = container.querySelector('#settings-save-btn');
         const settingsResetBtn = container.querySelector('#settings-reset-btn');
 
@@ -2681,6 +2852,7 @@ registerApp('agent', {
             systemPrompt: '你是 Eos Agent，一个强大的 AI 编程助手。\n你可以读写文件、执行终端命令、分析代码。\n请用中文回复。',
             maxIterations: 50,
             toolScanSpeed: 1.0,  // 工具调用扫描动画速度（秒）
+            toolset: '',  // 工具集（空字符串表示所有工具）
         };
 
         function loadSettings() {
@@ -2747,6 +2919,7 @@ registerApp('agent', {
             settingsSystemPrompt.value = s.systemPrompt || '';
             settingsMaxIter.value = s.maxIterations || 50;
             settingsScanSpeed.value = s.toolScanSpeed || 1.0;
+            settingsToolset.value = s.toolset || '';
         }
 
         function readSettingsForm() {
@@ -2755,6 +2928,7 @@ registerApp('agent', {
                 systemPrompt: settingsSystemPrompt.value,
                 maxIterations: parseInt(settingsMaxIter.value, 10) || 50,
                 toolScanSpeed: parseFloat(settingsScanSpeed.value) || 1.0,
+                toolset: settingsToolset.value,
             };
         }
 

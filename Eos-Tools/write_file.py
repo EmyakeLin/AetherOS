@@ -1,45 +1,81 @@
-from __future__ import annotations
+"""
+Eos-Tools: write_file 工具
+用完整文本覆盖文件。
+"""
 
+import json
 import hashlib
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
-def write_file(path: str, content: str, error_fix_id: Optional[str] = None) -> Dict[str, Any]:
-    resolved = str(Path(path).expanduser())
+def write_file(path: str, content: str, error_fix_id: Optional[str] = None) -> dict:
+    """
+    用完整文本覆盖文件。
+
+    Args:
+        path: 文件路径
+        content: 完整文件内容
+        error_fix_id: 可选，用于修正失败调用
+
+    Returns:
+        包含 status, path, content 等字段的字典
+    """
     try:
-        target = Path(resolved)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
-        data = content.encode("utf-8")
-        result = {
+        file_path = Path(path).resolve()
+
+        # 确保父目录存在
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 写入文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        # 计算内容 hash
+        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
+
+        # 统计行数
+        total_lines = content.count('\n') + 1 if content else 0
+
+        return {
             "status": "ok",
-            "path": resolved,
+            "path": str(file_path),
             "content": content,
-            "bytes_written": len(data),
-            "total_lines": 0 if content == "" else len(content.splitlines()),
-            "content_hash": hashlib.sha256(data).hexdigest(),
+            "bytes_written": len(content.encode('utf-8')),
+            "total_lines": total_lines,
+            "content_hash": content_hash
         }
-        if error_fix_id:
-            result["error_fix_id"] = error_fix_id
-        return result
-    except Exception as exc:
-        result = {"status": "error", "path": resolved, "error": str(exc)}
-        if error_fix_id:
-            result["error_fix_id"] = error_fix_id
-        return result
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "path": str(Path(path).resolve()),
+            "error": str(e),
+            "tool_call_id": None
+        }
 
 
-SCHEMA = {
-    "name": "write_file",
-    "description": "Write full file content. Context projection may omit arguments, but successful output preserves full text semantics.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {"type": "string"},
-            "content": {"type": "string"},
-            "error_fix_id": {"type": "string"},
-        },
-        "required": ["path", "content"],
-    },
-}
+def get_tool_definition() -> dict:
+    """获取工具定义"""
+    return {
+        "name": "write_file",
+        "description": "用完整文本覆盖文件。成功后，该文件的所有旧内容在当前版本语义上过期。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "文件路径"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "完整文件内容"
+                },
+                "error_fix_id": {
+                    "type": "string",
+                    "description": "可选，用于修正失败的同名工具调用"
+                }
+            },
+            "required": ["path", "content"]
+        }
+    }

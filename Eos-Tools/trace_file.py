@@ -1,61 +1,70 @@
-from __future__ import annotations
+"""
+Eos-Tools: trace_file 工具
+文件状态追踪控制。
+"""
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
-def _empty_cache(session_id: str = "") -> Dict[str, Any]:
-    return {"session_id": session_id, "version": 1, "last_processed_message_index": -1, "files": {}}
+def trace_file(path: str, operation: str = "trace") -> dict:
+    """
+    控制文件的 trace 状态。
+
+    Args:
+        path: 文件路径
+        operation: "trace" 或 "untrace"
+
+    Returns:
+        包含 status, path, operation 等字段的字典
+    """
+    try:
+        file_path = Path(path).resolve()
+
+        if operation not in ["trace", "untrace"]:
+            return {
+                "status": "error",
+                "path": str(file_path),
+                "error": f"Unknown operation: {operation}. Must be 'trace' or 'untrace'.",
+                "tool_call_id": None
+            }
+
+        return {
+            "status": "ok",
+            "path": str(file_path),
+            "operation": operation,
+            "message": f"File {operation}d successfully"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "path": str(Path(path).resolve()),
+            "error": str(e),
+            "tool_call_id": None
+        }
 
 
-def _load_cache(path: str, session_id: str = "") -> Dict[str, Any]:
-    p = Path(path)
-    if not p.exists():
-        return _empty_cache(session_id)
-    return json.loads(p.read_text(encoding="utf-8"))
-
-
-def _save_cache(path: str, cache: Dict[str, Any]) -> None:
-    p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def trace_file(path: str, operation: str, trace_cache_path: str, session_id: str = "") -> Dict[str, Any]:
-    resolved = str(Path(path).expanduser())
-    op = operation.lower().strip()
-    if op not in {"trace", "untrace"}:
-        return {"status": "error", "path": resolved, "error": "operation must be trace or untrace"}
-    cache = _load_cache(trace_cache_path, session_id=session_id)
-    files = cache.setdefault("files", {})
-    state = files.setdefault(resolved, {
-        "enabled": False,
-        "oversize": False,
-        "current_version": 0,
-        "last_event_message_index": -1,
-        "last_trace_message_index": -1,
-        "known_ranges": [],
-        "trace_nodes": [],
-        "events": [],
-    })
-    state["enabled"] = op == "trace"
-    state.setdefault("events", []).append({"tool": "trace_file", "type": op, "path": resolved})
-    _save_cache(trace_cache_path, cache)
-    return {"status": "traced" if op == "trace" else "untraced", "path": resolved, "trace_cache_path": str(Path(trace_cache_path))}
-
-
-SCHEMA = {
-    "name": "trace_file",
-    "description": "Add or remove a file from session-level file_trace management.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "path": {"type": "string"},
-            "operation": {"type": "string", "enum": ["trace", "untrace"]},
-            "trace_cache_path": {"type": "string"},
-            "session_id": {"type": "string"},
-        },
-        "required": ["path", "operation", "trace_cache_path"],
-    },
-}
+def get_tool_definition() -> dict:
+    """获取工具定义"""
+    return {
+        "name": "trace_file",
+        "description": "控制文件的 trace 状态。trace 后，该文件的所有读/写/改操作将被追踪。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "文件路径"
+                },
+                "operation": {
+                    "type": "string",
+                    "enum": ["trace", "untrace"],
+                    "description": "操作类型",
+                    "default": "trace"
+                }
+            },
+            "required": ["path"]
+        }
+    }

@@ -21,6 +21,7 @@ registerApp('settings', {
                     <div class="settings-nav" data-section="keybindings">快捷键</div>
                     <div class="settings-nav" data-section="apps">应用管理</div>
                     <div class="settings-nav" data-section="llm">LLM 模型</div>
+                    <div class="settings-nav" data-section="storage">存储空间</div>
                 </div>
                 <!-- Content -->
                 <div id="settings-content" style="flex:1;overflow-y:auto;padding:20px;"></div>
@@ -183,6 +184,25 @@ registerApp('settings', {
                         <input class="settings-input" type="number" value="80" style="max-width:100px;" /> <span style="color:var(--text-muted);font-size:12px;">%</span>
                     </div>
                 </div>
+                <div class="settings-group">
+                    <div class="settings-group-title">Eos-Context 文件上下文管理</div>
+                    <div class="settings-row">
+                        <div><div class="settings-label">启用 Eos-Context</div><div class="settings-desc">启用 Eos-Context 文件上下文管理器，优化文件操作的上下文</div></div>
+                        <select class="settings-select" id="settings-eos-context-select">
+                            <option value="true">启用</option>
+                            <option value="false">禁用</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <div><div class="settings-label">说明</div><div class="settings-desc">
+                            Eos-Context 会自动优化文件操作的上下文：<br>
+                            • write_file: 省略 content 参数，标记旧内容为过期<br>
+                            • edit_file: 省略 old_string/new_string 参数<br>
+                            • read_file: 合并连续读取，标记过期内容<br>
+                            • 失败的工具调用不参与上下文管理
+                        </div></div>
+                    </div>
+                </div>
             `,
 
             appearance: () => `
@@ -303,6 +323,27 @@ registerApp('settings', {
                     </div>
                 </div>
             `,
+
+            storage: () => `
+                <div class="settings-group">
+                    <div class="settings-group-title">存储空间</div>
+                    <div id="storage-loading" style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">正在计算存储占用...</div>
+                    <div id="storage-content" style="display:none;"></div>
+                </div>
+                <div class="settings-group">
+                    <div class="settings-group-title">数据目录</div>
+                    <div id="storage-dir-info" style="margin-bottom:12px;"></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="settings-btn" id="storage-change-btn">更改数据目录</button>
+                        <button class="settings-btn settings-btn-danger" id="storage-reset-btn" style="display:none;">恢复默认目录</button>
+                    </div>
+                    <div id="storage-migrate-msg" style="margin-top:10px;font-size:11px;display:none;"></div>
+                </div>
+                <div class="settings-group">
+                    <div class="settings-group-title">磁盘空间</div>
+                    <div id="storage-disk-info"></div>
+                </div>
+            `,
         };
 
         function showSection(name) {
@@ -333,6 +374,31 @@ registerApp('settings', {
             if (name === 'llm') {
                 loadLLMProviders();
                 contentEl.querySelector('#llm-add-provider').addEventListener('click', addLLMProvider);
+            }
+            // Bind storage section
+            if (name === 'storage') {
+                loadStorageInfo();
+            }
+            // Bind context section (Eos-Context)
+            if (name === 'context') {
+                const eosContextSelect = contentEl.querySelector('#settings-eos-context-select');
+                if (eosContextSelect) {
+                    // 从 localStorage 读取当前设置
+                    const currentSetting = localStorage.getItem('eos_context_enabled');
+                    eosContextSelect.value = currentSetting !== null ? currentSetting : 'true';
+                    eosContextSelect.addEventListener('change', () => {
+                        const enabled = eosContextSelect.value === 'true';
+                        localStorage.setItem('eos_context_enabled', eosContextSelect.value);
+                        // 通过 WebSocket 发送配置到 Agent
+                        if (os.agentWs && os.agentWs.readyState === WebSocket.OPEN) {
+                            os.agentWs.send(JSON.stringify({
+                                type: 'configure',
+                                settings: { eos_context_enabled: enabled }
+                            }));
+                        }
+                        alert('设置已保存并应用。');
+                    });
+                }
             }
         }
 
@@ -535,6 +601,253 @@ registerApp('settings', {
                 }
                 overlay.remove();
                 saveLLMConfig(_llmConfig);
+            });
+        }
+
+        // ── 存储空间管理 ──
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        const STORAGE_COLORS = [
+            'var(--accent)',
+            '#6c5ce7',
+            '#ff6b6b',
+            '#40c060',
+            '#fdcb6e',
+            '#e17055',
+            '#00cec9',
+            '#a29bfe',
+        ];
+
+        async function loadStorageInfo() {
+            const loadingEl = contentEl.querySelector('#storage-loading');
+            const contentElInner = contentEl.querySelector('#storage-content');
+            const dirInfoEl = contentEl.querySelector('#storage-dir-info');
+            const diskInfoEl = contentEl.querySelector('#storage-disk-info');
+            const changeBtn = contentEl.querySelector('#storage-change-btn');
+            const resetBtn = contentEl.querySelector('#storage-reset-btn');
+            const migrateMsg = contentEl.querySelector('#storage-migrate-msg');
+
+            try {
+                const [usage, config] = await Promise.all([
+                    os.api('GET', '/api/storage/usage'),
+                    os.api('GET', '/api/storage/config'),
+                ]);
+
+                // ── 渲染使用量 breakdown ──
+                loadingEl.style.display = 'none';
+                contentElInner.style.display = '';
+
+                const total = usage.total || 0;
+                const breakdown = usage.breakdown || [];
+
+                let html = '';
+
+                // 总量概览
+                html += `<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px;">
+                    <span style="font-size:28px;font-weight:700;font-family:var(--font-display);color:var(--accent);">${escapeHtml(usage.formatted_total)}</span>
+                    <span style="font-size:11px;color:var(--text-muted);">已使用</span>
+                </div>`;
+
+                // 可视化条形图
+                if (total > 0 && breakdown.length > 0) {
+                    html += `<div style="height:8px;border-radius:4px;background:var(--bg-deep);overflow:hidden;display:flex;margin-bottom:20px;">`;
+                    breakdown.forEach((item, i) => {
+                        const pct = (item.size / total * 100);
+                        if (pct > 0.5) {
+                            const color = STORAGE_COLORS[i % STORAGE_COLORS.length];
+                            html += `<div style="width:${pct}%;background:${color};transition:width 0.3s;" title="${escapeHtml(item.name)}: ${escapeHtml(item.formatted_size)}"></div>`;
+                        }
+                    });
+                    html += `</div>`;
+                }
+
+                // 各子目录详情
+                if (breakdown.length > 0) {
+                    html += `<div style="display:flex;flex-direction:column;gap:6px;">`;
+                    breakdown.forEach((item, i) => {
+                        const pct = total > 0 ? (item.size / total * 100).toFixed(1) : '0';
+                        const color = STORAGE_COLORS[i % STORAGE_COLORS.length];
+                        const icon = item.name === 'aether-cards' ? '🃏' :
+                                     item.name === 'agent' ? '🤖' :
+                                     item.name === 'data' ? '💾' :
+                                     item.name === 'llm' ? '🧠' :
+                                     item.name === 'images' ? '🖼️' :
+                                     item.name.endsWith('.db') ? '📀' :
+                                     item.name.endsWith('.json') ? '📄' : '📁';
+                        html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border);">
+                            <span style="font-size:16px;width:24px;text-align:center;">${icon}</span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:12px;font-weight:600;color:var(--text-primary);font-family:var(--font-mono);">${escapeHtml(item.name)}</span>
+                                    <span style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);">${escapeHtml(item.formatted_size)}</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                                    <div style="flex:1;height:3px;border-radius:2px;background:var(--bg-deep);overflow:hidden;">
+                                        <div style="width:${pct}%;height:100%;background:${color};border-radius:2px;"></div>
+                                    </div>
+                                    <span style="font-size:10px;color:var(--text-muted);min-width:36px;text-align:right;">${pct}%</span>
+                                </div>
+                            </div>
+                            <span style="font-size:10px;color:var(--text-muted);">${item.file_count} 文件</span>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:12px;">数据目录为空</div>`;
+                }
+
+                contentElInner.innerHTML = html;
+
+                // ── 数据目录信息 ──
+                dirInfoEl.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);">
+                        <span style="font-size:14px;">📂</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:12px;font-family:var(--font-mono);color:var(--text-primary);word-break:break-all;">${escapeHtml(config.current_dir)}</div>
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${config.is_custom ? '自定义目录（需重启生效）' : '默认目录'}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (config.is_custom) {
+                    resetBtn.style.display = '';
+                }
+
+                // ── 磁盘空间 ──
+                const diskUsed = (usage.disk_total || 0) - (usage.disk_free || 0);
+                const diskPct = usage.disk_total > 0 ? (diskUsed / usage.disk_total * 100).toFixed(1) : '0';
+                diskInfoEl.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                        <span style="color:var(--text-secondary);">系统磁盘</span>
+                        <span style="color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(usage.formatted_disk_free || '0 B')} 可用 / ${escapeHtml(usage.formatted_disk_total || '0 B')} 总计</span>
+                    </div>
+                    <div style="height:6px;border-radius:3px;background:var(--bg-deep);overflow:hidden;">
+                        <div style="width:${diskPct}%;height:100%;background:${parseFloat(diskPct) > 90 ? 'var(--accent-warm)' : 'var(--accent)'};border-radius:3px;transition:width 0.3s;"></div>
+                    </div>
+                `;
+
+                // ── 绑定按钮事件 ──
+                changeBtn.addEventListener('click', () => showMigrateDialog(config));
+                resetBtn.addEventListener('click', async () => {
+                    if (!confirm('确定恢复为默认数据目录？\n\n此操作将取消自定义目录映射，需要重启服务器生效。数据不会被删除。')) return;
+                    try {
+                        const res = await os.api('POST', '/api/storage/reset-path');
+                        if (res.error) { alert(res.error); return; }
+                        migrateMsg.style.display = '';
+                        migrateMsg.style.color = 'var(--accent)';
+                        migrateMsg.textContent = res.message;
+                    } catch (e) { alert('操作失败: ' + e.message); }
+                });
+
+            } catch (e) {
+                loadingEl.innerHTML = `<div style="color:var(--accent-warm);">加载失败: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function showMigrateDialog(config) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;width:520px;">
+                    <div style="font-family:var(--font-display);font-size:13px;letter-spacing:1px;margin-bottom:16px;">更改数据目录</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
+                        当前目录: <code style="color:var(--text-primary);background:var(--bg-deep);padding:1px 4px;border-radius:2px;">${escapeHtml(config.current_dir)}</code><br>
+                        将所有数据复制到新目录，然后重启服务器生效。原目录数据不会被删除。
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:6px;">新目录路径</label>
+                        <div style="display:flex;gap:8px;">
+                            <input class="settings-input" id="migrate-path" placeholder="/path/to/new/data/dir" style="flex:1;" />
+                            <button class="settings-btn" id="migrate-browse" style="flex-shrink:0;">选择</button>
+                        </div>
+                    </div>
+                    <div id="migrate-status" style="font-size:11px;margin-bottom:12px;display:none;padding:8px;border-radius:var(--radius-sm);"></div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button class="settings-btn" id="migrate-cancel">取消</button>
+                        <button class="settings-btn" id="migrate-confirm">开始迁移</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const pathInput = overlay.querySelector('#migrate-path');
+            const statusEl = overlay.querySelector('#migrate-status');
+            const confirmBtn = overlay.querySelector('#migrate-confirm');
+
+            overlay.querySelector('#migrate-cancel').addEventListener('click', () => overlay.remove());
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+            // 文件夹选择（使用 input[type=file] webkitdirectory hack）
+            overlay.querySelector('#migrate-browse').addEventListener('click', () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.webkitdirectory = true;
+                fileInput.style.display = 'none';
+                fileInput.addEventListener('change', () => {
+                    if (fileInput.files.length > 0) {
+                        // 从第一个文件的路径提取目录
+                        const fullPath = fileInput.files[0].webkitRelativePath;
+                        const dirName = fullPath.split('/')[0];
+                        // 提示用户手动输入完整路径
+                        pathInput.value = dirName;
+                        pathInput.focus();
+                        statusEl.style.display = '';
+                        statusEl.style.background = 'rgba(0,229,255,0.05)';
+                        statusEl.style.color = 'var(--text-muted)';
+                        statusEl.textContent = '浏览器无法直接获取完整路径，请手动输入目标目录的绝对路径。';
+                    }
+                    fileInput.remove();
+                });
+                document.body.appendChild(fileInput);
+                fileInput.click();
+            });
+
+            confirmBtn.addEventListener('click', async () => {
+                const targetDir = pathInput.value.trim();
+                if (!targetDir) {
+                    statusEl.style.display = '';
+                    statusEl.style.background = 'rgba(255,107,107,0.05)';
+                    statusEl.style.color = 'var(--accent-warm)';
+                    statusEl.textContent = '请输入目标目录路径';
+                    return;
+                }
+
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = '迁移中...';
+                statusEl.style.display = '';
+                statusEl.style.background = 'rgba(0,229,255,0.05)';
+                statusEl.style.color = 'var(--accent)';
+                statusEl.textContent = '正在复制数据，请稍候...';
+
+                try {
+                    const res = await os.api('POST', '/api/storage/migrate', { target_dir: targetDir });
+                    if (res.error) {
+                        statusEl.style.background = 'rgba(255,107,107,0.05)';
+                        statusEl.style.color = 'var(--accent-warm)';
+                        statusEl.textContent = res.error;
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '开始迁移';
+                        return;
+                    }
+                    statusEl.style.background = 'rgba(64,192,96,0.08)';
+                    statusEl.style.color = '#40c060';
+                    statusEl.textContent = res.message;
+                    confirmBtn.textContent = '完成';
+                    confirmBtn.disabled = false;
+                    confirmBtn.addEventListener('click', () => overlay.remove(), { once: true });
+                } catch (e) {
+                    statusEl.style.background = 'rgba(255,107,107,0.05)';
+                    statusEl.style.color = 'var(--accent-warm)';
+                    statusEl.textContent = '迁移失败: ' + e.message;
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '开始迁移';
+                }
             });
         }
 
