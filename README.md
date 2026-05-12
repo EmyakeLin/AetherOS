@@ -15,7 +15,7 @@
 
 ## 系统要求
 
-- Python 3.10+
+- Python 3.10+（Windows 7 需要 Python 3.8.10）
 - 现代浏览器（Chrome/Firefox/Safari/Edge）
 
 ## 快速开始
@@ -42,8 +42,19 @@ cd AetherOS
 start.bat
 ```
 
+### Windows 7
+
+```cmd
+# 克隆仓库
+git clone https://github.com/EmyakeLin/AetherOS.git
+cd AetherOS
+
+# 启动（使用 Win7 专用脚本，自动创建 .venv-win7）
+start-win7.bat
+```
+
 首次运行会自动：
-1. 创建 Python 虚拟环境（`.venv/`）
+1. 创建 Python 虚拟环境（`.venv/` 或 `.venv-win7/`）
 2. 安装所需依赖
 3. 启动服务器并打开浏览器
 
@@ -79,6 +90,19 @@ start-lowperf.bat
 
 # 停止服务器
 stop.bat
+```
+
+### Windows 7
+
+```cmd
+# 默认端口 8411
+start-win7.bat
+
+# 自定义端口
+start-win7.bat 8420
+
+# 下载离线依赖（用于无网络环境）
+download_deps_win7.bat
 ```
 
 启动后访问 `http://localhost:8411`（或自定义端口）。
@@ -159,11 +183,16 @@ AetherOS/
 ├── server.py           # FastAPI 后端服务
 ├── start.sh            # Linux/macOS 启动脚本
 ├── start.bat           # Windows 启动脚本
+├── start-win7.bat      # Windows 7 专用启动脚本
 ├── start-lowperf.sh    # Linux/macOS 低性能模式启动
 ├── start-lowperf.bat   # Windows 低性能模式启动
 ├── stop.sh             # Linux/macOS 停止脚本
 ├── stop.bat            # Windows 停止脚本
-├── requirements.txt    # Python 依赖
+├── requirements.txt    # Python 依赖（Linux/Mac/Win10+）
+├── requirements-win7.txt # Win7 兼容依赖
+├── download_deps_win7.bat # Win7 离线依赖下载
+├── compat/             # 平台兼容层
+│   └── pty_compat.py   # PTY 兼容层（Unix/Win7）
 ├── static/
 │   ├── index.html      # 主页面
 │   ├── core/           # 核心系统（OS、窗口管理）
@@ -200,6 +229,13 @@ AetherOS/
 详见 `CLAUDE.md` 开发指南。
 
 ## 更新日志
+
+### v1.2.1 (2026-05-13)
+
+- **Windows 7 兼容** - 新增 `start-win7.bat` 专用启动脚本
+- **PTY 兼容层** - 新增 `compat/pty_compat.py`，Unix 使用 ptyprocess，Win7 使用 pywinpty
+- **离线依赖** - 新增 `download_deps_win7.bat` 和 `requirements-win7.txt`，支持无网络安装
+- **依赖降级** - Win7 版本使用 Python 3.8.10 兼容的依赖版本
 
 ### v1.1.1 (2026-05-12)
 

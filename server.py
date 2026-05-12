@@ -448,33 +448,32 @@ async def ws_terminal(websocket: WebSocket, session_id: str):
     await websocket.accept()
 
     try:
-        import ptyprocess
-    except ImportError:
-        await websocket.send_text("错误: ptyprocess 未安装。请运行: pip install ptyprocess\r\n")
+        from compat.pty_compat import spawn_terminal, resize_terminal, close_terminal, read_pty
+    except ImportError as e:
+        await websocket.send_text(f"错误: PTY 兼容层未找到: {e}\r\n")
         await websocket.close()
         return
 
     try:
-        shell = os.environ.get("SHELL", "/bin/bash")
         cwd = os.getcwd()
-        proc = ptyprocess.PtyProcess.spawn([shell], cwd=cwd, dimensions=(24, 80))
+        proc = spawn_terminal(cwd=cwd)
 
         terminal_sessions[session_id] = {"proc": proc, "ws": websocket}
 
         loop = asyncio.get_event_loop()
 
-        async def read_pty():
+        async def read_pty_loop():
             """从 PTY 读取并发送到 WebSocket"""
             try:
                 while True:
-                    data = await loop.run_in_executor(None, proc.read, 4096)
+                    data = await loop.run_in_executor(None, read_pty, proc, 4096)
                     if not data:
                         break
                     await websocket.send_bytes(data)
             except Exception:
                 pass
 
-        async def write_pty():
+        async def write_pty_loop():
             """从 WebSocket 接收并写入 PTY"""
             try:
                 while True:
@@ -489,11 +488,11 @@ async def ws_terminal(websocket: WebSocket, session_id: str):
                             elif data.get("type") == "resize":
                                 rows = data.get("rows", 24)
                                 cols = data.get("cols", 80)
-                                proc.setwinsize(rows, cols)
+                                resize_terminal(proc, rows, cols)
             except Exception:
                 pass
 
-        await asyncio.gather(read_pty(), write_pty())
+        await asyncio.gather(read_pty_loop(), write_pty_loop())
 
     except Exception as e:
         try:
@@ -503,7 +502,7 @@ async def ws_terminal(websocket: WebSocket, session_id: str):
     finally:
         terminal_sessions.pop(session_id, None)
         try:
-            proc.kill(9)
+            close_terminal(proc)
         except Exception:
             pass
 

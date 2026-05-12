@@ -64,7 +64,10 @@
       "Bash(graphify *)",
       "Bash(.venv/bin/pip show *)",
       "WebFetch(domain:pypi.org)",
-      "Bash(pip index *)"
+      "Bash(pip index *)",
+      "Bash(unix2dos ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)",
+      "Bash(sed -i 's/$/\\\\r/' ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)",
+      "Bash(xxd ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)"
     ]
   }
 }
