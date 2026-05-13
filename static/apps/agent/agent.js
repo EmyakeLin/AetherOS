@@ -768,6 +768,8 @@ registerApp('agent', {
                 line-height: 1.75;
                 color: var(--text-primary);
                 word-break: break-word;
+                user-select: text;
+                cursor: text;
             }
             .msg-content pre {
                 background: var(--bg-deep);
@@ -823,6 +825,8 @@ registerApp('agent', {
                 color: var(--text-muted);
                 padding: 8px 20px;
                 font-family: var(--font-mono);
+                user-select: text;
+                cursor: text;
             }
 
             /* ── Thinking indicator ── */

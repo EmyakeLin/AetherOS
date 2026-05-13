@@ -162,6 +162,19 @@ async def fs_mkdir(body: dict = Body(...)):
         return {"error": str(e)}
 
 
+@app.post("/api/fs/upload")
+async def fs_upload(path: str = Query(...), file: UploadFile = File(...)):
+    """上传文件到指定路径"""
+    try:
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = await file.read()
+        target.write_bytes(content)
+        return {"ok": True, "path": str(target), "size": len(content)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ═══════════════════════════════════════════════
 # 区域 1.5: 工具执行 API (Eos-Tools)
 # ═══════════════════════════════════════════════
@@ -1073,190 +1086,6 @@ async def ws_lsp(websocket: WebSocket, language: str):
 
 
 # ═══════════════════════════════════════════════
-# 区域 9: 灵感卡片
-# ═══════════════════════════════════════════════
-
-CARDS_DIR = Path.home() / ".aetheros" / "aether-cards"
-CARDS_JSON = CARDS_DIR / "cards.json"
-CARDS_CONFIG_JSON = CARDS_DIR / "config.json"
-CARDS_IMG_DIR = CARDS_DIR / "images"
-CARDS_IMG_DIR.mkdir(parents=True, exist_ok=True)
-
-
-@app.get("/api/aether-cards/load")
-async def cards_load():
-    """加载卡片数据"""
-    if CARDS_JSON.exists():
-        return json.loads(CARDS_JSON.read_text(encoding="utf-8"))
-    return {"version": 1, "canvas": {"offsetX": 0, "offsetY": 0, "zoom": 1}, "cards": []}
-
-
-@app.put("/api/aether-cards/save")
-async def cards_save(body: dict = Body(...)):
-    """保存卡片数据"""
-    CARDS_DIR.mkdir(parents=True, exist_ok=True)
-    CARDS_JSON.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True}
-
-
-@app.post("/api/aether-cards/upload")
-async def cards_upload(file: UploadFile = File(...)):
-    """上传图片到卡片存储"""
-    ext = Path(file.filename).suffix if file.filename else ".png"
-    filename = f"{uuid.uuid4().hex[:12]}{ext}"
-    dest = CARDS_IMG_DIR / filename
-    content = await file.read()
-    dest.write_bytes(content)
-    return {"ok": True, "path": str(dest), "filename": filename}
-
-
-@app.get("/api/aether-cards/config")
-async def cards_config_load():
-    """加载卡片 LLM 配置"""
-    if CARDS_CONFIG_JSON.exists():
-        return json.loads(CARDS_CONFIG_JSON.read_text(encoding="utf-8"))
-    return {"textModels": [], "imageModels": []}
-
-
-@app.put("/api/aether-cards/config")
-async def cards_config_save(body: dict = Body(...)):
-    """保存卡片 LLM 配置"""
-    CARDS_DIR.mkdir(parents=True, exist_ok=True)
-    CARDS_CONFIG_JSON.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True}
-
-
-@app.post("/api/aether-cards/chat")
-async def cards_chat(body: dict = Body(...)):
-    """卡片 LLM 流式对话（SSE）"""
-    from fastapi.responses import StreamingResponse
-
-    messages = body.get("messages", [])
-    model = body.get("model", "")
-    api_key = body.get("api_key", "")
-    api_base = body.get("api_base", "")
-    multimodal = body.get("multimodal", False)
-
-    if not model or not api_key:
-        return {"error": "未配置模型或 API Key"}
-
-    async def stream():
-        try:
-            import httpx as _httpx
-
-            if "claude" in model.lower():
-                # Anthropic API
-                import anthropic
-                http_client = _httpx.Client(proxy=None, timeout=60)
-                client = anthropic.Anthropic(api_key=api_key, http_client=http_client)
-                system_msg = None
-                chat_msgs = []
-                for m in messages:
-                    if m.get("role") == "system":
-                        system_msg = m["content"]
-                    else:
-                        chat_msgs.append(m)
-
-                kwargs = {"model": model, "max_tokens": 4096, "messages": chat_msgs}
-                if system_msg:
-                    kwargs["system"] = system_msg
-
-                # 流式调用
-                with client.messages.stream(**kwargs) as stream:
-                    for text in stream.text_stream:
-                        yield f"data: {json.dumps({'type': 'text', 'content': text})}\n\n"
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-            else:
-                # OpenAI-compatible API
-                import openai
-                http_client = _httpx.Client(proxy=None, timeout=60)
-                client_args = {"api_key": api_key, "http_client": http_client}
-                if api_base:
-                    client_args["base_url"] = api_base
-                client = openai.OpenAI(**client_args)
-
-                kwargs = {"model": model, "messages": messages, "max_tokens": 4096, "stream": True}
-                response = await asyncio.to_thread(
-                    lambda: client.chat.completions.create(**kwargs)
-                )
-                for chunk in response:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        yield f"data: {json.dumps({'type': 'text', 'content': chunk.choices[0].delta.content})}\n\n"
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-
-    return StreamingResponse(stream(), media_type="text/event-stream")
-
-
-@app.post("/api/aether-cards/generate-image")
-async def cards_generate_image(body: dict = Body(...)):
-    """卡片文生图"""
-    prompt = body.get("prompt", "")
-    model = body.get("model", "")
-    api_key = body.get("api_key", "")
-    api_base = body.get("api_base", "")
-
-CARDS_CHAT_HISTORY_JSON = CARDS_DIR / "chat_history.json"
-
-
-@app.get("/api/aether-cards/chat-history")
-async def cards_chat_history_load():
-    """加载对话历史"""
-    if not CARDS_CHAT_HISTORY_JSON.exists():
-        return {"conversations": {}}
-    try:
-        return json.loads(CARDS_CHAT_HISTORY_JSON.read_text(encoding="utf-8"))
-    except Exception:
-        return {"conversations": {}}
-
-
-@app.put("/api/aether-cards/chat-history")
-async def cards_chat_history_save(body: dict = Body(...)):
-    """保存对话历史"""
-    CARDS_DIR.mkdir(parents=True, exist_ok=True)
-    CARDS_CHAT_HISTORY_JSON.write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True}
-
-    if not model or not api_key:
-        return {"error": "未配置模型或 API Key"}
-
-    try:
-        import openai
-        import httpx as _httpx
-        http_client = _httpx.Client(proxy=None, timeout=120)
-        client_args = {"api_key": api_key, "http_client": http_client}
-        if api_base:
-            client_args["base_url"] = api_base
-        client = openai.OpenAI(**client_args)
-
-        response = await asyncio.to_thread(
-            lambda: client.images.generate(model=model, prompt=prompt, n=1, size="1024x1024")
-        )
-
-        # 保存图片到卡片存储
-        import base64
-        import urllib.request
-        img_data = response.data[0]
-        filename = f"gen-{uuid.uuid4().hex[:8]}.png"
-
-        if hasattr(img_data, 'b64_json') and img_data.b64_json:
-            img_bytes = base64.b64decode(img_data.b64_json)
-            (CARDS_IMG_DIR / filename).write_bytes(img_bytes)
-        elif hasattr(img_data, 'url') and img_data.url:
-            urllib.request.urlretrieve(img_data.url, str(CARDS_IMG_DIR / filename))
-        else:
-            return {"error": "生成的图片无数据"}
-
-        return {"ok": True, "filename": filename, "revised_prompt": getattr(img_data, 'revised_prompt', '')}
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# ═══════════════════════════════════════════════
 # 统一 LLM 调用接口
 # ═══════════════════════════════════════════════
 
@@ -1658,7 +1487,7 @@ async def root():
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/core", StaticFiles(directory=str(STATIC_DIR / "core")), name="core")
 app.mount("/apps", StaticFiles(directory=str(STATIC_DIR / "apps")), name="apps")
-app.mount("/aether-cards-images", StaticFiles(directory=str(CARDS_IMG_DIR)), name="aether-cards-images")
+app.mount("/user-data", StaticFiles(directory=str(Path.home() / ".aetheros")), name="user-data")
 app.mount("/lib", StaticFiles(directory=str(STATIC_DIR / "lib")), name="lib")
 app.mount("/fonts", StaticFiles(directory=str(BASE_DIR / "fonts")), name="fonts")
 app.mount("/svg", StaticFiles(directory=str(BASE_DIR / "svg")), name="svg")
