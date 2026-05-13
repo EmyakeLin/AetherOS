@@ -205,6 +205,8 @@ class AgentStorage:
         if reasoning_content is not None:
             msg["reasoning_content"] = reasoning_content
 
+        logger.debug(f"Adding message: role={role}, tool_calls={tool_calls is not None}, tool_call_id={tool_call_id}")
+
         # 读取现有会话
         session_data = self._read_session_file(session_id)
         if not session_data:
@@ -248,15 +250,20 @@ class AgentStorage:
         result = []
         for msg in messages:
             entry = {"role": msg["role"]}
-            if msg.get("content"):
+            # 内容字段：tool消息可能没有content，但必须有tool_call_id
+            if msg.get("content") is not None:
                 entry["content"] = msg["content"]
+            # tool_call_id：tool消息必须有
             if msg.get("tool_call_id"):
                 entry["tool_call_id"] = msg["tool_call_id"]
+            # tool_calls：assistant消息可能有
             if msg.get("tool_calls"):
                 entry["tool_calls"] = msg["tool_calls"]
+            # reasoning_content：assistant消息可能有
             if msg.get("reasoning_content"):
                 entry["reasoning_content"] = msg["reasoning_content"]
             result.append(entry)
+        logger.debug(f"Loaded {len(result)} messages for session {session_id}")
         return result
 
     async def search_sessions(self, query: str, limit: int = 20) -> list:

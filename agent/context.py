@@ -27,23 +27,63 @@ class ContextManager:
         self._context_rules = FileContextManager.get_system_prompt_rules()
 
     def _sliding_window(self, messages: list[dict]) -> list[dict]:
-        """滑动窗口：保留最近的消息，直到达到 token 限制"""
+        """滑动窗口：保留最近的消息，直到达到 token 限制
+
+        注意：确保不会分开 assistant 消息和对应的 tool 消息
+        """
         # Simple approximation: 1 token ≈ 4 chars
         max_chars = self.max_tokens * 4 * self.compress_threshold
+
+        # 从后往前遍历，找到可以保留的消息
         result = []
         total_chars = 0
+        i = len(messages) - 1
 
-        for msg in reversed(messages):
+        while i >= 0:
+            msg = messages[i]
             content = msg.get("content", "")
             # Handle multimodal content (list of blocks)
             if isinstance(content, list):
                 msg_chars = sum(len(b.get("text", "")) for b in content if isinstance(b, dict))
             else:
                 msg_chars = len(content)
+
+            # 检查是否超过限制
             if total_chars + msg_chars > max_chars:
                 break
+
+            # 如果是 tool 消息，需要确保对应的 assistant 消息也被保留
+            if msg.get("role") == "tool":
+                tool_call_id = msg.get("tool_call_id")
+                if tool_call_id:
+                    # 向前查找对应的 assistant 消息
+                    j = i - 1
+                    while j >= 0:
+                        if messages[j].get("role") == "assistant":
+                            tool_calls = messages[j].get("tool_calls", [])
+                            for tc in tool_calls:
+                                if tc.get("id") == tool_call_id:
+                                    # 找到对应的 assistant 消息，需要一起保留
+                                    # 计算 assistant 消息的大小
+                                    assistant_content = messages[j].get("content", "")
+                                    if isinstance(assistant_content, list):
+                                        assistant_chars = sum(len(b.get("text", "")) for b in assistant_content if isinstance(b, dict))
+                                    else:
+                                        assistant_chars = len(assistant_content)
+                                    # 检查是否超过限制
+                                    if total_chars + msg_chars + assistant_chars > max_chars:
+                                        # 超过限制，不保留这个 tool 消息
+                                        break
+                                    # 保留 assistant 消息
+                                    result.insert(0, messages[j])
+                                    total_chars += assistant_chars
+                                    break
+                            break
+                        j -= 1
+
             result.insert(0, msg)
             total_chars += msg_chars
+            i -= 1
 
         return result
 

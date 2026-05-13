@@ -126,12 +126,14 @@ class CustomAgentEngine:
                                tool_name: str = None, reasoning_content: str = None):
         """持久化消息到数据库"""
         if not self.session_id:
+            logger.warning(f"Cannot persist message: no session_id")
             return
         try:
             await get_storage().add_message(
                 self.session_id, role, content,
                 tool_call_id, tool_calls, tool_name, reasoning_content
             )
+            logger.debug(f"Persisted message: role={role}, tool_call_id={tool_call_id}, tool_name={tool_name}")
         except Exception as e:
             logger.warning(f"Failed to persist message: {e}")
 
