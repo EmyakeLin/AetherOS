@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    N.O.V.A AETHER OS — Settings Application
-   Agent config, MCP servers, tools, theme
+   Agent config, MCP servers, tools, context, theme
    ═══════════════════════════════════════════════════════ */
 
 registerApp('settings', {
@@ -16,6 +16,7 @@ registerApp('settings', {
                     <div class="settings-nav" data-section="agent">Agent 引擎</div>
                     <div class="settings-nav" data-section="tools">工具管理</div>
                     <div class="settings-nav" data-section="mcp">MCP 服务器</div>
+                    <div class="settings-nav" data-section="context">上下文管理</div>
                     <div class="settings-nav" data-section="appearance">外观</div>
                     <div class="settings-nav" data-section="keybindings">快捷键</div>
                     <div class="settings-nav" data-section="apps">应用管理</div>
@@ -167,8 +168,12 @@ registerApp('settings', {
                 <div class="settings-group">
                     <div class="settings-group-title">Eos-Context 文件上下文管理</div>
                     <div class="settings-row">
-                        <div><div class="settings-label">状态</div><div class="settings-desc">Eos-Context 文件上下文管理器（始终启用）</div></div>
-                        <span style="color:var(--accent);font-size:12px;">✓ 已启用</span>
+                        <div><div class="settings-label">状态</div><div class="settings-desc">Eos-Context 文件上下文管理器</div></div>
+                        <span id="eos-context-status" style="color:var(--accent);font-size:12px;">✓ 已启用</span>
+                    </div>
+                    <div class="settings-row">
+                        <div><div class="settings-label">操作</div><div class="settings-desc">启用或禁用 Eos-Context 文件上下文管理器</div></div>
+                        <button class="settings-btn" id="eos-context-toggle" style="padding:4px 12px;font-size:11px;">禁用</button>
                     </div>
                     <div class="settings-row">
                         <div><div class="settings-label">说明</div><div class="settings-desc">
@@ -355,6 +360,40 @@ registerApp('settings', {
             // Bind storage section
             if (name === 'storage') {
                 loadStorageInfo();
+            }
+            // Bind context section (Eos-Context)
+            if (name === 'context') {
+                // 从 localStorage 读取当前设置
+                const currentSetting = localStorage.getItem('eos_context_enabled');
+                const statusEl = contentEl.querySelector('#eos-context-status');
+                if (statusEl) {
+                    statusEl.textContent = currentSetting === 'false' ? '✗ 已禁用' : '✓ 已启用';
+                    statusEl.style.color = currentSetting === 'false' ? 'var(--accent-warm)' : 'var(--accent)';
+                }
+                const toggleBtn = contentEl.querySelector('#eos-context-toggle');
+                if (toggleBtn) {
+                    toggleBtn.textContent = currentSetting === 'false' ? '启用' : '禁用';
+                    toggleBtn.addEventListener('click', () => {
+                        const enabled = currentSetting === 'false';
+                        localStorage.setItem('eos_context_enabled', enabled ? 'true' : 'false');
+                        // 通过 WebSocket 发送配置到 Agent
+                        if (os.agentWs && os.agentWs.readyState === WebSocket.OPEN) {
+                            os.agentWs.send(JSON.stringify({
+                                type: 'configure',
+                                settings: { eos_context_enabled: enabled }
+                            }));
+                        }
+                        alert('设置已保存并应用。');
+                        // 刷新显示
+                        if (statusEl) {
+                            statusEl.textContent = enabled ? '✓ 已启用' : '✗ 已禁用';
+                            statusEl.style.color = enabled ? 'var(--accent)' : 'var(--accent-warm)';
+                        }
+                        if (toggleBtn) {
+                            toggleBtn.textContent = enabled ? '禁用' : '启用';
+                        }
+                    });
+                }
             }
         }
 

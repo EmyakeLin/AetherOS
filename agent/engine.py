@@ -37,6 +37,9 @@ class CustomAgentEngine:
         # 中断信号
         self._interrupted = False
 
+        # Eos-Context 配置（默认启用）
+        self.eos_context_enabled = config.get("eos_context_enabled", True)
+
         # 工具集配置
         self.toolset = config.get("toolset", None)  # None 表示加载所有工具
 
@@ -156,8 +159,9 @@ class CustomAgentEngine:
         storage = get_storage()
         messages = await storage.get_messages_as_conversation(self.session_id)
 
-        # 应用上下文管理（EosContextManager处理）
-        messages = self.eos_context.process_messages(messages)
+        # 应用上下文管理（EosContextManager处理，如果启用）
+        if self.eos_context_enabled:
+            messages = self.eos_context.process_messages(messages)
 
         # 应用压缩策略（滑动窗口、摘要压缩等）
         messages = self.context.compress(messages)

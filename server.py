@@ -659,6 +659,9 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                             engine.max_iterations = int(settings["maxIterations"])
                         if "toolset" in settings:
                             engine.toolset = settings["toolset"] or None
+                        # Eos-Context 配置
+                        if "eos_context_enabled" in settings:
+                            engine.eos_context_enabled = settings["eos_context_enabled"]
                         # 通过模块化组装重建系统提示词
                         mode = settings.get("agentMode", "assistant")
                         engine.rebuild_system_prompt(mode=mode)
