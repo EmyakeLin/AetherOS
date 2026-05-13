@@ -71,9 +71,13 @@ registerApp('aether-cards', {
             try {
                 const existing = await dbQuery(`SELECT COUNT(*) as cnt FROM cards WHERE board_id = 'board-default'`);
                 if (existing.rows && existing.rows[0] && existing.rows[0].cnt > 0) return; // 已有数据，跳过
-                // 尝试读取旧 JSON
-                const old = await os.api('GET', '/api/aether-cards/load');
-                if (!old.cards || old.cards.length === 0) return;
+                // 尝试读取旧 JSON 文件
+                let old = null;
+                try {
+                    const resp = await fetch('/user-data/aether-cards/cards.json');
+                    if (resp.ok) old = await resp.json();
+                } catch {}
+                if (!old || !old.cards || old.cards.length === 0) return;
                 const now = Date.now();
                 // 插入卡片
                 for (const c of old.cards) {
@@ -82,8 +86,12 @@ registerApp('aether-cards', {
                 }
                 // 迁移对话历史
                 try {
-                    const hist = await os.api('GET', '/api/aether-cards/chat-history');
-                    if (hist.conversations) {
+                    let hist = null;
+                    try {
+                        const resp = await fetch('/user-data/aether-cards/chat_history.json');
+                        if (resp.ok) hist = await resp.json();
+                    } catch {}
+                    if (hist && hist.conversations) {
                         for (const [id, conv] of Object.entries(hist.conversations)) {
                             await dbExec(`INSERT OR IGNORE INTO conversations (id, board_id, title, created_at, updated_at) VALUES (?,?,?,?,?)`, [id, 'board-default', conv.title || '', conv.created || now, conv.updated || now]);
                             for (const msg of (conv.messages || [])) {
@@ -91,7 +99,7 @@ registerApp('aether-cards', {
                             }
                         }
                     }
-                    if (hist.cardChatMap) {
+                    if (hist && hist.cardChatMap) {
                         for (const [cardId, convId] of Object.entries(hist.cardChatMap)) {
                             await dbExec(`INSERT OR IGNORE INTO card_chat_map (card_id, conversation_id, board_id) VALUES (?,?,?)`, [cardId, convId, 'board-default']);
                         }
@@ -533,13 +541,19 @@ registerApp('aether-cards', {
                 try {
                     let userMsg = `Title: ${card.title || '无标题'}\n\nContent:\n${card.content || ''}`;
                     if (card.metadata) userMsg += `\n\nPrevious metadata (update if needed):\n${card.metadata}`;
-                    const messages = [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: userMsg }];
                     let text = '';
-                    if (selectedModel.source === 'system') {
-                        text = await _llmChat(messages, selectedModel.ref);
-                    } else {
-                        text = await _cardsChat(messages, selectedModel.ref, selectedModel.apiKey, selectedModel.apiBase);
-                    }
+                    await os.llm.chat({
+                        messages: [{ role: 'user', content: userMsg }],
+                        system: SYS_PROMPT,
+                        model: selectedModel.ref,
+                        apiKey: selectedModel.source === 'cards' ? selectedModel.apiKey : undefined,
+                        apiBase: selectedModel.source === 'cards' ? selectedModel.apiBase : undefined,
+                        appId: 'cards-metadata',
+                        maxTokens: 1024,
+                        onText: (t) => { text += t; },
+                        onDone: () => {},
+                        onError: (msg) => { console.error(`[Cards] Metadata LLM error for "${card.title}":`, msg); },
+                    });
                     if (!text) { failed++; continue; }
                     let meta;
                     try {
@@ -553,45 +567,6 @@ registerApp('aether-cards', {
             }
             scheduleSave(); renderCards();
             showToast(updated > 0 ? `已更新 ${updated} 张卡片${failed > 0 ? `，${failed} 张失败` : ''}` : `元数据生成失败，请检查控制台`);
-        }
-
-        // ── 统一 LLM 调用 ──
-        // 系统模型走 /api/llm/chat，Cards 自配模型走 /api/aether-cards/chat
-
-        async function _llmChat(messages, modelRef) {
-            const resp = await fetch('/api/llm/chat', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages, model: modelRef })
-            });
-            if (!resp.ok) { console.error(`[Cards] /api/llm/chat HTTP ${resp.status}`); return ''; }
-            return _readSSE(resp);
-        }
-
-        async function _cardsChat(messages, model, apiKey, apiBase) {
-            const resp = await fetch('/api/aether-cards/chat', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages, model, api_key: apiKey, api_base: apiBase || '' })
-            });
-            if (!resp.ok) { console.error(`[Cards] /api/aether-cards/chat HTTP ${resp.status}`); return ''; }
-            return _readSSE(resp);
-        }
-
-        async function _readSSE(resp) {
-            const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
-            while (true) {
-                const { done, value } = await reader.read(); if (done) break;
-                buf += decoder.decode(value, { stream: true });
-                const lines = buf.split('\n'); buf = lines.pop() || '';
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    try {
-                        const evt = JSON.parse(line.slice(6));
-                        if (evt.type === 'text') text += evt.content;
-                        if (evt.type === 'error') console.error('[Cards] LLM error:', evt.message);
-                    } catch {}
-                }
-            }
-            return text;
         }
 
         // ── 样式 ──
@@ -888,11 +863,8 @@ registerApp('aether-cards', {
             } catch (e) { console.warn('Load chat history failed, trying JSON:', e); await loadChatHistoryJSON(); }
         }
         async function loadChatHistoryJSON() {
-            try {
-                const d = await os.api('GET', '/api/aether-cards/chat-history');
-                if (d.conversations) chatConversations = d.conversations;
-                if (d.cardChatMap) cardChatMap = d.cardChatMap;
-            } catch (e) { console.warn('JSON load chat history failed:', e); }
+            // JSON 降级方案已移除，DB 是主要存储
+            console.warn('JSON load chat history not available, DB is primary storage');
         }
 
         // 保存对话历史
@@ -913,7 +885,8 @@ registerApp('aether-cards', {
             } catch (e) { console.warn('Save chat history failed:', e); }
         }
         function saveChatHistoryJSON() {
-            os.api('PUT', '/api/aether-cards/chat-history', { conversations: chatConversations, cardChatMap }).catch(e => console.warn('JSON save chat history failed:', e));
+            // JSON 降级方案已移除，DB 是主要存储
+            console.warn('JSON save chat history not available, DB is primary storage');
         }
 
         // 恢复卡片关联的对话到 chatHistory
@@ -1032,7 +1005,7 @@ registerApp('aether-cards', {
                 if (msg.files && msg.files.length > 0) {
                     content += '<div style="margin-top:4px;">' + msg.files.map(f =>
                         f.type?.startsWith('image/') ?
-                            `<img src="/aether-cards-images/${esc(f.name)}" style="max-width:100px;max-height:80px;border-radius:4px;border:1px solid var(--border);">` :
+                            `<img src="/user-data/aether-cards/images/${esc(f.name)}" style="max-width:100px;max-height:80px;border-radius:4px;border:1px solid var(--border);">` :
                             `<span class="chat-attached-file">${esc(f.name)}</span>`
                     ).join('') + '</div>';
                 }
@@ -1203,7 +1176,7 @@ registerApp('aether-cards', {
             for (const f of files) {
                 if (f.type?.startsWith('image/')) {
                     try {
-                        const resp = await fetch('/aether-cards-images/' + f.name);
+                        const resp = await fetch('/user-data/aether-cards/images/' + f.name);
                         const blob = await resp.blob();
                         const b64 = await blobToB64(blob);
                         blocks.push({ type: 'image', source: { type: 'base64', media_type: blob.type || 'image/png', data: b64 } });
@@ -1237,7 +1210,7 @@ registerApp('aether-cards', {
                 const item = document.createElement('span');
                 item.className = 'chat-attached-file';
                 if (f.type?.startsWith('image/')) {
-                    item.innerHTML = `<img src="/aether-cards-images/${esc(f.name)}"> ${esc(f.name)} <button data-idx="${idx}">×</button>`;
+                    item.innerHTML = `<img src="/user-data/aether-cards/images/${esc(f.name)}"> ${esc(f.name)} <button data-idx="${idx}">×</button>`;
                 } else {
                     item.innerHTML = `${esc(f.name)} <button data-idx="${idx}">×</button>`;
                 }
@@ -1258,13 +1231,15 @@ registerApp('aether-cards', {
         chatFileInput.onchange = async (e) => {
             const files = Array.from(e.target.files);
             for (const f of files) {
+                const filename = `${Date.now()}-${f.name}`;
+                const path = `~/.aetheros/aether-cards/images/${filename}`;
                 const fd = new FormData();
                 fd.append('file', f);
                 try {
-                    const r = await fetch('/api/aether-cards/upload', { method: 'POST', body: fd });
+                    const r = await fetch(`/api/fs/upload?path=${encodeURIComponent(path)}`, { method: 'POST', body: fd });
                     const d = await r.json();
-                    if (d.ok && d.filename) {
-                        attachedFiles.push({ name: d.filename, type: f.type, size: f.size });
+                    if (d.ok) {
+                        attachedFiles.push({ name: filename, type: f.type, size: f.size });
                     }
                 } catch (err) {
                     console.warn('Upload failed:', err);
@@ -1577,7 +1552,7 @@ registerApp('aether-cards', {
             } else {
                 // 常规视图
                 if (card.coverImage) {
-                    inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="height:${Math.round(card.size.h * 0.45)}px;" loading="lazy">`;
+                    inner += `<img class="card-cover" src="/user-data/aether-cards/images/${esc(card.coverImage)}" alt="" style="height:${Math.round(card.size.h * 0.45)}px;" loading="lazy">`;
                 }
                 const preview = card.content ? card.content.slice(0, 500) : '';
                 if (preview || !card.coverImage) {
@@ -1606,7 +1581,7 @@ registerApp('aether-cards', {
 
             const otherImgs = card.images.filter(i => i !== card.coverImage);
             if (otherImgs.length > 0) {
-                inner += `<div class="card-images-strip">${otherImgs.slice(0, 5).map(i => `<img src="/aether-cards-images/${esc(i)}" alt="" loading="lazy">`).join('')}${otherImgs.length > 5 ? `<span style="font-size:10px;color:var(--text-muted);padding:0 2px;">+${otherImgs.length - 5}</span>` : ''}</div>`;
+                inner += `<div class="card-images-strip">${otherImgs.slice(0, 5).map(i => `<img src="/user-data/aether-cards/images/${esc(i)}" alt="" loading="lazy">`).join('')}${otherImgs.length > 5 ? `<span style="font-size:10px;color:var(--text-muted);padding:0 2px;">+${otherImgs.length - 5}</span>` : ''}</div>`;
             }
             el.innerHTML = inner;
 
@@ -1744,7 +1719,7 @@ registerApp('aether-cards', {
             detailImages.innerHTML = '';
             card.images.forEach((fn, idx) => {
                 const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;display:inline-block;flex-shrink:0;';
-                const img = document.createElement('img'); img.className = 'detail-img-thumb'; img.src = '/aether-cards-images/' + fn; img.title = fn;
+                const img = document.createElement('img'); img.className = 'detail-img-thumb'; img.src = '/user-data/aether-cards/images/' + fn; img.title = fn;
                 img.onclick = () => { chatInput.value += '@' + fn + ' '; chatInput.focus(); };
                 img.oncontextmenu = (e) => { e.preventDefault(); card.images.splice(idx, 1); if (card.coverImage === fn) card.coverImage = ''; card.updated = Date.now(); renderDetailImages(card); renderCards(); scheduleSave(); };
                 wrap.appendChild(img);
@@ -1884,11 +1859,11 @@ registerApp('aether-cards', {
             const el = getMsgsEl(cardId); if (!el) return;
             const msg = document.createElement('div'); msg.className = 'chat-msg';
             let html = `<div class="chat-msg-role">🎨 生成图片</div>`;
-            html += `<div class="chat-msg-content"><img src="/aether-cards-images/${esc(filename)}" style="max-width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" title="点击添加到卡片图片"></div>`;
+            html += `<div class="chat-msg-content"><img src="/user-data/aether-cards/images/${esc(filename)}" style="max-width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" title="点击添加到卡片图片"></div>`;
             if (revisedPrompt) html += `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${esc(revisedPrompt)}</div>`;
             html += `<div class="chat-msg-actions"><button class="cards-tb-btn">${ICO.plus_svg} 添加到卡片</button></div>`;
             msg.innerHTML = html;
-            msg.querySelector('img').onclick = () => window.open('/aether-cards-images/' + filename, '_blank');
+            msg.querySelector('img').onclick = () => window.open('/user-data/aether-cards/images/' + filename, '_blank');
             msg.querySelector('.chat-msg-actions button').onclick = () => {
                 const card = gc(cardId);
                 if (card && !card.images.includes(filename)) { card.images.push(filename); card.updated = Date.now(); if (detailCardId === cardId) renderDetailImages(card); renderCards(); scheduleSave(); }
@@ -2058,7 +2033,7 @@ registerApp('aether-cards', {
         function parseAt(text, card) { const r = []; const re = /@([^\s@]+)/g; let m; while ((m = re.exec(text)) !== null) { if (card.images.includes(m[1])) r.push(m[1]); } return r; }
         async function buildMultimodal(text, refs) {
             const blocks = [{ type: 'text', text }];
-            for (const fn of refs) { try { const resp = await fetch('/aether-cards-images/' + fn); const blob = await resp.blob(); const b64 = await blobToB64(blob); blocks.push({ type: 'image', source: { type: 'base64', media_type: blob.type || 'image/png', data: b64 } }); } catch {} }
+            for (const fn of refs) { try { const resp = await fetch('/user-data/aether-cards/images/' + fn); const blob = await resp.blob(); const b64 = await blobToB64(blob); blocks.push({ type: 'image', source: { type: 'base64', media_type: blob.type || 'image/png', data: b64 } }); } catch {} }
             return blocks;
         }
         function blobToB64(b) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(b); }); }
@@ -2142,7 +2117,7 @@ registerApp('aether-cards', {
 
         function showAtPopup(imgs, atPos, curPos) {
             atPopup.innerHTML = '';
-            imgs.forEach(fn => { const it = document.createElement('div'); it.className = 'at-item'; it.innerHTML = `<img src="/aether-cards-images/${esc(fn)}" alt="">${esc(fn)}`; it.onclick = () => { chatInput.value = chatInput.value.slice(0, atPos) + '@' + fn + ' ' + chatInput.value.slice(curPos); chatInput.focus(); hideAtPopup(); }; atPopup.appendChild(it); });
+            imgs.forEach(fn => { const it = document.createElement('div'); it.className = 'at-item'; it.innerHTML = `<img src="/user-data/aether-cards/images/${esc(fn)}" alt="">${esc(fn)}`; it.onclick = () => { chatInput.value = chatInput.value.slice(0, atPos) + '@' + fn + ' ' + chatInput.value.slice(curPos); chatInput.focus(); hideAtPopup(); }; atPopup.appendChild(it); });
             const ir = chatInput.getBoundingClientRect(), cr = container.getBoundingClientRect();
             atPopup.style.left = (ir.left - cr.left) + 'px'; atPopup.style.bottom = (cr.bottom - ir.top + 4) + 'px'; atPopup.style.display = '';
         }
@@ -2170,7 +2145,7 @@ registerApp('aether-cards', {
                     if (!it.is_dir && !IMAGE_EXTS.has('.' + it.name.split('.').pop().toLowerCase())) return;
                     const row = document.createElement('div'); row.className = 'img-modal-item' + (it.is_dir ? ' is-dir' : '');
                     if (it.is_dir) { row.innerHTML = `${ICO.folder_svg} <span>${esc(it.name)}</span>`; row.onclick = () => browseDir(d.path + '/' + it.name); }
-                    else { row.innerHTML = `<img src="/aether-cards-images/${encodeURIComponent(it.name)}" alt="" onerror="this.style.display='none'"> <span>${esc(it.name)}</span>`; row.onclick = () => selectFromModal(d.path + '/' + it.name, it.name); }
+                    else { row.innerHTML = `<img src="/user-data/aether-cards/images/${encodeURIComponent(it.name)}" alt="" onerror="this.style.display='none'"> <span>${esc(it.name)}</span>`; row.onclick = () => selectFromModal(d.path + '/' + it.name, it.name); }
                     imgModalList.appendChild(row);
                 });
                 if (imgModalList.children.length === 0 || (!items.some(i => i.is_dir || IMAGE_EXTS.has('.' + i.name.split('.').pop().toLowerCase())))) { if (!path) imgModalList.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:12px;">无图片文件</div>'; }
@@ -2180,7 +2155,7 @@ registerApp('aether-cards', {
         async function selectFromModal(fullPath, filename) {
             const card = gc(detailCardId); if (!card) return;
             // 确保图片在卡片存储中
-            try { const r = await fetch('/aether-cards-images/' + encodeURIComponent(filename)); if (!r.ok) await os.api('POST', '/api/exec', { command: `cp "${fullPath}" ~/.aetheros/aether-cards/images/` }); } catch {}
+            try { const r = await fetch('/user-data/aether-cards/images/' + encodeURIComponent(filename)); if (!r.ok) await os.api('POST', '/api/exec', { command: `cp "${fullPath}" ~/.aetheros/aether-cards/images/` }); } catch {}
             if (!card.images.includes(filename)) card.images.push(filename);
             card.updated = Date.now(); renderDetailImages(card); renderCards(); scheduleSave(); closeImageModal();
         }
@@ -2188,8 +2163,10 @@ registerApp('aether-cards', {
         async function handleImageUpload(e) {
             const f = e.target.files[0]; if (!f) return;
             const card = gc(detailCardId); if (!card) return;
+            const filename = `${Date.now()}-${f.name}`;
+            const path = `~/.aetheros/aether-cards/images/${filename}`;
             const fd = new FormData(); fd.append('file', f);
-            try { const r = await fetch('/api/aether-cards/upload', { method: 'POST', body: fd }); const d = await r.json(); if (d.ok && d.filename) { card.images.push(d.filename); card.updated = Date.now(); renderDetailImages(card); renderCards(); scheduleSave(); } } catch {}
+            try { const r = await fetch(`/api/fs/upload?path=${encodeURIComponent(path)}`, { method: 'POST', body: fd }); const d = await r.json(); if (d.ok) { card.images.push(filename); card.updated = Date.now(); renderDetailImages(card); renderCards(); scheduleSave(); } } catch {}
             imgUploadInput.value = '';
         }
 
@@ -2276,13 +2253,13 @@ registerApp('aether-cards', {
             inner += `<button class="card-act-btn" title="固定在最上层" data-nd>${ICO.pin_svg}</button>`;
             inner += `</div>`;
             if (card.coverImage) {
-                inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="flex:0 0 auto;max-height:45%;object-fit:cover;" loading="lazy">`;
+                inner += `<img class="card-cover" src="/user-data/aether-cards/images/${esc(card.coverImage)}" alt="" style="flex:0 0 auto;max-height:45%;object-fit:cover;" loading="lazy">`;
             }
             if (preview || !card.coverImage) {
                 inner += `<div class="card-body">${markdownToHtml(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
             }
             if (otherImgs.length > 0) {
-                inner += `<div class="card-images-strip">${otherImgs.slice(0, 5).map(i => `<img src="/aether-cards-images/${esc(i)}" alt="" loading="lazy">`).join('')}${otherImgs.length > 5 ? `<span style="font-size:10px;color:var(--text-muted);padding:0 2px;">+${otherImgs.length - 5}</span>` : ''}</div>`;
+                inner += `<div class="card-images-strip">${otherImgs.slice(0, 5).map(i => `<img src="/user-data/aether-cards/images/${esc(i)}" alt="" loading="lazy">`).join('')}${otherImgs.length > 5 ? `<span style="font-size:10px;color:var(--text-muted);padding:0 2px;">+${otherImgs.length - 5}</span>` : ''}</div>`;
             }
             inner += `</div>`;
             cCon.innerHTML = inner;
@@ -2659,7 +2636,7 @@ registerApp('aether-cards', {
                 imgsEl.innerHTML = '';
                 card.images.forEach((fn, idx) => {
                     const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;display:inline-block;flex-shrink:0;';
-                    const img = document.createElement('img'); img.className = 'detail-img-thumb'; img.src = '/aether-cards-images/' + fn; img.title = fn;
+                    const img = document.createElement('img'); img.className = 'detail-img-thumb'; img.src = '/user-data/aether-cards/images/' + fn; img.title = fn;
                     img.onclick = () => { chatInEl.value += '@' + fn + ' '; chatInEl.focus(); };
                     img.oncontextmenu = (e) => { e.preventDefault(); card.images.splice(idx, 1); if (card.coverImage === fn) card.coverImage = ''; card.updated = Date.now(); renderWinImgs(); renderCards(); scheduleSave(); };
                     wrap.appendChild(img);
@@ -2815,8 +2792,8 @@ registerApp('aether-cards', {
         }
 
         function scheduleConfigSave() { clearTimeout(configSaveTimer); configSaveTimer = setTimeout(saveConfig, 500); }
-        async function saveConfig() { try { await os.api('PUT', '/api/aether-cards/config', CardsLLMConfig); } catch (e) { console.warn('Config save failed:', e); } }
-        async function loadConfig() { try { const d = await os.api('GET', '/api/aether-cards/config'); if (d.textModels) CardsLLMConfig.textModels = d.textModels; if (d.imageModels) CardsLLMConfig.imageModels = d.imageModels; } catch (e) { console.warn('Config load failed:', e); } }
+        async function saveConfig() { try { localStorage.setItem('cards-llm-config', JSON.stringify(CardsLLMConfig)); } catch (e) { console.warn('Config save failed:', e); } }
+        async function loadConfig() { try { const d = JSON.parse(localStorage.getItem('cards-llm-config') || '{}'); if (d.textModels) CardsLLMConfig.textModels = d.textModels; if (d.imageModels) CardsLLMConfig.imageModels = d.imageModels; } catch (e) { console.warn('Config load failed:', e); } }
 
         // ═══════════════════════════════════════
         // 手绘板功能
@@ -2948,9 +2925,8 @@ registerApp('aether-cards', {
             } catch (e) { console.warn('Save failed:', e); }
         }
         function saveJSON() {
-            const data = { version: 2, canvas: { offsetX: canvasOffset.x, offsetY: canvasOffset.y, zoom: canvasZoom }, cards };
-            CardsData.cards = cards; CardsData.canvas = data.canvas;
-            os.api('PUT', '/api/aether-cards/save', data).catch(e => console.warn('JSON save failed:', e));
+            // JSON 降级方案已移除，DB 是主要存储
+            console.warn('JSON save not available, DB is primary storage');
         }
         async function load() {
             if (!_dbAvailable) return loadJSON();
@@ -2980,26 +2956,8 @@ registerApp('aether-cards', {
             } catch (e) { console.warn('Load failed, trying JSON:', e); await loadJSON(); }
         }
         async function loadJSON() {
-            try {
-                const d = await os.api('GET', '/api/aether-cards/load');
-                if (d.cards) {
-                    cards = d.cards.map(c => {
-                        let ratio = c.ratio || [...DEFAULT_RATIO];
-                        if (c.size && c.size.w && c.size.h) {
-                            const actualRatio = c.size.w / c.size.h;
-                            if (Math.abs(ratio[0] / ratio[1] - actualRatio) > 0.01) {
-                                ratio = [c.size.w, c.size.h];
-                                const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-                                const g = gcd(ratio[0], ratio[1]);
-                                ratio = [ratio[0] / g, ratio[1] / g];
-                            }
-                        }
-                        return { ratio, coverImage: '', ...c };
-                    });
-                    CardsData.cards = cards;
-                }
-                if (d.canvas) { canvasOffset.x = d.canvas.offsetX || 0; canvasOffset.y = d.canvas.offsetY || 0; canvasZoom = d.canvas.zoom || 1; CardsData.canvas = d.canvas; }
-            } catch (e) { console.warn('JSON load failed:', e); }
+            // JSON 降级方案已移除，DB 是主要存储
+            console.warn('JSON load not available, DB is primary storage');
         }
 
         // ═══════════════════════════════════════
