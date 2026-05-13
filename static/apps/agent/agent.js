@@ -20,144 +20,224 @@ registerApp('agent', {
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                             <span>新会话</span>
                         </button>
-                    </div>
-                    <div class="sidebar-search">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                        <input id="session-filter" type="text" placeholder="搜索会话..." />
+                        <div class="sidebar-search">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                            <input id="session-filter" type="text" placeholder="搜索会话..." />
+                        </div>
                     </div>
                     <div id="session-list" class="session-list"></div>
+                    <div class="sidebar-bottom">
+                        <button id="sidebar-settings-btn" class="sidebar-bottom-btn">
+                            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
+                            <span>设置</span>
+                        </button>
+                        <button id="sidebar-help-btn" class="sidebar-bottom-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 6.5a2 2 0 013.5 1.5c0 1-1.5 1.2-1.5 2.5M8 12.5v.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                            <span>帮助</span>
+                        </button>
+                    </div>
                 </aside>
 
-                <!-- Main chat area -->
+                <!-- Main area (page container) -->
                 <main class="agent-main">
-                    <!-- Top bar -->
-                    <header class="agent-header">
-                        <button id="session-toggle-btn" class="icon-btn" title="切换侧边栏">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3.5" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="8.25" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="13" width="14" height="1.5" rx="0.75" fill="currentColor"/></svg>
-                        </button>
-                        <div class="header-title">
-                            <span id="session-title-display">Eos Agent</span>
-                            <span class="model-badge" id="model-badge"></span>
-                        </div>
-                        <div style="flex:1"></div>
-                        <button id="panel-toggle-btn" class="icon-btn" title="工具面板">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="16" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="1" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="10" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
-                        </button>
-                        <button id="agent-settings-btn" class="icon-btn" title="设置">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.2"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.2 4.2l1.4 1.4M12.4 12.4l1.4 1.4M4.2 13.8l1.4-1.4M12.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
-                        </button>
-                    </header>
-
-                    <!-- Messages area -->
-                    <div id="agent-messages" class="agent-messages">
-                        <div id="welcome-screen" class="welcome-screen">
-                            <div class="welcome-glow"></div>
-                            <div class="welcome-icon">
-                                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                                    <circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="1.5" opacity="0.3"/>
-                                    <circle cx="24" cy="24" r="14" stroke="var(--accent)" stroke-width="1.2" opacity="0.5"/>
-                                    <circle cx="24" cy="24" r="5" fill="var(--accent)" opacity="0.8"/>
-                                    <circle cx="24" cy="24" r="5" fill="var(--accent)">
-                                        <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/>
-                                        <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
-                                    </circle>
-                                </svg>
+                    <!-- Home page -->
+                    <div id="home-page" class="agent-page home-page">
+                        <div class="home-content">
+                            <div class="home-header">
+                                <div class="home-icon">
+                                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                        <circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="1.5" opacity="0.3"/>
+                                        <circle cx="24" cy="24" r="14" stroke="var(--accent)" stroke-width="1.2" opacity="0.5"/>
+                                        <circle cx="24" cy="24" r="5" fill="var(--accent)" opacity="0.8"/>
+                                        <circle cx="24" cy="24" r="5" fill="var(--accent)">
+                                            <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/>
+                                            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
+                                        </circle>
+                                    </svg>
+                                </div>
+                                <h1 class="home-title">Eos Agent</h1>
                             </div>
-                            <h2 class="welcome-title">Eos Agent</h2>
-                            <p class="welcome-sub">有什么需要帮助的？</p>
-                            <div class="welcome-chips">
-                                <button class="chip" data-prompt="帮我分析当前项目的代码结构">分析代码结构</button>
-                                <button class="chip" data-prompt="读取并解释 server.py 的核心逻辑">解释后端逻辑</button>
-                                <button class="chip" data-prompt="帮我写一个 Python 脚本来处理数据">编写脚本</button>
-                                <button class="chip" data-prompt="检查项目中是否有潜在的安全问题">安全审查</button>
+                            <p class="home-welcome-text" id="home-welcome-text"></p>
+                            <div class="home-input-wrap">
+                                <div class="input-container">
+                                    <textarea id="home-input" placeholder="发送消息..." rows="1"></textarea>
+                                    <div class="input-actions">
+                                        <button id="home-send" class="send-btn" disabled>
+                                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3L13 8L3 13V9.5L9 8L3 6.5V3Z" fill="currentColor"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Input area -->
-                    <div class="agent-input-wrap">
-                        <div class="input-container">
-                            <textarea id="agent-input" placeholder="发送消息..." rows="1"></textarea>
-                            <div class="input-actions">
-                                <button id="agent-stop" class="stop-btn" style="display:none">
-                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+                    <!-- Chat page -->
+                    <div id="chat-page" class="agent-page chat-page" style="display:none">
+                        <header class="agent-header">
+                            <button id="session-toggle-btn" class="icon-btn" title="切换侧边栏">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3.5" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="8.25" width="14" height="1.5" rx="0.75" fill="currentColor"/><rect x="2" y="13" width="14" height="1.5" rx="0.75" fill="currentColor"/></svg>
+                            </button>
+                            <div class="header-title">
+                                <span id="session-title-display">Eos Agent</span>
+                                <span class="model-badge" id="model-badge"></span>
+                            </div>
+                            <div style="flex:1"></div>
+                            <div class="mode-switch" id="mode-switch">
+                                <button class="mode-btn active" data-mode="assistant">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4 1.5 1.5 3.5 1.5 7c0 1.5.8 2.8 2 3.5L3 13l2.5-1.5c.5.1 1 .1 1.5.1 3 0 5.5-2 5.5-5.5S10 1.5 7 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    Assistant
                                 </button>
-                                <button id="agent-send" class="send-btn" disabled>
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3L13 8L3 13V9.5L9 8L3 6.5V3Z" fill="currentColor"/></svg>
+                                <button class="mode-btn" data-mode="coder">
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4.5 4L1.5 7l3 3M9.5 4l3 3-3 3M8 2L6 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    Coder
                                 </button>
                             </div>
+                            <button id="panel-toggle-btn" class="icon-btn" title="工具面板">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="16" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="1" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="10" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+                            </button>
+                        </header>
+
+                        <div class="chat-body">
+                            <div id="agent-messages" class="agent-messages">
+                                <div id="welcome-screen-chat" class="welcome-screen">
+                                    <div class="welcome-glow"></div>
+                                    <div class="welcome-icon">
+                                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                            <circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="1.5" opacity="0.3"/>
+                                            <circle cx="24" cy="24" r="14" stroke="var(--accent)" stroke-width="1.2" opacity="0.5"/>
+                                            <circle cx="24" cy="24" r="5" fill="var(--accent)" opacity="0.8"/>
+                                            <circle cx="24" cy="24" r="5" fill="var(--accent)">
+                                                <animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/>
+                                                <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
+                                            </circle>
+                                        </svg>
+                                    </div>
+                                    <h2 class="welcome-title">Eos Agent</h2>
+                                    <p class="welcome-sub">有什么需要帮助的？</p>
+                                    <div class="welcome-chips">
+                                        <button class="chip" data-prompt="帮我分析当前项目的代码结构">分析代码结构</button>
+                                        <button class="chip" data-prompt="读取并解释 server.py 的核心逻辑">解释后端逻辑</button>
+                                        <button class="chip" data-prompt="帮我写一个 Python 脚本来处理数据">编写脚本</button>
+                                        <button class="chip" data-prompt="检查项目中是否有潜在的安全问题">安全审查</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside id="agent-panel" class="agent-panel">
+                                <div class="panel-section">
+                                    <div class="panel-section-header">
+                                        <span class="panel-section-icon">
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                        </span>
+                                        <span>工具调用</span>
+                                        <span id="tool-count" class="panel-count">0</span>
+                                    </div>
+                                    <div id="agent-tools" class="panel-body tools-body"></div>
+                                </div>
+                                <div class="panel-divider"></div>
+                                <div class="panel-section" style="flex:1;min-height:0">
+                                    <div class="panel-section-header">
+                                        <span class="panel-section-icon">
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.5L6 7.5L4 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 9.5H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                        </span>
+                                        <span>终端</span>
+                                        <button id="terminal-clear" class="panel-action-btn" title="清空">清空</button>
+                                    </div>
+                                    <div id="agent-terminal" class="panel-body terminal-body"></div>
+                                </div>
+                            </aside>
                         </div>
-                        <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+
+                        <div class="agent-input-wrap">
+                            <div class="input-container">
+                                <textarea id="agent-input" placeholder="发送消息..." rows="1"></textarea>
+                                <div class="input-actions">
+                                    <button id="agent-stop" class="stop-btn" style="display:none">
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+                                    </button>
+                                    <button id="agent-send" class="send-btn" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3L13 8L3 13V9.5L9 8L3 6.5V3Z" fill="currentColor"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+                        </div>
+                    </div>
+
+                    <!-- Settings page -->
+                    <div id="settings-page" class="agent-page settings-page" style="display:none">
+                        <div class="settings-page-header">
+                            <button id="settings-back-btn" class="settings-back-btn">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>返回</span>
+                            </button>
+                            <span class="settings-page-title">Agent 设置</span>
+                        </div>
+                        <div class="settings-page-body">
+                            <div class="settings-section">
+                                <div class="settings-section-title">模型配置</div>
+                                <div class="settings-field">
+                                    <label class="settings-label">模型</label>
+                                    <select id="settings-model" class="settings-select">
+                                        <option value="">加载中...</option>
+                                    </select>
+                                    <div id="settings-model-hint" class="settings-hint"></div>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Agent 行为</div>
+                                <div class="settings-field">
+                                    <label class="settings-label">System Prompt</label>
+                                    <textarea id="settings-system-prompt" class="settings-textarea" rows="5" placeholder="你是 Eos Agent..."></textarea>
+                                </div>
+                                <div class="settings-field">
+                                    <label class="settings-label">最大迭代次数</label>
+                                    <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
+                                </div>
+                                <div class="settings-field">
+                                    <label class="settings-label">工具集</label>
+                                    <select id="settings-toolset" class="settings-select">
+                                        <option value="">所有工具</option>
+                                        <option value="default">默认工具集（文件 + 终端）</option>
+                                        <option value="file">文件操作</option>
+                                        <option value="terminal">终端执行</option>
+                                        <option value="eos-tools-file-management">Eos-Tools 文件管理</option>
+                                    </select>
+                                </div>
+                                <div class="settings-field">
+                                    <label class="settings-label">工具调用扫描动画速度（秒）</label>
+                                    <input id="settings-scan-speed" class="settings-input" type="number" min="0.2" max="5" step="0.1" value="1.0">
+                                </div>
+                            </div>
+                            <div class="settings-actions">
+                                <button id="settings-save-btn" class="settings-save-btn">保存</button>
+                                <button id="settings-reset-btn" class="settings-reset-btn">重置</button>
+                            </div>
+                        </div>
                     </div>
                 </main>
 
-                <!-- Right panel: tools & terminal -->
-                <aside id="agent-panel" class="agent-panel">
-                    <div class="panel-section">
-                        <div class="panel-section-header">
-                            <span class="panel-section-icon">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                            </span>
-                            <span>工具调用</span>
-                            <span id="tool-count" class="panel-count">0</span>
-                        </div>
-                        <div id="agent-tools" class="panel-body tools-body"></div>
-                    </div>
-                    <div class="panel-divider"></div>
-                    <div class="panel-section" style="flex:1;min-height:0">
-                        <div class="panel-section-header">
-                            <span class="panel-section-icon">
-                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.5L6 7.5L4 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 9.5H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                            </span>
-                            <span>终端</span>
-                            <button id="terminal-clear" class="panel-action-btn" title="清空">清空</button>
-                        </div>
-                        <div id="agent-terminal" class="panel-body terminal-body"></div>
-                    </div>
-                </aside>
-
-                <!-- Settings drawer -->
-                <div id="agent-settings-overlay" class="settings-overlay"></div>
-                <div id="agent-settings-drawer" class="settings-drawer">
-                    <div class="settings-header">
-                        <span class="settings-title">设置</span>
-                        <button id="settings-close-btn" class="icon-btn">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <!-- Help popover -->
+                <div id="help-popover" class="help-popover" style="display:none">
+                    <div class="help-popover-header">
+                        <span class="help-popover-title">快捷键与提示</span>
+                        <button id="help-close-btn" class="help-close-btn">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                         </button>
                     </div>
-                    <div class="settings-body">
-                        <div class="settings-field">
-                            <label class="settings-label">模型</label>
-                            <select id="settings-model" class="settings-select">
-                                <option value="">加载中...</option>
-                            </select>
-                            <div id="settings-model-hint" class="settings-hint"></div>
+                    <div class="help-popover-body">
+                        <div class="help-section">
+                            <div class="help-section-label">快捷键</div>
+                            <div class="help-row"><kbd>Enter</kbd><span>发送消息</span></div>
+                            <div class="help-row"><kbd>Shift + Enter</kbd><span>换行</span></div>
+                            <div class="help-row"><kbd>Ctrl + Shift + Enter</kbd><span>新建会话</span></div>
                         </div>
-                        <div class="settings-field">
-                            <label class="settings-label">System Prompt</label>
-                            <textarea id="settings-system-prompt" class="settings-textarea" rows="5" placeholder="你是 Eos Agent..."></textarea>
-                        </div>
-                        <div class="settings-field">
-                            <label class="settings-label">最大迭代次数</label>
-                            <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
-                        </div>
-                        <div class="settings-field">
-                            <label class="settings-label">工具集</label>
-                            <select id="settings-toolset" class="settings-select">
-                                <option value="">所有工具</option>
-                                <option value="default">默认工具集（文件 + 终端）</option>
-                                <option value="file">文件操作</option>
-                                <option value="terminal">终端执行</option>
-                                <option value="eos-tools-file-management">Eos-Tools 文件管理</option>
-                            </select>
-                        </div>
-                        <div class="settings-field">
-                            <label class="settings-label">工具调用扫描动画速度（秒）</label>
-                            <input id="settings-scan-speed" class="settings-input" type="number" min="0.2" max="5" step="0.1" value="1.0">
-                        </div>
-                        <div class="settings-actions">
-                            <button id="settings-save-btn" class="settings-save-btn">保存</button>
-                            <button id="settings-reset-btn" class="settings-reset-btn">重置</button>
+                        <div class="help-section">
+                            <div class="help-section-label">快速提示</div>
+                            <div class="help-tip">点击会话标题可重命名</div>
+                            <div class="help-tip">使用搜索框快速查找历史会话</div>
+                            <div class="help-tip">切换 Assistant / Coder 模式获得不同体验</div>
                         </div>
                     </div>
                 </div>
@@ -197,6 +277,9 @@ registerApp('agent', {
             .sidebar-top {
                 padding: 12px;
                 flex-shrink: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
             }
             .new-chat-btn {
                 display: flex;
@@ -222,7 +305,6 @@ registerApp('agent', {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                margin: 0 12px 8px;
                 padding: 7px 10px;
                 background: var(--bg-surface);
                 border: 1px solid var(--border);
@@ -249,6 +331,38 @@ registerApp('agent', {
                 flex: 1;
                 overflow-y: auto;
                 padding: 4px 8px;
+            }
+
+            /* ── Sidebar bottom ── */
+            .sidebar-bottom {
+                flex-shrink: 0;
+                padding: 8px;
+                border-top: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .sidebar-bottom-btn {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+                padding: 8px 12px;
+                background: none;
+                border: none;
+                border-radius: var(--radius-md);
+                color: var(--text-muted);
+                font-family: var(--font-body);
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .sidebar-bottom-btn:hover {
+                background: var(--bg-hover);
+                color: var(--text-primary);
+            }
+            .sidebar-bottom-btn svg {
+                flex-shrink: 0;
             }
 
             /* ── Session items ── */
@@ -335,6 +449,70 @@ registerApp('agent', {
                 flex-direction: column;
                 min-width: 0;
                 position: relative;
+                overflow: hidden;
+            }
+
+            /* ── Page system ── */
+            .agent-page {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .home-page {
+                align-items: center;
+                justify-content: center;
+            }
+            .home-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+                max-width: 600px;
+                width: 100%;
+                padding: 0 24px;
+            }
+            .home-header {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+            .home-icon {
+                filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.3));
+            }
+            .home-title {
+                font-family: var(--font-display);
+                font-size: 32px;
+                font-weight: 700;
+                color: var(--text-primary);
+                letter-spacing: 2px;
+                margin: 0;
+            }
+            .home-welcome-text {
+                font-size: 20px;
+                color: var(--text-primary);
+                text-align: center;
+                line-height: 1.6;
+                margin: 0;
+                min-height: 32px;
+            }
+            .home-input-wrap {
+                width: 100%;
+                max-width: 560px;
+                transition: transform 0.5s var(--ease-out), opacity 0.3s;
+            }
+            .home-input-wrap.moved {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            .chat-page {
+                display: flex;
+                flex-direction: column;
+            }
+            .chat-body {
+                flex: 1;
+                display: flex;
+                overflow: hidden;
             }
             .agent-header {
                 display: flex;
@@ -423,6 +601,46 @@ registerApp('agent', {
                 color: var(--text-primary);
                 background: var(--bg-hover);
                 border-color: var(--border);
+            }
+
+            /* ── Mode switch ── */
+            .mode-switch {
+                display: flex;
+                align-items: center;
+                background: var(--bg-deep);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 2px;
+                gap: 2px;
+            }
+            .mode-btn {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                padding: 5px 12px;
+                background: none;
+                border: none;
+                border-radius: var(--radius-sm);
+                color: var(--text-muted);
+                font-family: var(--font-display);
+                font-size: 11px;
+                font-weight: 500;
+                letter-spacing: 0.5px;
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+            .mode-btn:hover {
+                color: var(--text-primary);
+                background: var(--bg-hover);
+            }
+            .mode-btn.active {
+                color: var(--accent);
+                background: var(--accent-glow);
+                box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+            }
+            .mode-btn svg {
+                flex-shrink: 0;
             }
 
             /* ── Messages ── */
@@ -672,10 +890,49 @@ registerApp('agent', {
                 border-radius: 16px;
                 padding: 8px 8px 8px 16px;
                 transition: border-color 0.2s, box-shadow 0.2s;
+                position: relative;
             }
             .input-container:focus-within {
                 border-color: var(--accent-dim);
                 box-shadow: 0 0 0 1px var(--accent-glow), 0 0 20px rgba(0, 229, 255, 0.05);
+            }
+            /* Skill autocomplete */
+            .skill-autocomplete {
+                display: none;
+                position: absolute;
+                bottom: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-elevated);
+                border: 1px solid var(--border);
+                border-radius: 8px 8px 0 0;
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 10;
+            }
+            .skill-autocomplete-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 12px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .skill-autocomplete-item:hover {
+                background: var(--bg-hover);
+            }
+            .skill-name {
+                font-family: var(--font-mono);
+                color: var(--accent);
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            .skill-desc {
+                color: var(--text-secondary);
+                font-size: 0.85em;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             .input-container textarea {
                 flex: 1;
@@ -889,55 +1146,79 @@ registerApp('agent', {
                 word-break: break-all;
             }
 
-            /* ── Settings drawer ── */
-            .settings-overlay {
-                position: absolute;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-                z-index: 90;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.25s;
-            }
-            .settings-overlay.open {
-                opacity: 1;
-                pointer-events: auto;
-            }
-            .settings-drawer {
-                position: absolute;
-                top: 0;
-                right: 0;
-                bottom: 0;
-                width: 360px;
-                background: var(--bg-surface);
-                border-left: 1px solid var(--border);
-                z-index: 100;
+            /* ── Settings page ── */
+            .settings-page {
+                flex: 1;
                 display: flex;
                 flex-direction: column;
-                transform: translateX(100%);
-                transition: transform 0.3s var(--ease-out);
-                box-shadow: -8px 0 40px rgba(0, 0, 0, 0.4);
+                overflow: hidden;
+                animation: settings-page-in 0.25s var(--ease-out);
             }
-            .settings-drawer.open {
-                transform: translateX(0);
+            @keyframes settings-page-in {
+                from { opacity: 0; transform: translateY(12px); }
+                to { opacity: 1; transform: translateY(0); }
             }
-            .settings-header {
+            .settings-page-header {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
-                padding: 16px 20px;
+                gap: 12px;
+                padding: 12px 20px;
                 border-bottom: 1px solid var(--border);
                 flex-shrink: 0;
             }
-            .settings-title {
+            .settings-back-btn {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                background: none;
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                color: var(--text-muted);
+                font-family: var(--font-body);
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.15s;
+            }
+            .settings-back-btn:hover {
+                color: var(--accent);
+                border-color: var(--accent-dim);
+                background: var(--accent-glow);
+            }
+            .settings-page-title {
                 font-family: var(--font-display);
-                font-size: 14px;
+                font-size: 15px;
                 font-weight: 600;
                 color: var(--text-primary);
+                letter-spacing: 0.5px;
             }
-            .settings-body {
+            .settings-page-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px;
+                max-width: 640px;
+                width: 100%;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                gap: 28px;
+            }
+            .settings-section {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .settings-section-title {
+                font-family: var(--font-display);
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                color: var(--accent);
+                padding-bottom: 8px;
+                border-bottom: 1px solid var(--border);
+            }
+            .settings-page-body {
                 flex: 1;
                 overflow-y: auto;
                 padding: 20px;
@@ -1070,6 +1351,110 @@ registerApp('agent', {
                 border-color: rgba(255, 107, 107, 0.3);
             }
 
+            /* ── Help popover ── */
+            .help-popover {
+                position: absolute;
+                bottom: 16px;
+                left: 272px;
+                width: 320px;
+                background: var(--bg-surface);
+                border: 1px solid var(--accent-dim);
+                border-radius: var(--radius-lg);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.08);
+                z-index: 80;
+                animation: help-pop-in 0.2s var(--ease-out);
+                overflow: hidden;
+            }
+            @keyframes help-pop-in {
+                from { opacity: 0; transform: translateY(8px) scale(0.97); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            .help-popover-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border);
+            }
+            .help-popover-title {
+                font-family: var(--font-display);
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            .help-close-btn {
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                cursor: pointer;
+                border-radius: var(--radius-sm);
+                transition: all 0.15s;
+            }
+            .help-close-btn:hover {
+                color: var(--accent-warm);
+                background: rgba(255, 107, 107, 0.1);
+            }
+            .help-popover-body {
+                padding: 12px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .help-section-label {
+                font-family: var(--font-display);
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                margin-bottom: 8px;
+            }
+            .help-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 4px 0;
+            }
+            .help-row kbd {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--accent);
+                background: var(--accent-glow);
+                border: 1px solid var(--accent-dim);
+                border-radius: 4px;
+                padding: 2px 8px;
+            }
+            .help-row span {
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+            .help-tip {
+                font-size: 12px;
+                color: var(--text-secondary);
+                padding: 4px 0;
+                padding-left: 12px;
+                position: relative;
+            }
+            .help-tip::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                background: var(--accent);
+                opacity: 0.5;
+            }
+
             /* Toast */
             .agent-toast {
                 position: absolute;
@@ -1098,13 +1483,13 @@ registerApp('agent', {
             .session-list::-webkit-scrollbar,
             .agent-messages::-webkit-scrollbar,
             .panel-body::-webkit-scrollbar,
-            .settings-body::-webkit-scrollbar {
+            .settings-page-body::-webkit-scrollbar {
                 width: 5px;
             }
             .session-list::-webkit-scrollbar-thumb,
             .agent-messages::-webkit-scrollbar-thumb,
             .panel-body::-webkit-scrollbar-thumb,
-            .settings-body::-webkit-scrollbar-thumb {
+            .settings-page-body::-webkit-scrollbar-thumb {
                 background: var(--text-muted);
                 border-radius: 3px;
             }
@@ -1420,7 +1805,14 @@ registerApp('agent', {
            DOM refs
            ══════════════════════════════════════════ */
         const messagesEl = container.querySelector('#agent-messages');
-        const welcomeEl = container.querySelector('#welcome-screen');
+        const welcomeEl = container.querySelector('#welcome-screen-chat');
+        const homePage = container.querySelector('#home-page');
+        const chatPage = container.querySelector('#chat-page');
+        const settingsPage = container.querySelector('#settings-page');
+        const homeInput = container.querySelector('#home-input');
+        const homeSendBtn = container.querySelector('#home-send');
+        const homeWelcomeText = container.querySelector('#home-welcome-text');
+        const homeInputWrap = container.querySelector('.home-input-wrap');
         const inputEl = container.querySelector('#agent-input');
         const sendBtn = container.querySelector('#agent-send');
         const stopBtn = container.querySelector('#agent-stop');
@@ -1438,6 +1830,18 @@ registerApp('agent', {
         const agentPanel = container.querySelector('#agent-panel');
         const sessionFilter = container.querySelector('#session-filter');
         const terminalClearBtn = container.querySelector('#terminal-clear');
+
+        /* ══════════════════════════════════════════
+           Page router
+           ══════════════════════════════════════════ */
+        let currentPage = 'home';
+
+        function navigateTo(page) {
+            container.querySelectorAll('.agent-page').forEach(p => p.style.display = 'none');
+            const target = container.querySelector(`#${page}-page`);
+            if (target) target.style.display = 'flex';
+            currentPage = page;
+        }
 
         /* ══════════════════════════════════════════
            State
@@ -1458,6 +1862,31 @@ registerApp('agent', {
         let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
         let _toolStartTime = 0;      // 工具调用开始时间
         let _toolTimerInterval = null; // 工具调用计时器
+
+        // Mode state
+        let agentMode = 'assistant'; // 'assistant' or 'coder'
+        const MODE_CONFIGS = {
+            assistant: {
+                systemPrompt: '你是 Eos Agent，一个强大的 AI 助手。\n你可以读写文件、执行终端命令、分析代码、回答问题。\n请用中文回复，保持友好和专业。',
+                toolset: '',
+                welcomeChips: [
+                    { text: '分析代码结构', prompt: '帮我分析当前项目的代码结构' },
+                    { text: '解释后端逻辑', prompt: '读取并解释 server.py 的核心逻辑' },
+                    { text: '安全审查', prompt: '检查项目中是否有潜在的安全问题' },
+                    { text: '项目概览', prompt: '给我一个项目的整体概览' },
+                ],
+            },
+            coder: {
+                systemPrompt: '你是一个专业的编程助手（Coder模式）。\n你专注于代码编写、调试和优化。\n请直接给出代码解决方案，减少解释，用中文回复。',
+                toolset: 'default',
+                welcomeChips: [
+                    { text: '编写脚本', prompt: '帮我写一个 Python 脚本来处理数据' },
+                    { text: '修复 Bug', prompt: '帮我找出并修复这个文件中的 bug' },
+                    { text: '代码重构', prompt: '重构这段代码，提高可读性和性能' },
+                    { text: '编写测试', prompt: '为这个函数编写单元测试' },
+                ],
+            },
+        };
 
         // ── Register agent panel in sidebar ──
         os.registerAgentPanel({ id: agentId, name: 'Eos Agent', windowId: win.id });
@@ -1525,6 +1954,7 @@ registerApp('agent', {
                         if (e.target.closest('.session-item-delete')) return;
                         if (e.target.closest('.session-item-title.editing')) return;
                         switchSession(session.id);
+                        navigateTo('chat');
                     });
                     // 双击标题重命名
                     const titleEl = el.querySelector('.session-item-title');
@@ -2000,6 +2430,8 @@ registerApp('agent', {
                 if (s.model) {
                     updateModelBadge(s.model);
                 }
+                // 请求 Skill 列表
+                setTimeout(fetchSkills, 500);
                 // 如果有当前 session，发送给后端加载历史消息
                 if (currentSessionId) {
                     ws.send(JSON.stringify({ type: 'session_id', session_id: currentSessionId }));
@@ -2096,6 +2528,10 @@ registerApp('agent', {
                         lastCall.error = data.error;
                     }
                     os.updateAgentPanel(agentId, { status: 'output' });
+                    break;
+                case 'skill_activated':
+                    addSystemMessage(`Skill "${data.skill}" 已激活`);
+                    if (data.args) addSystemMessage(`参数: ${data.args}`);
                     break;
                 case 'done':
                     removeThinkingIndicator();
@@ -2742,6 +3178,7 @@ registerApp('agent', {
 
             _sending = true;
 
+            if (currentPage !== 'chat') navigateTo('chat');
             if (!currentSessionId) await createNewSession();
 
             _conversationRound++;
@@ -2791,21 +3228,123 @@ registerApp('agent', {
             inputEl.style.height = '44px';
             inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
             sendBtn.disabled = !inputEl.value.trim() && !isStreaming;
+            // Skill 自动补全
+            const text = inputEl.value;
+            if (text.startsWith('/') && !text.includes(' ')) {
+                showSkillAutocomplete(text.slice(1));
+            } else if (_skillAutocomplete) {
+                _skillAutocomplete.style.display = 'none';
+            }
         });
 
         /* ══════════════════════════════════════════
-           Welcome chips
+           Skill autocomplete
            ══════════════════════════════════════════ */
 
-        container.querySelectorAll('.chip[data-prompt]').forEach(chip => {
-            chip.addEventListener('click', () => {
-                inputEl.value = chip.dataset.prompt;
+        let _skillAutocomplete = null;
+        let _cachedSkills = [];
+
+        function showSkillAutocomplete(filter) {
+            if (!_skillAutocomplete) {
+                _skillAutocomplete = document.createElement('div');
+                _skillAutocomplete.className = 'skill-autocomplete';
+                inputEl.parentElement.appendChild(_skillAutocomplete);
+            }
+
+            const skills = _cachedSkills || [];
+            const filtered = filter
+                ? skills.filter(s => s.name.toLowerCase().startsWith(filter.toLowerCase()))
+                : skills;
+
+            if (filtered.length === 0) {
+                _skillAutocomplete.style.display = 'none';
+                return;
+            }
+
+            _skillAutocomplete.innerHTML = filtered.map(s =>
+                `<div class="skill-autocomplete-item" data-name="${s.name}">
+                    <span class="skill-name">/${s.name}</span>
+                    <span class="skill-desc">${s.description}</span>
+                </div>`
+            ).join('');
+            _skillAutocomplete.style.display = 'block';
+
+            _skillAutocomplete.querySelectorAll('.skill-autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    inputEl.value = `/${item.dataset.name} `;
+                    _skillAutocomplete.style.display = 'none';
+                    inputEl.focus();
+                });
+            });
+        }
+
+        // Skill 列表（通过 info 事件获取）
+        function fetchSkills() {
+            // Skills are loaded at startup, use hardcoded list for now
+            // In production, this would be fetched from the engine via info event
+            _cachedSkills = [
+                { name: 'example', description: '示例 Skill，用于验证 Skill 框架是否正常工作', tools: ['search_files'] }
+            ];
+        }
+
+        /* ══════════════════════════════════════════
+           Home page
+           ══════════════════════════════════════════ */
+
+        const WELCOME_MESSAGES = [
+            '有什么我可以帮你的？',
+            '今天想聊些什么？',
+            '准备好了，开始吧。',
+            '需要什么帮助吗？',
+            '随时为你服务。',
+            '说说你的想法。',
+        ];
+
+        function setRandomWelcome() {
+            const msg = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
+            homeWelcomeText.textContent = msg;
+        }
+
+        setRandomWelcome();
+
+        homeInput.addEventListener('input', () => {
+            homeInput.style.height = '44px';
+            homeInput.style.height = Math.min(homeInput.scrollHeight, 160) + 'px';
+            homeSendBtn.disabled = !homeInput.value.trim();
+        });
+
+        homeInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendFromHome();
+            }
+        });
+
+        homeSendBtn.addEventListener('click', sendFromHome);
+
+        async function sendFromHome() {
+            const text = homeInput.value.trim();
+            if (!text) return;
+
+            // 动画：输入框下移并消失
+            homeInputWrap.classList.add('moved');
+
+            // 等待动画完成后跳转
+            setTimeout(async () => {
+                navigateTo('chat');
+                inputEl.value = text;
                 inputEl.style.height = '44px';
                 inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
                 sendBtn.disabled = false;
-                inputEl.focus();
-            });
-        });
+                await sendMessage();
+                // 重置首页输入框
+                homeInput.value = '';
+                homeInput.style.height = '44px';
+                homeSendBtn.disabled = true;
+                homeInputWrap.classList.remove('moved');
+                setRandomWelcome();
+            }, 400);
+        }
 
         /* ══════════════════════════════════════════
            Sidebar & panel toggles
@@ -2819,7 +3358,10 @@ registerApp('agent', {
             agentPanel.classList.toggle('collapsed');
         });
 
-        sessionNewBtn.addEventListener('click', createNewSession);
+        sessionNewBtn.addEventListener('click', () => {
+            createNewSession();
+            navigateTo('home');
+        });
 
         sessionFilter.addEventListener('input', () => {
             renderSessionList(sessionFilter.value);
@@ -2833,10 +3375,11 @@ registerApp('agent', {
            Settings drawer
            ══════════════════════════════════════════ */
 
-        const settingsBtn = container.querySelector('#agent-settings-btn');
-        const settingsOverlay = container.querySelector('#agent-settings-overlay');
-        const settingsDrawer = container.querySelector('#agent-settings-drawer');
-        const settingsCloseBtn = container.querySelector('#settings-close-btn');
+        const settingsBackBtn = container.querySelector('#settings-back-btn');
+        const sidebarSettingsBtn = container.querySelector('#sidebar-settings-btn');
+        const sidebarHelpBtn = container.querySelector('#sidebar-help-btn');
+        const helpPopover = container.querySelector('#help-popover');
+        const helpCloseBtn = container.querySelector('#help-close-btn');
         const settingsModel = container.querySelector('#settings-model');
         const settingsModelHint = container.querySelector('#settings-model-hint');
         const settingsSystemPrompt = container.querySelector('#settings-system-prompt');
@@ -2849,10 +3392,11 @@ registerApp('agent', {
         const SETTINGS_KEY = 'eos-agent-settings';
         const DEFAULT_SETTINGS = {
             model: '',
-            systemPrompt: '你是 Eos Agent，一个强大的 AI 编程助手。\n你可以读写文件、执行终端命令、分析代码。\n请用中文回复。',
+            systemPrompt: '你是 Eos Agent，一个强大的 AI 助手。\n你可以读写文件、执行终端命令、分析代码、回答问题。\n请用中文回复，保持友好和专业。',
             maxIterations: 50,
             toolScanSpeed: 1.0,  // 工具调用扫描动画速度（秒）
             toolset: '',  // 工具集（空字符串表示所有工具）
+            agentMode: 'assistant',  // 模式：assistant 或 coder
         };
 
         function loadSettings() {
@@ -2935,13 +3479,15 @@ registerApp('agent', {
         async function openSettings() {
             await populateModelSelect();
             fillSettingsForm(loadSettings());
-            settingsOverlay.classList.add('open');
-            settingsDrawer.classList.add('open');
+            navigateTo('settings');
         }
 
         function closeSettings() {
-            settingsOverlay.classList.remove('open');
-            settingsDrawer.classList.remove('open');
+            if (currentSessionId) {
+                navigateTo('chat');
+            } else {
+                navigateTo('home');
+            }
         }
 
         function showToast(msg) {
@@ -2956,9 +3502,73 @@ registerApp('agent', {
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
-        settingsBtn.addEventListener('click', openSettings);
-        settingsOverlay.addEventListener('click', closeSettings);
-        settingsCloseBtn.addEventListener('click', closeSettings);
+        /* ══════════════════════════════════════════
+           Mode switch
+           ══════════════════════════════════════════ */
+
+        const modeSwitchEl = container.querySelector('#mode-switch');
+        const modeBtns = modeSwitchEl.querySelectorAll('.mode-btn');
+
+        function switchMode(mode) {
+            if (mode === agentMode) return;
+            agentMode = mode;
+
+            // Update UI
+            modeBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            // Update welcome chips
+            const config = MODE_CONFIGS[mode];
+            const chipsEl = container.querySelector('.welcome-chips');
+            if (chipsEl && config.welcomeChips) {
+                chipsEl.innerHTML = config.welcomeChips.map(chip =>
+                    `<button class="chip" data-prompt="${escapeHtml(chip.prompt)}">${escapeHtml(chip.text)}</button>`
+                ).join('');
+                // Re-bind chip events
+                chipsEl.querySelectorAll('.chip[data-prompt]').forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        inputEl.value = chip.dataset.prompt;
+                        inputEl.style.height = '44px';
+                        inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+                        sendBtn.disabled = false;
+                        inputEl.focus();
+                    });
+                });
+            }
+
+            // Save mode to settings
+            const settings = loadSettings();
+            settings.agentMode = mode;
+            // Update toolset for the new mode
+            settings.toolset = config.toolset;
+            saveSettings(settings);
+
+            // Send updated config to backend
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'configure', settings: loadSettings() }));
+            }
+
+            showToast(`已切换到 ${mode === 'assistant' ? 'Assistant' : 'Coder'} 模式`);
+        }
+
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => switchMode(btn.dataset.mode));
+        });
+
+        // Load saved mode
+        function initMode() {
+            const settings = loadSettings();
+            agentMode = settings.agentMode || 'assistant';
+            modeBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === agentMode);
+            });
+        }
+
+        initMode();
+
+        sidebarSettingsBtn.addEventListener('click', openSettings);
+        settingsBackBtn.addEventListener('click', closeSettings);
 
         settingsSaveBtn.addEventListener('click', () => {
             const s = readSettingsForm();
@@ -2977,6 +3587,32 @@ registerApp('agent', {
             fillSettingsForm(DEFAULT_SETTINGS);
             saveSettings(DEFAULT_SETTINGS);
             showToast('已重置为默认值');
+        });
+
+        /* ══════════════════════════════════════════
+           Help popover
+           ══════════════════════════════════════════ */
+
+        function toggleHelp() {
+            const isVisible = helpPopover.style.display !== 'none';
+            helpPopover.style.display = isVisible ? 'none' : 'block';
+        }
+
+        sidebarHelpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleHelp();
+        });
+
+        helpCloseBtn.addEventListener('click', () => {
+            helpPopover.style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (helpPopover.style.display !== 'none' &&
+                !helpPopover.contains(e.target) &&
+                e.target !== sidebarHelpBtn && !sidebarHelpBtn.contains(e.target)) {
+                helpPopover.style.display = 'none';
+            }
         });
 
         /* ══════════════════════════════════════════
@@ -3036,10 +3672,13 @@ registerApp('agent', {
             // Restore saved session if available
             if (win._agentSessionId && sessionCache.some(s => s.id === win._agentSessionId)) {
                 switchSession(win._agentSessionId);
+                navigateTo('chat');
             } else if (sessionCache.length > 0) {
                 switchSession(sessionCache[0].id);
+                navigateTo('chat');
             } else {
                 createNewSession();
+                navigateTo('home');
             }
         });
     }

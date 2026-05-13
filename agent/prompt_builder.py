@@ -209,6 +209,31 @@ def _get_output_efficiency_section() -> str:
     return _get_config_value("output_efficiency", "# Output efficiency\nGo straight to the point.")
 
 
+def _get_context_rules_section() -> Optional[str]:
+    """上下文管理规则"""
+    try:
+        from context_manager import ContextManager as FileContextManager
+        return FileContextManager.get_system_prompt_rules()
+    except Exception:
+        return None
+
+
+def _get_mode_section(mode: str = "assistant") -> Optional[str]:
+    """加载模式专用提示词（替代 identity + system_rules + 行为指引）"""
+    config = get_prompts_config()
+    if mode == "coder":
+        coder_file = Path(__file__).parent / "coder-prompt2.md"
+        if coder_file.exists():
+            try:
+                content = coder_file.read_text(encoding="utf-8")
+                return _scan_context_content(content, "coder-prompt2.md")
+            except Exception as e:
+                logger.warning(f"Failed to load coder-prompt2.md: {e}")
+        return config.get("coder_mode")
+    else:
+        return config.get("assistant_mode")
+
+
 def _get_eos_tools_section() -> Optional[str]:
     """Eos-Tools 文件管理工具集提示词"""
     eos_tools_prompt_file = Path(__file__).parent / "eos_tools_prompt.md"
@@ -219,6 +244,30 @@ def _get_eos_tools_section() -> Optional[str]:
         return _scan_context_content(content, "eos_tools_prompt.md")
     except Exception as e:
         logger.warning(f"Failed to load eos_tools_prompt.md: {e}")
+        return None
+
+
+def _get_skills_info_section() -> Optional[str]:
+    """Skills 信息段落 — 告诉 LLM 有哪些 Skill 可用"""
+    try:
+        from skills.registry import skill_registry
+        skills = skill_registry.list_skills()
+        if not skills:
+            return None
+
+        lines = ["# Available Skills", ""]
+        lines.append("You have access to the following skills. When a user's request matches a skill's trigger condition, suggest using the corresponding slash command.")
+        lines.append("")
+        for s in skills:
+            lines.append(f"- **/{s['name']}**: {s['description']}")
+            if s.get("trigger"):
+                lines.append(f"  - Trigger: {s['trigger']}")
+            if s.get("tools"):
+                lines.append(f"  - Tools: {', '.join(s['tools'])}")
+        lines.append("")
+        lines.append("To use a skill, the user types: `/skill-name` followed by their request.")
+        return "\n".join(lines)
+    except ImportError:
         return None
 
 
@@ -290,20 +339,17 @@ def build_system_prompt(
     language: str = "中文",
     override_system_prompt: str = None,
     append_system_prompt: str = None,
+    mode: str = "assistant",
 ) -> str:
     """组装完整的系统提示词。
 
-    优先级链（从高到低）：
-    1. override_system_prompt — 完全覆盖（如 loop 模式）
-    2. agent_system_prompt — 自定义 Agent 定义
-    3. custom_system_prompt — 用户配置的 system_prompt
-    4. default_system_prompt — 默认 Eos Agent 提示词
+    段落顺序：mode → platform → language → user_custom → append → context_rules → skills → eos_tools → env_info → context
 
     参数:
-        identity: Agent 身份字符串（默认使用内置身份）
+        identity: Agent 身份字符串（已弃用，由 mode 替代）
         user_system_prompt: 用户自定义 system prompt
         extra_context: 额外上下文（如当前目录、打开的文件等）
-        tools_schema: 工具定义列表
+        tools_schema: 工具定义列表（已弃用，由 mode 段落替代）
         cwd: 当前工作目录
         is_git: 是否是 git 仓库
         platform: 运行平台
@@ -311,40 +357,26 @@ def build_system_prompt(
         language: 语言偏好
         override_system_prompt: 完全覆盖的系统提示词
         append_system_prompt: 始终追加在末尾的提示词
+        mode: 模式 — "assistant" 或 "coder"
     """
     # 优先级 1: 完全覆盖
     if override_system_prompt:
         return override_system_prompt
 
-    # 构建默认段落列表
+    # 构建段落列表
     sections = []
 
-    # 静态段落（可缓存）
-    sections.append(system_prompt_section("identity", _get_identity_section))
-    sections.append(system_prompt_section("platform", _get_platform_section))
-    sections.append(system_prompt_section("system_rules", _get_system_rules_section))
-    sections.append(system_prompt_section("doing_tasks", _get_doing_tasks_section))
-    sections.append(system_prompt_section("actions", _get_actions_section))
-    sections.append(system_prompt_section("tool_usage", lambda: _get_tool_usage_section(tools_schema)))
-    sections.append(system_prompt_section("tone_style", _get_tone_style_section))
-    sections.append(system_prompt_section("output_efficiency", _get_output_efficiency_section))
-    sections.append(system_prompt_section("eos_tools", _get_eos_tools_section))
+    # 模式段落（替代 identity + system_rules + 行为指引）
+    sections.append(system_prompt_section(f"mode:{mode}", lambda: _get_mode_section(mode)))
 
-    # 动态段落（每轮重新计算）
-    sections.append(uncached_system_prompt_section(
-        "env_info",
-        lambda: _get_env_info_section(cwd, is_git, platform, model),
-        "Environment info changes between sessions",
-    ))
+    # 平台信息
+    sections.append(system_prompt_section("platform", _get_platform_section))
+
+    # 语言偏好
     sections.append(uncached_system_prompt_section(
         "language",
         lambda: _get_language_section(language),
         "Language preference is session-specific",
-    ))
-    sections.append(uncached_system_prompt_section(
-        "context",
-        lambda: _get_context_section(extra_context),
-        "Extra context changes between turns",
     ))
 
     # 用户自定义提示词
@@ -355,12 +387,35 @@ def build_system_prompt(
             "User custom prompt is session-specific",
         ))
 
-    # 同步解析
-    results = resolve_sections(sections)
-
     # 追加提示词
     if append_system_prompt:
-        results.append(append_system_prompt)
+        sections.append(system_prompt_section("append", lambda: append_system_prompt))
+
+    # 上下文管理规则
+    sections.append(system_prompt_section("context_rules", _get_context_rules_section))
+
+    # Skills 信息
+    sections.append(system_prompt_section("skills_info", _get_skills_info_section))
+
+    # Eos-Tools 工具集
+    sections.append(system_prompt_section("eos_tools", _get_eos_tools_section))
+
+    # 环境信息
+    sections.append(uncached_system_prompt_section(
+        "env_info",
+        lambda: _get_env_info_section(cwd, is_git, platform, model),
+        "Environment info changes between sessions",
+    ))
+
+    # 额外上下文
+    sections.append(uncached_system_prompt_section(
+        "context",
+        lambda: _get_context_section(extra_context),
+        "Extra context changes between turns",
+    ))
+
+    # 同步解析
+    results = resolve_sections(sections)
 
     return "\n\n".join(results)
 

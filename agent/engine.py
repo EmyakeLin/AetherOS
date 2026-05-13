@@ -15,9 +15,10 @@ from typing import AsyncGenerator
 
 from context import ContextManager
 from context_manager import ContextManager as FileContextManager
-from prompt_builder import build_system_prompt, clear_section_cache
+from prompt_builder import build_system_prompt, clear_section_cache, reload_prompts
 from model_tools import get_tool_definitions, handle_function_call
 from storage import get_storage
+from skills.registry import skill_registry, Skill
 
 # 添加 Eos-Context 目录到路径
 eos_context_dir = Path(__file__).parent.parent / "Eos-Context"
@@ -43,20 +44,23 @@ class CustomAgentEngine:
         # 工具集配置
         self.toolset = config.get("toolset", None)  # None 表示加载所有工具
 
-        # 构建系统提示词（支持模块化架构）
-        user_system_prompt = config.get("system_prompt", "")
-        extra_context = config.get("extra_context", {})
-        override_system_prompt = config.get("override_system_prompt")
-        append_system_prompt = config.get("append_system_prompt")
-        language = config.get("language", "中文")
+        # 保存构建参数（供 rebuild_system_prompt 复用）
+        self._user_system_prompt = config.get("system_prompt", "")
+        self._extra_context = config.get("extra_context", {})
+        self._override_system_prompt = config.get("override_system_prompt")
+        self._append_system_prompt = config.get("append_system_prompt")
+        self._language = config.get("language", "中文")
+        self.mode = config.get("mode", "assistant")
 
+        # 构建系统提示词（支持模块化架构）
         system_prompt = build_system_prompt(
-            user_system_prompt=user_system_prompt,
-            extra_context=extra_context,
+            user_system_prompt=self._user_system_prompt,
+            extra_context=self._extra_context,
             tools_schema=get_tool_definitions(self.toolset),
-            language=language,
-            override_system_prompt=override_system_prompt,
-            append_system_prompt=append_system_prompt,
+            language=self._language,
+            override_system_prompt=self._override_system_prompt,
+            append_system_prompt=self._append_system_prompt,
+            mode=self.mode,
         )
 
         # 初始化上下文管理器（传入构建好的 system_prompt）
@@ -77,6 +81,48 @@ class CustomAgentEngine:
         """清除系统提示词缓存（调用 /clear 或 /compact 时）"""
         clear_section_cache()
 
+    def rebuild_system_prompt(self, mode: str = None):
+        """重建系统提示词（模式切换时调用）"""
+        if mode:
+            self.mode = mode
+        reload_prompts()
+        clear_section_cache()
+        system_prompt = build_system_prompt(
+            user_system_prompt=self._user_system_prompt,
+            extra_context=self._extra_context,
+            tools_schema=get_tool_definitions(self.toolset),
+            language=self._language,
+            override_system_prompt=self._override_system_prompt,
+            append_system_prompt=self._append_system_prompt,
+            mode=self.mode,
+        )
+        self.context.system_prompt = system_prompt
+
+    def _activate_skill(self, skill: Skill, args: str = ""):
+        """激活 Skill：注入 Skill 提示词到 system prompt，设置 Skill 工具子集"""
+        skill_prompt_section = skill.prompt
+        if args:
+            skill_prompt_section += f"\n\n## Current Request\n{args}"
+
+        current_prompt = self.context.system_prompt
+        self.context.system_prompt = (
+            current_prompt
+            + "\n\n"
+            + f"## Active Skill: {skill.name}\n\n"
+            + skill_prompt_section
+        )
+
+        if skill.tools:
+            self._skill_tools = skill.tools
+            self.toolset = None
+
+    def get_effective_tool_definitions(self) -> list:
+        """获取当前有效的工具定义（考虑 Skill 工具子集）"""
+        if hasattr(self, '_skill_tools') and self._skill_tools:
+            all_tools = get_tool_definitions(None)
+            return [t for t in all_tools if t["name"] in self._skill_tools]
+        return get_tool_definitions(self.toolset)
+
     async def _persist_message(self, role: str, content: str = None,
                                tool_call_id: str = None, tool_calls: list = None,
                                tool_name: str = None, reasoning_content: str = None):
@@ -94,14 +140,28 @@ class CustomAgentEngine:
     async def run(self, user_message: str) -> AsyncGenerator[dict, None]:
         """主循环：处理用户消息，执行工具调用"""
         self.clear_interrupt()
+
+        # ── Skill 斜杠命令检测 ──
+        skill_match = skill_registry.find_by_slash_command(user_message)
+        if skill_match:
+            skill, args = skill_match
+            yield {"type": "skill_activated", "skill": skill.name, "args": args}
+            self._activate_skill(skill, args)
+            if skill.has_custom_execution():
+                result = await skill.execute({"args": args, "message": user_message})
+                if result:
+                    yield {"type": "text", "content": result}
+                    yield {"type": "done"}
+                    return
+
         self.context.add_message("user", user_message)
         messages = self.context.build_messages(user_message)
 
         # 持久化用户消息
         await self._persist_message("user", user_message)
 
-        # 获取工具定义（支持工具集过滤）
-        tools_schema = get_tool_definitions(self.toolset)
+        # 获取工具定义（支持工具集过滤 + Skill 工具子集）
+        tools_schema = self.get_effective_tool_definitions()
 
         if not self.llm_service or not self.model:
             yield {

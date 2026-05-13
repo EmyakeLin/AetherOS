@@ -71,3 +71,18 @@ def list_toolsets() -> dict:
         }
         for name, ts in TOOLSETS.items()
     }
+
+
+def register_skill_toolset(skill_name: str, tools: list):
+    """动态注册 Skill 工具集"""
+    toolset_name = f"skill:{skill_name}"
+    TOOLSETS[toolset_name] = {
+        "description": f"Skill '{skill_name}' 工具子集",
+        "tools": tools,
+    }
+
+
+def unregister_skill_toolset(skill_name: str):
+    """移除 Skill 工具集"""
+    toolset_name = f"skill:{skill_name}"
+    TOOLSETS.pop(toolset_name, None)

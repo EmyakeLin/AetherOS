@@ -67,7 +67,11 @@
       "Bash(pip index *)",
       "Bash(unix2dos ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)",
       "Bash(sed -i 's/$/\\\\r/' ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)",
-      "Bash(xxd ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)"
+      "Bash(xxd ~/桌面/AetherOS_V1.2.1/download_deps_win7.bat)",
+      "Bash(curl -s http://localhost:8411/apps/agent/agent.js)",
+      "Bash(curl -sI http://localhost:8411/apps/agent/agent.js)",
+      "Read(//home/emyake/.npm-global/lib/node_modules/openclaw/**)",
+      "Bash(curl -s http://localhost:8411/api/agent/skills)"
     ]
   }
 }

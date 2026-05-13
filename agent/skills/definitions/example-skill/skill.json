@@ -1,0 +1,8 @@
+{
+    "name": "example",
+    "description": "示例 Skill，用于验证 Skill 框架是否正常工作",
+    "trigger": "Use when the user explicitly requests the example skill via /example",
+    "tools": ["search_files"],
+    "aliases": ["ex"],
+    "version": "1.0.0"
+}

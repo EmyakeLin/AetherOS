@@ -639,18 +639,20 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                     if msg_type == "interrupt":
                         engine.interrupt()
                     elif msg_type == "configure":
-                        # 更新引擎配置（模型/提示词/迭代次数，API Key 由全局 LLM 配置管理）
+                        # 更新引擎配置（模型/模式/工具集/迭代次数）
                         settings = data.get("settings", {})
                         if settings.get("model"):
                             engine.model = settings["model"]
-                        if settings.get("systemPrompt"):
-                            engine.system_prompt = settings["systemPrompt"]
-                            engine.context.system_prompt = settings["systemPrompt"]
                         if settings.get("maxIterations"):
                             engine.max_iterations = int(settings["maxIterations"])
+                        if "toolset" in settings:
+                            engine.toolset = settings["toolset"] or None
+                        # 通过模块化组装重建系统提示词
+                        mode = settings.get("agentMode", "assistant")
+                        engine.rebuild_system_prompt(mode=mode)
                         await websocket.send_text(json.dumps({
                             "type": "info",
-                            "message": f"已配置: model={engine.model}"
+                            "message": f"已配置: model={engine.model}, mode={mode}"
                         }))
                     elif msg_type == "session_id":
                         # 设置当前 session ID 并加载历史消息
