@@ -212,7 +212,11 @@ def _get_output_efficiency_section() -> str:
 def _get_context_rules_section() -> Optional[str]:
     """上下文管理规则"""
     try:
-        from context_manager import ContextManager as FileContextManager
+        import sys
+        from pathlib import Path
+        eos_context_dir = Path(__file__).parent.parent / "Eos-Context"
+        sys.path.insert(0, str(eos_context_dir))
+        from eos_context_manager import FileContextManager
         return FileContextManager.get_system_prompt_rules()
     except Exception:
         return None

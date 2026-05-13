@@ -4,6 +4,13 @@ Eos Agent — 上下文管理器
 """
 
 from typing import Optional
+import sys
+from pathlib import Path
+
+# 添加 Eos-Context 目录到路径
+eos_context_dir = Path(__file__).parent.parent / "Eos-Context"
+sys.path.insert(0, str(eos_context_dir))
+from eos_context_manager import FileContextManager
 
 
 class ContextManager:
@@ -18,7 +25,6 @@ class ContextManager:
         self.extra_context: dict = {}
 
         # Context management rules (injected into system prompt)
-        from context_manager import ContextManager as FileContextManager
         self._context_rules = FileContextManager.get_system_prompt_rules()
 
     def build_messages(self, user_message) -> list[dict]:

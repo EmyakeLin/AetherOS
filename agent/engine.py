@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 from context import ContextManager
-from context_manager import ContextManager as FileContextManager
 from prompt_builder import build_system_prompt, clear_section_cache, reload_prompts
 from model_tools import get_tool_definitions, handle_function_call
 from storage import get_storage
@@ -37,9 +36,6 @@ class CustomAgentEngine:
         self.session_id = None  # 当前 session ID，由外部设置
         # 中断信号
         self._interrupted = False
-
-        # Eos-Context 配置
-        self.eos_context_enabled = config.get("eos_context_enabled", True)
 
         # 工具集配置
         self.toolset = config.get("toolset", None)  # None 表示加载所有工具
@@ -66,7 +62,6 @@ class CustomAgentEngine:
         # 初始化上下文管理器（传入构建好的 system_prompt）
         ctx_config = {**config, "system_prompt": system_prompt}
         self.context = ContextManager(ctx_config)
-        self.file_context = FileContextManager()
         self.eos_context = EosContextManager()
 
     def interrupt(self):
@@ -184,10 +179,7 @@ class CustomAgentEngine:
                 yield {"type": "thinking", "call_id": call_id, "model": self.model}
 
                 # 处理消息（缩减参数、清理失败调用、注入通知）
-                if self.eos_context_enabled:
-                    processed_messages = self.eos_context.process_messages(messages)
-                else:
-                    processed_messages = self.file_context.process_messages(messages)
+                processed_messages = self.eos_context.process_messages(messages)
 
                 # 调用 LLM（流式传输，统一通过 llm_service.chat_stream）
                 start_time = time.time()
@@ -295,14 +287,9 @@ class CustomAgentEngine:
                                 tool_name=tool_name,
                             )
                             # 记录成功的工具调用
-                            self.file_context.record_tool_call(
+                            self.eos_context.record_tool_call(
                                 tc_id, tool_name, tool_args, result_str, True
                             )
-                            # 记录到 EosContextManager
-                            if self.eos_context_enabled:
-                                self.eos_context.record_tool_call(
-                                    tc_id, tool_name, tool_args, result_str, True
-                                )
                         except Exception as e:
                             error_str = str(e)
                             yield {
@@ -323,14 +310,9 @@ class CustomAgentEngine:
                                 tool_name=tool_name,
                             )
                             # 记录失败的工具调用
-                            self.file_context.record_tool_call(
+                            self.eos_context.record_tool_call(
                                 tc_id, tool_name, tool_args, error_str, False
                             )
-                            # 记录到 EosContextManager
-                            if self.eos_context_enabled:
-                                self.eos_context.record_tool_call(
-                                    tc_id, tool_name, tool_args, error_str, False
-                                )
 
                     # 一次性添加 assistant 消息和所有工具结果
                     messages.append(assistant_msg)

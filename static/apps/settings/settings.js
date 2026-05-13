@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    N.O.V.A AETHER OS — Settings Application
-   Agent config, MCP servers, tools, context, theme
+   Agent config, MCP servers, tools, theme
    ═══════════════════════════════════════════════════════ */
 
 registerApp('settings', {
@@ -16,7 +16,6 @@ registerApp('settings', {
                     <div class="settings-nav" data-section="agent">Agent 引擎</div>
                     <div class="settings-nav" data-section="tools">工具管理</div>
                     <div class="settings-nav" data-section="mcp">MCP 服务器</div>
-                    <div class="settings-nav" data-section="context">上下文管理</div>
                     <div class="settings-nav" data-section="appearance">外观</div>
                     <div class="settings-nav" data-section="keybindings">快捷键</div>
                     <div class="settings-nav" data-section="apps">应用管理</div>
@@ -166,32 +165,10 @@ registerApp('settings', {
 
             context: () => `
                 <div class="settings-group">
-                    <div class="settings-group-title">上下文管理</div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">策略</div><div class="settings-desc">上下文窗口管理策略</div></div>
-                        <select class="settings-select">
-                            <option selected>滑动窗口 (Sliding Window)</option>
-                            <option>摘要压缩 (Summary Compression)</option>
-                            <option>分层注入 (Layered Injection)</option>
-                        </select>
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">最大 Token 数</div><div class="settings-desc">上下文窗口大小</div></div>
-                        <input class="settings-input" type="number" value="128000" style="max-width:150px;" />
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">压缩阈值</div><div class="settings-desc">触发上下文压缩的 Token 比例</div></div>
-                        <input class="settings-input" type="number" value="80" style="max-width:100px;" /> <span style="color:var(--text-muted);font-size:12px;">%</span>
-                    </div>
-                </div>
-                <div class="settings-group">
                     <div class="settings-group-title">Eos-Context 文件上下文管理</div>
                     <div class="settings-row">
-                        <div><div class="settings-label">启用 Eos-Context</div><div class="settings-desc">启用 Eos-Context 文件上下文管理器，优化文件操作的上下文</div></div>
-                        <select class="settings-select" id="settings-eos-context-select">
-                            <option value="true">启用</option>
-                            <option value="false">禁用</option>
-                        </select>
+                        <div><div class="settings-label">状态</div><div class="settings-desc">Eos-Context 文件上下文管理器（始终启用）</div></div>
+                        <span style="color:var(--accent);font-size:12px;">✓ 已启用</span>
                     </div>
                     <div class="settings-row">
                         <div><div class="settings-label">说明</div><div class="settings-desc">
@@ -378,27 +355,6 @@ registerApp('settings', {
             // Bind storage section
             if (name === 'storage') {
                 loadStorageInfo();
-            }
-            // Bind context section (Eos-Context)
-            if (name === 'context') {
-                const eosContextSelect = contentEl.querySelector('#settings-eos-context-select');
-                if (eosContextSelect) {
-                    // 从 localStorage 读取当前设置
-                    const currentSetting = localStorage.getItem('eos_context_enabled');
-                    eosContextSelect.value = currentSetting !== null ? currentSetting : 'true';
-                    eosContextSelect.addEventListener('change', () => {
-                        const enabled = eosContextSelect.value === 'true';
-                        localStorage.setItem('eos_context_enabled', eosContextSelect.value);
-                        // 通过 WebSocket 发送配置到 Agent
-                        if (os.agentWs && os.agentWs.readyState === WebSocket.OPEN) {
-                            os.agentWs.send(JSON.stringify({
-                                type: 'configure',
-                                settings: { eos_context_enabled: enabled }
-                            }));
-                        }
-                        alert('设置已保存并应用。');
-                    });
-                }
             }
         }
 

@@ -622,7 +622,6 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
         import logging
         from engine import CustomAgentEngine
         from context import ContextManager
-        from context_manager import ContextManager as FileContextManager
 
         logger = logging.getLogger(__name__)
 
@@ -678,7 +677,7 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                                 history = await get_storage().get_messages_as_conversation(session_id)
                                 engine.context.messages = history
                                 # 同步文件上下文状态
-                                engine.file_context = FileContextManager()
+                                engine.eos_context = EosContextManager()
                                 await websocket.send_text(json.dumps({
                                     "type": "info",
                                     "message": f"已加载 {len(history)} 条历史消息"
@@ -695,7 +694,7 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
                                 from storage import get_storage
                                 history = await get_storage().get_messages_as_conversation(session_id)
                                 engine.context.messages = history
-                                engine.file_context = FileContextManager()
+                                engine.eos_context = EosContextManager()
                             except Exception as e:
                                 logger.warning(f"Failed to load history: {e}")
                         if content:
@@ -814,9 +813,9 @@ async def agent_context_process(body: dict = Body(...)):
 
     try:
         sys.path.insert(0, str(BASE_DIR / "agent"))
-        from context_manager import ContextManager
+        from eos_context_manager import FileContextManager
 
-        cm = ContextManager()
+        cm = FileContextManager()
 
         # 记录所有工具调用
         for msg in messages:
