@@ -161,12 +161,33 @@ class CustomAgentEngine:
         storage = get_storage()
         messages = await storage.get_messages_as_conversation(self.session_id)
 
+        logger.debug(f"Loaded {len(messages)} messages from storage")
+
         # 应用上下文管理（EosContextManager处理，如果启用）
         if self.eos_context_enabled:
             messages = self.eos_context.process_messages(messages)
+            logger.debug(f"After EosContextManager: {len(messages)} messages")
 
         # 应用压缩策略（滑动窗口、摘要压缩等）
         messages = self.context.compress(messages)
+        logger.debug(f"After compress: {len(messages)} messages")
+
+        # 验证消息配对
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "assistant" and "tool_calls" in msg:
+                tool_calls = msg["tool_calls"]
+                for tc in tool_calls:
+                    tc_id = tc.get("id")
+                    found = False
+                    for j in range(i+1, len(messages)):
+                        if messages[j].get("role") == "tool" and messages[j].get("tool_call_id") == tc_id:
+                            found = True
+                            break
+                    if not found:
+                        logger.error(f"Message {i}: assistant with tool_call {tc_id} has NO tool message")
+                        # 删除这个不完整的assistant消息
+                        messages[i] = None
+        messages = [msg for msg in messages if msg is not None]
 
         # 注入系统提示词
         if self.context.system_prompt:
