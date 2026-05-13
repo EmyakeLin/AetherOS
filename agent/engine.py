@@ -149,11 +149,23 @@ class CustomAgentEngine:
                     yield {"type": "done"}
                     return
 
-        self.context.add_message("user", user_message)
-        messages = self.context.build_messages(user_message)
-
         # 持久化用户消息
         await self._persist_message("user", user_message)
+
+        # 从storage加载当前session的所有消息（基于持久化的session.json）
+        storage = get_storage()
+        messages = await storage.get_messages_as_conversation(self.session_id)
+
+        # 应用上下文管理（EosContextManager处理）
+        messages = self.eos_context.process_messages(messages)
+
+        # 应用压缩策略（滑动窗口、摘要压缩等）
+        messages = self.context.compress(messages)
+
+        # 注入系统提示词
+        if self.context.system_prompt:
+            system_msg = {"role": "system", "content": self.context.system_prompt}
+            messages.insert(0, system_msg)
 
         # 获取工具定义（支持工具集过滤 + Skill 工具子集）
         tools_schema = self.get_effective_tool_definitions()
@@ -324,12 +336,6 @@ class CustomAgentEngine:
                 else:
                     # 纯文本响应 = 最终答案
                     if text_content:
-                        # 存储时保留 reasoning_content（DeepSeek 等模型需要回传）
-                        ctx_msg = {"role": "assistant", "content": text_content}
-                        if reasoning_content:
-                            ctx_msg["reasoning_content"] = reasoning_content
-                        self.context.messages.append(ctx_msg)
-
                         # 持久化最终响应
                         await self._persist_message(
                             "assistant",
