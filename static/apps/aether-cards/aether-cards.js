@@ -507,10 +507,14 @@ registerApp('aether-cards', {
 
         async function generateMetadata(cardsToUpdate) {
             const provider = CardsLLMConfig.textModels[0];
-            if (!provider || !provider.models?.length) { showToast('请先配置 LLM 模型'); return; }
+            if (!provider) { showToast('错误: 未找到 LLM Provider，请在 LLM 设置中配置'); return; }
+            if (!provider.models?.length) { showToast('错误: Provider 下无模型，请在 LLM 设置中添加模型'); return; }
             const modelInfo = provider.models[0];
+            if (!modelInfo.name) { showToast('错误: 模型名称为空'); return; }
+            if (!provider.apiKey) { showToast('错误: API Key 为空，请在 LLM 设置中填写'); return; }
             const SYS_PROMPT = 'You are a metadata generator for knowledge cards. Given a card\'s title and content, produce structured JSON metadata. Output ONLY valid JSON with these fields: {"summary":"1-2 sentence summary","tags":["keyword1","keyword2"],"category":"single category word","key_entities":["entity1","entity2"]}';
-            let updated = 0;
+            showToast(`开始生成元数据 (${cardsToUpdate.length} 张)...`);
+            let updated = 0, failed = 0;
             for (const card of cardsToUpdate) {
                 try {
                     let userMsg = `Title: ${card.title || '无标题'}\n\nContent:\n${card.content || ''}`;
@@ -521,8 +525,9 @@ registerApp('aether-cards', {
                     ];
                     const resp = await fetch('/api/aether-cards/chat', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages, model: modelInfo.name, api_key: provider.apiKey, api_base: provider.apiBase })
+                        body: JSON.stringify({ messages, model: modelInfo.name, api_key: provider.apiKey, api_base: provider.apiBase || '' })
                     });
+                    if (!resp.ok) { console.error(`[Cards] HTTP ${resp.status} for card "${card.title}"`); failed++; continue; }
                     const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
                     while (true) {
                         const { done, value } = await reader.read(); if (done) break;
@@ -530,22 +535,26 @@ registerApp('aether-cards', {
                         const lines = buf.split('\n'); buf = lines.pop() || '';
                         for (const line of lines) {
                             if (!line.startsWith('data: ')) continue;
-                            try { const evt = JSON.parse(line.slice(6)); if (evt.type === 'text') text += evt.content; } catch {}
+                            try {
+                                const evt = JSON.parse(line.slice(6));
+                                if (evt.type === 'text') text += evt.content;
+                                if (evt.type === 'error') { console.error(`[Cards] LLM error for "${card.title}":`, evt.message); }
+                            } catch {}
                         }
                     }
-                    // 解析 JSON
+                    if (!text) { console.warn(`[Cards] Empty response for card "${card.title}"`); failed++; continue; }
                     let meta;
                     try {
-                        const jsonMatch = text.match(/\{[^{}]*\}/s);
+                        const jsonMatch = text.match(/\{[\s\S]*?\}/);
                         meta = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
                     } catch { meta = { summary: text.slice(0, 200), tags: [], category: '', key_entities: [] }; }
                     card.metadata = JSON.stringify(meta);
                     card.metadataVersion = String(card.updated);
                     updated++;
-                } catch (e) { console.warn(`[Cards] Metadata gen failed for ${card.title}:`, e); }
+                } catch (e) { console.error(`[Cards] Metadata gen exception for "${card.title}":`, e); failed++; }
             }
             scheduleSave(); renderCards();
-            showToast(updated > 0 ? `已更新 ${updated} 张卡片的元数据` : '元数据生成失败');
+            showToast(updated > 0 ? `已更新 ${updated} 张卡片${failed > 0 ? `，${failed} 张失败` : ''}` : `元数据生成失败 (${failed} 张)，请检查控制台`);
         }
 
         // ── 样式 ──
