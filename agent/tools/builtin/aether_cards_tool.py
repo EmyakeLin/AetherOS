@@ -25,10 +25,29 @@ async def _get_board_id(work_table: str) -> str | None:
 
 
 async def _load(params: dict) -> str:
-    """加载工作板，返回所有卡片标题及元数据状态"""
+    """加载工作板，返回所有卡片标题及元数据状态。不传 work_table 则列出所有工作板。"""
     work_table = params.get("work_table", "")
+
+    import aiosqlite
     if not work_table:
-        return "错误: 未指定工作板名称 (work_table)"
+        # 列出所有工作板
+        try:
+            async with aiosqlite.connect(str(DB_PATH)) as db:
+                db.row_factory = aiosqlite.Row
+                async with db.execute("SELECT id, title FROM boards ORDER BY created_at") as cur:
+                    boards = await cur.fetchall()
+            if not boards:
+                return "没有工作板。"
+            lines = ["# 工作板列表\n"]
+            for b in boards:
+                # 获取每个板的卡片数
+                async with aiosqlite.connect(str(DB_PATH)) as db:
+                    async with db.execute("SELECT COUNT(*) FROM cards WHERE board_id = ?", [b['id']]) as cur:
+                        count = (await cur.fetchone())[0]
+                lines.append(f"- **{b['title']}** ({count} 张卡片)")
+            return '\n'.join(lines)
+        except Exception as e:
+            return f"错误: {e}"
 
     board_id = await _get_board_id(work_table)
     if not board_id:
@@ -290,12 +309,12 @@ async def _dispatch(params: dict) -> str:
 TOOL_SCHEMAS = [
     {
         "name": "aether_cards",
-        "description": "操作 Aether Cards 工作板：查看卡片列表、获取卡片内容、通过 AI 分析工作板、创建或编辑卡片。使用前必须先调用 load 了解工作板结构。",
+        "description": "操作 Aether Cards 工作板：查看卡片列表、获取卡片内容、通过 AI 分析工作板、创建或编辑卡片。首次使用时先不传 work_table 调 load 获取所有工作板列表。",
         "parameters": {
             "type": "object",
             "properties": {
-                "work_table": {"type": "string", "description": "工作板名称（如 '默认工作板'）"},
-                "operation": {"type": "string", "enum": ["load", "get", "extract", "create", "edit"], "description": "操作类型: load=加载卡片列表, get=获取卡片内容, extract=AI分析, create=创建卡片, edit=编辑卡片"},
+                "work_table": {"type": "string", "description": "工作板名称（如 '默认工作板'）。load 操作可省略，省略则列出所有工作板。"},
+                "operation": {"type": "string", "enum": ["load", "get", "extract", "create", "edit"], "description": "操作类型: load=加载卡片列表(省略work_table则列出所有板), get=获取卡片内容, extract=AI分析, create=创建卡片, edit=编辑卡片"},
                 "card_name": {"type": "string", "description": "卡片名称（get/edit/create 操作必需，get 支持逗号分隔多个名称）"},
                 "content": {"type": "string", "description": "卡片内容（create 操作必需）"},
                 "card_type": {"type": "string", "enum": ["code", "progress"], "description": "卡片类型（create 操作可选，默认 'code'）"},
@@ -303,7 +322,7 @@ TOOL_SCHEMAS = [
                 "new_string": {"type": "string", "description": "替换后的新文本（edit 操作必需）"},
                 "purpose": {"type": "string", "description": "分析意图（extract 操作必需，描述你想从工作板中获取什么信息）"}
             },
-            "required": ["work_table", "operation"]
+            "required": ["operation"]
         },
         "handler": _dispatch,
         "toolset": "aether-cards",
