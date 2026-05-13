@@ -250,14 +250,6 @@ class CustomAgentEngine:
                     if reasoning_content:
                         assistant_msg["reasoning_content"] = reasoning_content
 
-                    # 持久化 assistant 消息（含 tool_calls）
-                    await self._persist_message(
-                        "assistant",
-                        content=text_content or None,
-                        tool_calls=normalized_tool_calls,
-                        reasoning_content=reasoning_content or None,
-                    )
-
                     tool_result_msgs = []
 
                     for tc in normalized_tool_calls:
@@ -297,13 +289,6 @@ class CustomAgentEngine:
                                 "tool_call_id": tc_id,
                                 "content": result_str,
                             })
-                            # 持久化工具结果
-                            await self._persist_message(
-                                "tool",
-                                content=result_str,
-                                tool_call_id=tc_id,
-                                tool_name=tool_name,
-                            )
                             # 记录成功的工具调用
                             self.eos_context.record_tool_call(
                                 tc_id, tool_name, tool_args, result_str, True
@@ -320,17 +305,26 @@ class CustomAgentEngine:
                                 "tool_call_id": tc_id,
                                 "content": f"错误: {error_str}",
                             })
-                            # 持久化错误结果
-                            await self._persist_message(
-                                "tool",
-                                content=f"错误: {error_str}",
-                                tool_call_id=tc_id,
-                                tool_name=tool_name,
-                            )
                             # 记录失败的工具调用
                             self.eos_context.record_tool_call(
                                 tc_id, tool_name, tool_args, error_str, False
                             )
+
+                    # 所有工具执行完毕后，一次性持久化 assistant 消息和所有工具结果
+                    # 这样可以确保不会出现 assistant 有 tool_calls 但没有对应 tool 消息的情况
+                    await self._persist_message(
+                        "assistant",
+                        content=text_content or None,
+                        tool_calls=normalized_tool_calls,
+                        reasoning_content=reasoning_content or None,
+                    )
+                    for tool_msg in tool_result_msgs:
+                        await self._persist_message(
+                            "tool",
+                            content=tool_msg["content"],
+                            tool_call_id=tool_msg["tool_call_id"],
+                            tool_name=tool_msg.get("tool_name"),
+                        )
 
                     # 一次性添加 assistant 消息和所有工具结果
                     messages.append(assistant_msg)
