@@ -622,6 +622,7 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
         import logging
         from engine import CustomAgentEngine
         from context import ContextManager
+        from eos_context_manager import FileContextManager as EosContextManager
 
         logger = logging.getLogger(__name__)
 
