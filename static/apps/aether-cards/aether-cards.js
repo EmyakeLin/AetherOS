@@ -430,7 +430,7 @@ registerApp('aether-cards', {
             scheduleSave(); renderCards();
         }
 
-        function tellEos(cardId) {
+        async function tellEos(cardId) {
             const card = gc(cardId); if (!card) return;
             let text = `[Card: ${card.title || '无标题'}]`;
             if (card.type !== 'default') text += ` [Type: ${card.type}]`;
@@ -442,7 +442,7 @@ registerApp('aether-cards', {
                 } catch {}
             }
             text += `\n\n${card.content || '(空卡片)'}`;
-            const agentWin = os.openApp('agent');
+            const agentWin = await os.openApp('agent');
             if (agentWin) { setTimeout(() => agentWin.emit('set-input', { text }), 300); }
         }
 
