@@ -11,6 +11,30 @@ from pathlib import Path
 DB_PATH = Path.home() / ".aetheros" / "data" / "cards.db"
 
 
+async def _ensure_schema():
+    """确保 cards 表包含所有必要列（与前端 initDB 迁移同步）"""
+    import aiosqlite
+    try:
+        async with aiosqlite.connect(str(DB_PATH)) as db:
+            async with db.execute("PRAGMA table_info(cards)") as cur:
+                col_names = {row[1] for row in await cur.fetchall()}
+            migrations = []
+            if 'type' not in col_names:
+                migrations.append("ALTER TABLE cards ADD COLUMN type TEXT DEFAULT 'default'")
+            if 'metadata' not in col_names:
+                migrations.append("ALTER TABLE cards ADD COLUMN metadata TEXT DEFAULT ''")
+            if 'metadata_version' not in col_names:
+                migrations.append("ALTER TABLE cards ADD COLUMN metadata_version TEXT DEFAULT ''")
+            if 'metadata_disabled' not in col_names:
+                migrations.append("ALTER TABLE cards ADD COLUMN metadata_disabled INTEGER DEFAULT 0")
+            for sql in migrations:
+                await db.execute(sql)
+            if migrations:
+                await db.commit()
+    except Exception:
+        pass  # 数据库不存在时忽略
+
+
 async def _get_board_id(work_table: str) -> str | None:
     """通过工作板名称获取 board_id"""
     import aiosqlite
@@ -26,6 +50,7 @@ async def _get_board_id(work_table: str) -> str | None:
 
 async def _load(params: dict) -> str:
     """加载工作板，返回所有卡片标题及元数据状态。不传 work_table 则列出所有工作板。"""
+    await _ensure_schema()
     work_table = params.get("work_table", "")
 
     import aiosqlite
@@ -94,6 +119,7 @@ async def _load(params: dict) -> str:
 
 async def _get(params: dict) -> str:
     """获取一个或多个卡片的内容"""
+    await _ensure_schema()
     work_table = params.get("work_table", "")
     card_name = params.get("card_name", "")
     if not work_table:
@@ -203,6 +229,7 @@ async def _extract(params: dict) -> str:
 
 async def _create(params: dict) -> str:
     """创建 Code Card 或 Progress Card"""
+    await _ensure_schema()
     work_table = params.get("work_table", "")
     card_name = params.get("card_name", "")
     content = params.get("content", "")
@@ -236,6 +263,7 @@ async def _create(params: dict) -> str:
 
 async def _edit(params: dict) -> str:
     """编辑 Code Card 或 Progress Card 的内容"""
+    await _ensure_schema()
     work_table = params.get("work_table", "")
     card_name = params.get("card_name", "")
     old_string = params.get("old_string", "")
