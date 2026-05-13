@@ -45,6 +45,22 @@ class FileContextManager:
         # 存储工具调用结果，用于上下文管理
         self._tool_calls: Dict[str, Dict[str, Any]] = {}
 
+    @staticmethod
+    def get_system_prompt_rules() -> str:
+        """
+        Return system prompt rules for context management.
+
+        These rules tell the model how to handle retries and file state.
+        """
+        return """
+## Context Management Rules
+
+1. **Failed tool calls**: If a tool call fails, you MUST reference the failed call's ID when retrying. Example: "Retrying call_001 with corrected arguments."
+2. **File state awareness**: After a file is modified (via eos_write_file or eos_edit_file), you will receive a file change notification. If you need the updated content, call eos_read_file again.
+3. **Stale content**: Historical eos_read_file results may be marked as outdated. Do not rely on outdated content — re-read the file if needed.
+4. **Chunked reads**: When reading a file in chunks, previous chunks are merged automatically. The merged view includes gap markers for unread sections.
+"""
+
     def record_tool_call(
         self,
         call_id: str,
