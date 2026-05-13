@@ -506,14 +506,15 @@ registerApp('aether-cards', {
         };
 
         async function generateMetadata(cardsToUpdate) {
-            const provider = CardsLLMConfig.textModels[0];
-            if (!provider) { showToast('错误: 未找到 LLM Provider，请在 LLM 设置中配置'); return; }
-            if (!provider.models?.length) { showToast('错误: Provider 下无模型，请在 LLM 设置中添加模型'); return; }
-            const modelInfo = provider.models[0];
-            if (!modelInfo.name) { showToast('错误: 模型名称为空'); return; }
-            if (!provider.apiKey) { showToast('错误: API Key 为空，请在 LLM 设置中填写'); return; }
+            // 使用系统 LLM 接口 (/api/llm/chat)，复用已配置的 Provider
+            let modelRef = '';
+            try {
+                const models = await os.api('GET', '/api/llm/models');
+                if (models && models.length) modelRef = models[0].ref;
+            } catch {}
+            if (!modelRef) { showToast('错误: 系统未配置 LLM 模型，请先添加 Provider'); return; }
             const SYS_PROMPT = 'You are a metadata generator for knowledge cards. Given a card\'s title and content, produce structured JSON metadata. Output ONLY valid JSON with these fields: {"summary":"1-2 sentence summary","tags":["keyword1","keyword2"],"category":"single category word","key_entities":["entity1","entity2"]}';
-            showToast(`开始生成元数据 (${cardsToUpdate.length} 张)...`);
+            showToast(`开始生成元数据 (${cardsToUpdate.length} 张, model: ${modelRef})...`);
             let updated = 0, failed = 0;
             for (const card of cardsToUpdate) {
                 try {
@@ -523,9 +524,9 @@ registerApp('aether-cards', {
                         { role: 'system', content: SYS_PROMPT },
                         { role: 'user', content: userMsg }
                     ];
-                    const resp = await fetch('/api/aether-cards/chat', {
+                    const resp = await fetch('/api/llm/chat', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages, model: modelInfo.name, api_key: provider.apiKey, api_base: provider.apiBase || '' })
+                        body: JSON.stringify({ messages, model: modelRef })
                     });
                     if (!resp.ok) { console.error(`[Cards] HTTP ${resp.status} for card "${card.title}"`); failed++; continue; }
                     const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
