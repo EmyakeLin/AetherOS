@@ -34,8 +34,8 @@ class ContextManager:
         # Simple approximation: 1 token ≈ 4 chars
         max_chars = self.max_tokens * 4 * self.compress_threshold
 
-        # 从后往前遍历，找到可以保留的消息
-        result = []
+        # 从后往前遍历，标记需要保留的消息
+        keep = [False] * len(messages)
         total_chars = 0
         i = len(messages) - 1
 
@@ -74,18 +74,21 @@ class ContextManager:
                                     if total_chars + msg_chars + assistant_chars > max_chars:
                                         # 超过限制，不保留这个 tool 消息
                                         break
-                                    # 保留 assistant 消息
-                                    result.insert(0, messages[j])
-                                    total_chars += assistant_chars
+                                    # 标记 assistant 消息需要保留
+                                    if not keep[j]:
+                                        keep[j] = True
+                                        total_chars += assistant_chars
                                     break
                             break
                         j -= 1
 
-            result.insert(0, msg)
+            # 标记当前消息需要保留
+            keep[i] = True
             total_chars += msg_chars
             i -= 1
 
-        return result
+        # 按原始顺序返回需要保留的消息
+        return [msg for i, msg in enumerate(messages) if keep[i]]
 
     def _with_summary(self, messages: list[dict]) -> list[dict]:
         """摘要压缩：保留首尾消息，中间用摘要替代"""
@@ -103,7 +106,9 @@ class ContextManager:
 
     def compress(self, messages: list[dict]) -> list[dict]:
         """手动触发上下文压缩"""
-        if self.strategy == "sliding_window":
+        if self.strategy == "none":
+            return messages
+        elif self.strategy == "sliding_window":
             return self._sliding_window(messages)
         elif self.strategy == "summary":
             return self._with_summary(messages)
