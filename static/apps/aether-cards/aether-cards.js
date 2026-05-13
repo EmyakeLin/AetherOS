@@ -464,23 +464,41 @@ registerApp('aether-cards', {
             renderCards();
         };
 
-        metaUpdateBtn.onclick = () => {
+        metaUpdateBtn.onclick = async () => {
             const eligible = cards.filter(c => !c.metadataDisabled);
             if (!eligible.length) { showToast('没有可更新的卡片'); return; }
+            // 收集可用模型：系统 LLM + Cards 自配
+            const allModels = [];
+            try {
+                const sysModels = await os.api('GET', '/api/llm/models');
+                if (Array.isArray(sysModels)) {
+                    for (const m of sysModels) allModels.push({ label: `[系统] ${m.name}`, ref: m.ref, source: 'system' });
+                }
+            } catch {}
+            for (const p of (CardsLLMConfig.textModels || [])) {
+                for (const m of (p.models || [])) {
+                    allModels.push({ label: `[Cards] ${p.name || ''} / ${m.name}`, ref: m.name, apiKey: p.apiKey, apiBase: p.apiBase, source: 'cards' });
+                }
+            }
+            if (!allModels.length) { showToast('错误: 无可用模型，请在系统设置或 LLM 面板中配置'); return; }
             // 弹出选择 overlay
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fade-in 0.2s var(--ease-out);';
             const modal = document.createElement('div');
             modal.style.cssText = 'width:480px;max-height:80%;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6);border:1px solid var(--glass-border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-glass);';
-            const selectedIds = new Set(eligible.map(c => c.id));
             let listHtml = eligible.map(c => {
                 const metaStatus = c.metadata ? '<span style="color:var(--accent);font-size:10px;">●</span>' : '<span style="color:var(--text-muted);font-size:10px;">○</span>';
                 return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:var(--radius-sm);transition:background var(--duration-fast) var(--ease-out);" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='transparent'"><input type="checkbox" data-cid="${c.id}" checked style="accent-color:var(--accent)"><span style="font-size:12px;font-family:var(--font-body);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);">${esc(c.title || '无标题')}</span>${metaStatus}</label>`;
             }).join('');
+            const modelOpts = allModels.map((m, i) => `<option value="${i}">${esc(m.label)}</option>`).join('');
             modal.innerHTML = `
                 <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
                     <span style="font-size:13px;font-family:var(--font-display);font-weight:500;color:var(--text-primary);letter-spacing:0.3px;">更新元数据</span>
                     <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${eligible.length} cards</span>
+                </div>
+                <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">模型:</span>
+                    <select id="meta-model-select" style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);padding:4px 8px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font-body);outline:none;">${modelOpts}</select>
                 </div>
                 <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;">
                     <button class="cards-tb-btn" id="meta-sel-all" style="font-size:11px;">全选</button>
@@ -500,50 +518,29 @@ registerApp('aether-cards', {
                 const toUpdate = [];
                 modal.querySelectorAll('#meta-card-list input[type=checkbox]:checked').forEach(cb => { const c = gc(cb.dataset.cid); if (c) toUpdate.push(c); });
                 if (!toUpdate.length) { overlay.remove(); return; }
+                const modelIdx = parseInt(modal.querySelector('#meta-model-select').value);
+                const selectedModel = allModels[modelIdx];
                 overlay.remove();
-                await generateMetadata(toUpdate);
+                await generateMetadata(toUpdate, selectedModel);
             };
         };
 
-        async function generateMetadata(cardsToUpdate) {
-            // 使用系统 LLM 接口 (/api/llm/chat)，复用已配置的 Provider
-            let modelRef = '';
-            try {
-                const models = await os.api('GET', '/api/llm/models');
-                if (models && models.length) modelRef = models[0].ref;
-            } catch {}
-            if (!modelRef) { showToast('错误: 系统未配置 LLM 模型，请先添加 Provider'); return; }
+        async function generateMetadata(cardsToUpdate, selectedModel) {
             const SYS_PROMPT = 'You are a metadata generator for knowledge cards. Given a card\'s title and content, produce structured JSON metadata. Output ONLY valid JSON with these fields: {"summary":"1-2 sentence summary","tags":["keyword1","keyword2"],"category":"single category word","key_entities":["entity1","entity2"]}';
-            showToast(`开始生成元数据 (${cardsToUpdate.length} 张, model: ${modelRef})...`);
+            showToast(`开始生成元数据 (${cardsToUpdate.length} 张, model: ${selectedModel.label})...`);
             let updated = 0, failed = 0;
             for (const card of cardsToUpdate) {
                 try {
                     let userMsg = `Title: ${card.title || '无标题'}\n\nContent:\n${card.content || ''}`;
                     if (card.metadata) userMsg += `\n\nPrevious metadata (update if needed):\n${card.metadata}`;
-                    const messages = [
-                        { role: 'system', content: SYS_PROMPT },
-                        { role: 'user', content: userMsg }
-                    ];
-                    const resp = await fetch('/api/llm/chat', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages, model: modelRef })
-                    });
-                    if (!resp.ok) { console.error(`[Cards] HTTP ${resp.status} for card "${card.title}"`); failed++; continue; }
-                    const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
-                    while (true) {
-                        const { done, value } = await reader.read(); if (done) break;
-                        buf += decoder.decode(value, { stream: true });
-                        const lines = buf.split('\n'); buf = lines.pop() || '';
-                        for (const line of lines) {
-                            if (!line.startsWith('data: ')) continue;
-                            try {
-                                const evt = JSON.parse(line.slice(6));
-                                if (evt.type === 'text') text += evt.content;
-                                if (evt.type === 'error') { console.error(`[Cards] LLM error for "${card.title}":`, evt.message); }
-                            } catch {}
-                        }
+                    const messages = [{ role: 'system', content: SYS_PROMPT }, { role: 'user', content: userMsg }];
+                    let text = '';
+                    if (selectedModel.source === 'system') {
+                        text = await _llmChat(messages, selectedModel.ref);
+                    } else {
+                        text = await _cardsChat(messages, selectedModel.ref, selectedModel.apiKey, selectedModel.apiBase);
                     }
-                    if (!text) { console.warn(`[Cards] Empty response for card "${card.title}"`); failed++; continue; }
+                    if (!text) { failed++; continue; }
                     let meta;
                     try {
                         const jsonMatch = text.match(/\{[\s\S]*?\}/);
@@ -552,10 +549,49 @@ registerApp('aether-cards', {
                     card.metadata = JSON.stringify(meta);
                     card.metadataVersion = String(card.updated);
                     updated++;
-                } catch (e) { console.error(`[Cards] Metadata gen exception for "${card.title}":`, e); failed++; }
+                } catch (e) { console.error(`[Cards] Metadata gen failed for "${card.title}":`, e); failed++; }
             }
             scheduleSave(); renderCards();
-            showToast(updated > 0 ? `已更新 ${updated} 张卡片${failed > 0 ? `，${failed} 张失败` : ''}` : `元数据生成失败 (${failed} 张)，请检查控制台`);
+            showToast(updated > 0 ? `已更新 ${updated} 张卡片${failed > 0 ? `，${failed} 张失败` : ''}` : `元数据生成失败，请检查控制台`);
+        }
+
+        // ── 统一 LLM 调用 ──
+        // 系统模型走 /api/llm/chat，Cards 自配模型走 /api/aether-cards/chat
+
+        async function _llmChat(messages, modelRef) {
+            const resp = await fetch('/api/llm/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages, model: modelRef })
+            });
+            if (!resp.ok) { console.error(`[Cards] /api/llm/chat HTTP ${resp.status}`); return ''; }
+            return _readSSE(resp);
+        }
+
+        async function _cardsChat(messages, model, apiKey, apiBase) {
+            const resp = await fetch('/api/aether-cards/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages, model, api_key: apiKey, api_base: apiBase || '' })
+            });
+            if (!resp.ok) { console.error(`[Cards] /api/aether-cards/chat HTTP ${resp.status}`); return ''; }
+            return _readSSE(resp);
+        }
+
+        async function _readSSE(resp) {
+            const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
+            while (true) {
+                const { done, value } = await reader.read(); if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n'); buf = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const evt = JSON.parse(line.slice(6));
+                        if (evt.type === 'text') text += evt.content;
+                        if (evt.type === 'error') console.error('[Cards] LLM error:', evt.message);
+                    } catch {}
+                }
+            }
+            return text;
         }
 
         // ── 样式 ──
