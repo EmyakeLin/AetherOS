@@ -3237,6 +3237,15 @@ registerApp('agent', {
             }
         });
 
+        // Tell Eos: 接收来自其他 App 的输入
+        win.on('set-input', ({ text }) => {
+            inputEl.value = text;
+            inputEl.style.height = '44px';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+            sendBtn.disabled = false;
+            inputEl.focus();
+        });
+
         /* ══════════════════════════════════════════
            Skill autocomplete
            ══════════════════════════════════════════ */

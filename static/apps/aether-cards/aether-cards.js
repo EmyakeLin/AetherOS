@@ -49,6 +49,17 @@ registerApp('aether-cards', {
                 await dbExec(`CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, files TEXT DEFAULT '[]', timestamp INTEGER NOT NULL)`);
                 await dbExec(`CREATE TABLE IF NOT EXISTS card_chat_map (card_id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, board_id TEXT NOT NULL)`);
                 await dbExec(`INSERT OR IGNORE INTO boards (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)`, ['board-default', '默认工作板', Date.now(), Date.now()]);
+                // Schema migration: add new columns if missing
+                try {
+                    const cols = await dbQuery("PRAGMA table_info(cards)");
+                    const colNames = (cols.rows || []).map(r => r.name);
+                    if (!colNames.includes('type')) {
+                        await dbExec(`ALTER TABLE cards ADD COLUMN type TEXT DEFAULT 'default'`);
+                        await dbExec(`ALTER TABLE cards ADD COLUMN metadata TEXT DEFAULT ''`);
+                        await dbExec(`ALTER TABLE cards ADD COLUMN metadata_version TEXT DEFAULT ''`);
+                        await dbExec(`ALTER TABLE cards ADD COLUMN metadata_disabled INTEGER DEFAULT 0`);
+                    }
+                } catch (migErr) { console.warn('[Cards] Migration skipped:', migErr); }
                 await migrateFromJSON();
             } catch (e) {
                 console.error('[Cards] initDB failed, falling back to JSON mode:', e);
@@ -135,9 +146,38 @@ registerApp('aether-cards', {
             board_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="3" height="10" rx="0.8" stroke="currentColor" stroke-width="1.1"/><rect x="5.5" y="2" width="3" height="7" rx="0.8" stroke="currentColor" stroke-width="1.1"/><rect x="9.5" y="2" width="3" height="5" rx="0.8" stroke="currentColor" stroke-width="1.1"/></svg>`,
             duplicate_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.2" stroke="currentColor" stroke-width="1.1"/><path d="M10 4V2.5C10 2.22 9.78 2 9.5 2H2.5C2.22 2 2 2.22 2 2.5V9.5C2 9.78 2.22 10 2.5 10H4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
             spinner_svg: `<span class="cards-thinking-dots"><span></span><span></span><span></span></span>`,
+            tag_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3C2 2.45 2.45 2 3 2H7.59L12 6.41V11C12 11.55 11.55 12 11 12H3C2.45 12 2 11.55 2 11V3Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><circle cx="5" cy="5.5" r="1" fill="currentColor"/></svg>`,
+            refresh_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7A5 5 0 1 1 7 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M7 2L10 2L10 5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            code_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4.5 3.5L1 7L4.5 10.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 3.5L13 7L9.5 10.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+            progress_svg: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M4.5 7L6.5 9L9.5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
         };
 
         const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp']);
+
+        // 右键菜单工具函数
+        function showCardsContextMenu(x, y, items) {
+            document.querySelector('#cards-context-menu')?.remove();
+            const menu = document.createElement('div');
+            menu.id = 'cards-context-menu';
+            menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:10000;min-width:170px;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur)) saturate(1.5);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.5);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:4px;box-shadow:var(--shadow-glass);animation:dropdown-in 0.15s var(--ease-out);`;
+            for (const item of items) {
+                if (item.type === 'divider') { menu.appendChild(Object.assign(document.createElement('div'), { innerHTML: `<hr style="border:none;border-top:1px solid var(--border);margin:4px 0;">` })); continue; }
+                const row = document.createElement('div');
+                row.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-family:var(--font-body);color:var(--text-secondary);transition:all var(--duration-fast) var(--ease-out);`;
+                row.innerHTML = `<span style="font-size:13px;width:18px;text-align:center;flex-shrink:0;">${item.icon || ''}</span><span>${item.label}</span>`;
+                row.onmouseenter = () => { row.style.background = 'var(--bg-hover)'; row.style.color = 'var(--text-primary)'; };
+                row.onmouseleave = () => { row.style.background = 'transparent'; row.style.color = 'var(--text-secondary)'; };
+                row.onclick = (e) => { e.stopPropagation(); menu.remove(); item.action?.(); };
+                menu.appendChild(row);
+            }
+            document.body.appendChild(menu);
+            const br = menu.getBoundingClientRect();
+            if (br.right > window.innerWidth) menu.style.left = (x - br.width) + 'px';
+            if (br.bottom > window.innerHeight) menu.style.top = (y - br.height) + 'px';
+            const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', escClose); } };
+            const escClose = (e) => { if (e.key === 'Escape') { menu.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', escClose); } };
+            setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', escClose); }, 0);
+        }
 
         // 智能滚动：只在用户已在底部时自动滚动
         function smartScroll(el) {
@@ -156,6 +196,8 @@ registerApp('aether-cards', {
                     <button class="cards-tb-btn" id="cards-add" title="新建卡片">${ICO.plus_svg} 新建</button>
                     <button class="cards-tb-btn" id="cards-draw-board" title="新建手绘板">${ICO.draw_svg} 手绘板</button>
                     <button class="cards-tb-btn" id="cards-chat-toggle" title="显示对话框">${ICO.chat_svg} 对话</button>
+                    <button class="cards-tb-btn" id="cards-metadata-toggle" title="元数据管理">${ICO.tag_svg} 元数据</button>
+                    <button class="cards-tb-btn" id="cards-metadata-update" title="更新元数据" style="display:none">${ICO.refresh_svg} 更新</button>
                     <button class="cards-tb-btn" id="cards-board-mgr" title="管理工作板">${ICO.folder_svg} <span id="cards-board-name">默认工作板</span></button>
                     <div style="flex:1;"></div>
                     <button class="cards-tb-btn" id="cards-llm-settings" title="LLM 设置">${ICO.settings_svg} LLM</button>
@@ -358,6 +400,154 @@ registerApp('aether-cards', {
         const chatHistoryList = container.querySelector('#cards-chat-history-list');
         const chatFileInput = container.querySelector('#cards-chat-file-input');
 
+        // ── 元数据视图状态 ──
+        let metadataView = false;
+        const metaToggleBtn = container.querySelector('#cards-metadata-toggle');
+        const metaUpdateBtn = container.querySelector('#cards-metadata-update');
+
+        // ── 右键菜单注册 ──
+        win.setContextMenu((x, y, target) => {
+            const cardEl = target.closest('.card-el[data-cid]');
+            if (!cardEl) return;
+            const cardId = cardEl.dataset.cid;
+            const card = gc(cardId);
+            if (!card) return;
+            const items = [];
+            if (metadataView) {
+                items.push({ label: card.metadataDisabled ? '启用元数据' : '禁用元数据', icon: card.metadataDisabled ? '✅' : '🚫', action: () => toggleMetadataDisabled(cardId) });
+            } else {
+                items.push({ label: 'Tell Eos', icon: '🤖', action: () => tellEos(cardId) });
+                items.push({ type: 'divider' });
+                items.push({ label: '删除', icon: '🗑️', action: () => deleteCard(cardId) });
+            }
+            showCardsContextMenu(x, y, items);
+        });
+
+        function toggleMetadataDisabled(cardId) {
+            const card = gc(cardId); if (!card) return;
+            card.metadataDisabled = !card.metadataDisabled;
+            dbExec(`UPDATE cards SET metadata_disabled = ? WHERE id = ?`, [card.metadataDisabled ? 1 : 0, cardId]).catch(() => {});
+            scheduleSave(); renderCards();
+        }
+
+        function tellEos(cardId) {
+            const card = gc(cardId); if (!card) return;
+            let text = `[Card: ${card.title || '无标题'}]`;
+            if (card.type !== 'default') text += ` [Type: ${card.type}]`;
+            if (card.metadata) {
+                try {
+                    const meta = JSON.parse(card.metadata);
+                    text += `\n[Metadata] Summary: ${meta.summary || 'N/A'}`;
+                    if (meta.tags) text += `\n[Metadata] Tags: ${meta.tags.join(', ')}`;
+                } catch {}
+            }
+            text += `\n\n${card.content || '(空卡片)'}`;
+            const agentWin = os.openApp('agent');
+            if (agentWin) { setTimeout(() => agentWin.emit('set-input', { text }), 300); }
+        }
+
+        // ── 元数据管理 ──
+        metaToggleBtn.onclick = () => {
+            metadataView = !metadataView;
+            if (metadataView) {
+                metaToggleBtn.style.borderColor = 'var(--accent)';
+                metaToggleBtn.style.color = 'var(--accent)';
+                metaToggleBtn.style.boxShadow = '0 0 10px rgba(0,229,255,0.15)';
+                metaToggleBtn.style.textShadow = '0 0 8px rgba(0,229,255,0.3)';
+            } else {
+                metaToggleBtn.style.borderColor = '';
+                metaToggleBtn.style.color = '';
+                metaToggleBtn.style.boxShadow = '';
+                metaToggleBtn.style.textShadow = '';
+            }
+            metaUpdateBtn.style.display = metadataView ? '' : 'none';
+            renderCards();
+        };
+
+        metaUpdateBtn.onclick = () => {
+            const eligible = cards.filter(c => !c.metadataDisabled);
+            if (!eligible.length) { showToast('没有可更新的卡片'); return; }
+            // 弹出选择 overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fade-in 0.2s var(--ease-out);';
+            const modal = document.createElement('div');
+            modal.style.cssText = 'width:480px;max-height:80%;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6);border:1px solid var(--glass-border);border-radius:var(--radius-lg);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-glass);';
+            const selectedIds = new Set(eligible.map(c => c.id));
+            let listHtml = eligible.map(c => {
+                const metaStatus = c.metadata ? '<span style="color:var(--accent);font-size:10px;">●</span>' : '<span style="color:var(--text-muted);font-size:10px;">○</span>';
+                return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:var(--radius-sm);transition:background var(--duration-fast) var(--ease-out);" onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background='transparent'"><input type="checkbox" data-cid="${c.id}" checked style="accent-color:var(--accent)"><span style="font-size:12px;font-family:var(--font-body);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);">${esc(c.title || '无标题')}</span>${metaStatus}</label>`;
+            }).join('');
+            modal.innerHTML = `
+                <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:13px;font-family:var(--font-display);font-weight:500;color:var(--text-primary);letter-spacing:0.3px;">更新元数据</span>
+                    <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${eligible.length} cards</span>
+                </div>
+                <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;">
+                    <button class="cards-tb-btn" id="meta-sel-all" style="font-size:11px;">全选</button>
+                    <button class="cards-tb-btn" id="meta-sel-none" style="font-size:11px;">全不选</button>
+                </div>
+                <div id="meta-card-list" style="flex:1;overflow-y:auto;padding:6px 8px;">${listHtml}</div>
+                <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">
+                    <button class="cards-tb-btn" id="meta-cancel" style="font-size:12px;">取消</button>
+                    <button class="cards-tb-btn" id="meta-exec" style="font-size:12px;background:var(--accent);color:var(--bg-deep);border-color:var(--accent);font-weight:500;box-shadow:0 0 12px rgba(0,229,255,0.2);transition:all var(--duration-fast) var(--ease-out);" onmouseenter="this.style.boxShadow='0 0 20px rgba(0,229,255,0.35)'" onmouseleave="this.style.boxShadow='0 0 12px rgba(0,229,255,0.2)'">执行更新</button>
+                </div>`;
+            overlay.appendChild(modal);
+            container.appendChild(overlay);
+            modal.querySelector('#meta-sel-all').onclick = () => { modal.querySelectorAll('#meta-card-list input[type=checkbox]').forEach(cb => cb.checked = true); };
+            modal.querySelector('#meta-sel-none').onclick = () => { modal.querySelectorAll('#meta-card-list input[type=checkbox]').forEach(cb => cb.checked = false); };
+            modal.querySelector('#meta-cancel').onclick = () => overlay.remove();
+            modal.querySelector('#meta-exec').onclick = async () => {
+                const toUpdate = [];
+                modal.querySelectorAll('#meta-card-list input[type=checkbox]:checked').forEach(cb => { const c = gc(cb.dataset.cid); if (c) toUpdate.push(c); });
+                if (!toUpdate.length) { overlay.remove(); return; }
+                overlay.remove();
+                await generateMetadata(toUpdate);
+            };
+        };
+
+        async function generateMetadata(cardsToUpdate) {
+            const provider = CardsLLMConfig.textModels[0];
+            if (!provider || !provider.models?.length) { showToast('请先配置 LLM 模型'); return; }
+            const modelInfo = provider.models[0];
+            const SYS_PROMPT = 'You are a metadata generator for knowledge cards. Given a card\'s title and content, produce structured JSON metadata. Output ONLY valid JSON with these fields: {"summary":"1-2 sentence summary","tags":["keyword1","keyword2"],"category":"single category word","key_entities":["entity1","entity2"]}';
+            let updated = 0;
+            for (const card of cardsToUpdate) {
+                try {
+                    let userMsg = `Title: ${card.title || '无标题'}\n\nContent:\n${card.content || ''}`;
+                    if (card.metadata) userMsg += `\n\nPrevious metadata (update if needed):\n${card.metadata}`;
+                    const messages = [
+                        { role: 'system', content: SYS_PROMPT },
+                        { role: 'user', content: userMsg }
+                    ];
+                    const resp = await fetch('/api/aether-cards/chat', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages, model: modelInfo.name, api_key: provider.apiKey, api_base: provider.apiBase })
+                    });
+                    const reader = resp.body.getReader(); const decoder = new TextDecoder(); let text = '', buf = '';
+                    while (true) {
+                        const { done, value } = await reader.read(); if (done) break;
+                        buf += decoder.decode(value, { stream: true });
+                        const lines = buf.split('\n'); buf = lines.pop() || '';
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            try { const evt = JSON.parse(line.slice(6)); if (evt.type === 'text') text += evt.content; } catch {}
+                        }
+                    }
+                    // 解析 JSON
+                    let meta;
+                    try {
+                        const jsonMatch = text.match(/\{[^{}]*\}/s);
+                        meta = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+                    } catch { meta = { summary: text.slice(0, 200), tags: [], category: '', key_entities: [] }; }
+                    card.metadata = JSON.stringify(meta);
+                    card.metadataVersion = String(card.updated);
+                    updated++;
+                } catch (e) { console.warn(`[Cards] Metadata gen failed for ${card.title}:`, e); }
+            }
+            scheduleSave(); renderCards();
+            showToast(updated > 0 ? `已更新 ${updated} 张卡片的元数据` : '元数据生成失败');
+        }
+
         // ── 样式 ──
         if (!document.getElementById('cards-app-styles-v2')) {
             const s = document.createElement('style');
@@ -513,10 +703,11 @@ registerApp('aether-cards', {
                 .cards-dialog-btn-primary:hover{background:var(--accent-bright);border-color:var(--accent-bright);}
                 .cards-dialog-btn-danger{background:var(--accent-warm);color:#fff;border-color:var(--accent-warm);font-weight:600;}
                 .cards-dialog-btn-danger:hover{background:#ff8585;border-color:#ff8585;}
-                .cards-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(210,235,255,0.10);backdrop-filter:blur(28px) saturate(1.6);border:1px solid rgba(220,240,255,0.18);border-radius:var(--radius-xl);padding:8px 24px;font-size:12px;font-family:var(--font-body);color:var(--text-primary);box-shadow:0 8px 32px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.06);animation:cards-toast-in 0.25s var(--ease-spring);pointer-events:none;white-space:nowrap;}
+                .cards-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6);border:1px solid var(--glass-border);border-radius:var(--radius-xl);padding:8px 24px;font-size:12px;font-family:var(--font-body);color:var(--text-primary);box-shadow:var(--shadow-glass),0 0 20px rgba(0,229,255,0.06);animation:cards-toast-in 0.25s var(--ease-spring);pointer-events:none;white-space:nowrap;letter-spacing:0.2px;}
                 .cards-toast.out{animation:cards-toast-out 0.3s var(--ease-out) forwards;}
                 @keyframes cards-toast-in{from{opacity:0;transform:translateX(-50%) translateY(-12px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
                 @keyframes cards-toast-out{from{opacity:1;transform:translateX(-50%) translateY(0);}to{opacity:0;transform:translateX(-50%) translateY(-12px);}}
+                @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
                 [data-theme="light"] .cards-dialog{background:rgba(240,235,226,0.85);border-color:rgba(60,50,40,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.5);}
                 [data-theme="light"] .cards-dialog-header{border-bottom-color:rgba(60,50,40,0.1);}
                 [data-theme="light"] .cards-dialog-footer{border-top-color:rgba(60,50,40,0.1);}
@@ -545,7 +736,14 @@ registerApp('aether-cards', {
         // 工具栏事件
         // ═══════════════════════════════════════
 
-        container.querySelector('#cards-add').onclick = () => createCard();
+        container.querySelector('#cards-add').onclick = (e) => {
+            const btn = e.currentTarget; const r = btn.getBoundingClientRect();
+            showCardsContextMenu(r.left, r.bottom + 4, [
+                { label: '默认卡片', icon: '🃏', action: () => createCard(null, null, 'default') },
+                { label: 'Code Card', icon: '{ }', action: () => createCard(null, null, 'code') },
+                { label: 'Progress Card', icon: '☑️', action: () => createCard(null, null, 'progress') },
+            ]);
+        };
         container.querySelector('#cards-zoom-in').onclick = () => setZoom(canvasZoom * 1.2);
         container.querySelector('#cards-zoom-out').onclick = () => setZoom(canvasZoom / 1.2);
         container.querySelector('#cards-zoom-reset').onclick = () => { setZoom(1); canvasOffset = { x: 0, y: 0 }; applyTransform(); scheduleSave(); };
@@ -1235,7 +1433,7 @@ registerApp('aether-cards', {
         function genId() { return 'card-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6); }
         function gc(id) { return cards.find(c => c.id === id); }
 
-        function createCard(x, y) {
+        function createCard(x, y, type) {
             const r = canvasEl.getBoundingClientRect();
             const card = {
                 id: genId(), title: '', content: '', images: [], coverImage: '',
@@ -1243,6 +1441,7 @@ registerApp('aether-cards', {
                 position: { x: snap(x ?? (r.width / 2 - canvasOffset.x) / canvasZoom - DEFAULT_W / 2), y: snap(y ?? (r.height / 2 - canvasOffset.y) / canvasZoom - DEFAULT_H / 2) },
                 size: { w: DEFAULT_W, h: DEFAULT_H },
                 windowed: false, created: Date.now(), updated: Date.now(),
+                type: type || 'default', metadata: '', metadataVersion: '', metadataDisabled: false,
             };
             cards.push(card); renderCard(card); selectCard(card.id); scheduleSave(); updateCount();
             setTimeout(() => { const el = worldEl.querySelector(`[data-cid="${card.id}"] .card-title-text`); if (el) el.focus(); }, 50);
@@ -1280,6 +1479,19 @@ registerApp('aether-cards', {
             updateCount(); updateSelFrame();
         }
 
+        function _renderMetadataBody(metadata) {
+            try {
+                const meta = JSON.parse(metadata);
+                let h = '<div class="card-body" style="font-size:10px;font-family:var(--font-body);line-height:1.6;padding:8px 10px;">';
+                if (meta.summary) h += `<div style="margin-bottom:6px;color:var(--text-secondary);line-height:1.5;">${esc(meta.summary)}</div>`;
+                if (meta.category) h += `<div style="margin-bottom:5px;"><span style="display:inline-block;padding:1px 6px;border-radius:3px;background:var(--accent-glow);color:var(--accent);font-size:9px;letter-spacing:0.3px;">${esc(meta.category)}</span></div>`;
+                if (meta.tags && meta.tags.length) h += `<div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:3px;">${meta.tags.map(t => `<span style="padding:1px 5px;border-radius:3px;background:var(--bg-elevated);border:1px solid var(--border);font-size:9px;color:var(--text-muted);">${esc(t)}</span>`).join('')}</div>`;
+                if (meta.key_entities && meta.key_entities.length) h += `<div style="font-size:9px;color:var(--text-muted);margin-top:4px;"><span style="color:var(--text-secondary);">Entities:</span> ${meta.key_entities.map(e => esc(e)).join(' · ')}</div>`;
+                h += '</div>';
+                return h;
+            } catch { return `<div class="card-body" style="font-size:10px;">${esc(metadata)}</div>`; }
+        }
+
         function renderCard(card) {
             worldEl.querySelector(`[data-cid="${card.id}"]`)?.remove();
             const el = document.createElement('div');
@@ -1289,21 +1501,61 @@ registerApp('aether-cards', {
             el.style.top = card.position.y + 'px';
             el.style.width = card.size.w + 'px';
             el.style.height = card.size.h + 'px';
+            if (card.type === 'code') { el.style.borderLeft = '3px solid var(--accent)'; el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2), 0 0 12px rgba(0,229,255,0.05)'; }
+            if (card.type === 'progress') { el.style.borderLeft = '3px solid #4caf50'; el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2), 0 0 12px rgba(76,175,80,0.05)'; }
+
+            let typeIcon = '';
+            if (card.type === 'code') typeIcon = `<span style="margin-right:2px;color:var(--accent);filter:drop-shadow(0 0 3px rgba(0,229,255,0.3));">${ICO.code_svg}</span>`;
+            if (card.type === 'progress') typeIcon = `<span style="margin-right:2px;color:#4caf50;filter:drop-shadow(0 0 3px rgba(76,175,80,0.3));">${ICO.progress_svg}</span>`;
 
             let inner = '<div class="card-title-bar">';
+            inner += typeIcon;
             inner += `<input class="card-title-text" type="text" value="${esc(card.title)}" placeholder="无标题" data-nd>`;
             inner += `<button class="card-act-btn" title="窗口化" data-nd>${ICO.popout_svg}</button>`;
             inner += `<button class="card-act-btn" title="删除" data-nd>${ICO.trash_svg}</button>`;
             inner += '</div>';
 
-            // 封面图
-            if (card.coverImage) {
-                inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="height:${Math.round(card.size.h * 0.45)}px;" loading="lazy">`;
-            }
-
-            const preview = card.content ? card.content.slice(0, 500) : '';
-            if (preview || !card.coverImage) {
-                inner += `<div class="card-body">${markdownToHtml(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
+            // 元数据管理视图
+            if (metadataView) {
+                if (card.metadataDisabled) {
+                    inner += `<div class="card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-muted);font-size:11px;font-family:var(--font-body);"><span style="font-size:20px;opacity:0.4;">🚫</span><span style="letter-spacing:0.5px;text-transform:uppercase;font-size:10px;">Metadata Disabled</span></div>`;
+                } else if (!card.metadata) {
+                    inner += `<div class="card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-muted);font-size:11px;"><span style="font-size:20px;opacity:0.3;">◇</span><span style="letter-spacing:0.5px;text-transform:uppercase;font-size:10px;">No Metadata</span></div>`;
+                } else if (card.updated > parseInt(card.metadataVersion || '0')) {
+                    inner += `<div style="padding:5px 8px;background:rgba(255,193,7,0.08);border-bottom:1px solid rgba(255,193,7,0.15);font-size:10px;color:#ffc107;display:flex;align-items:center;gap:5px;"><span style="width:5px;height:5px;border-radius:50%;background:#ffc107;box-shadow:0 0 6px rgba(255,193,7,0.5);"></span>Content Changed</div>`;
+                    inner += _renderMetadataBody(card.metadata);
+                } else {
+                    inner += `<div style="padding:3px 8px;border-bottom:1px solid var(--border);font-size:9px;color:var(--accent);display:flex;align-items:center;gap:4px;letter-spacing:0.5px;text-transform:uppercase;"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);"></span>Synchronized</div>`;
+                    inner += _renderMetadataBody(card.metadata);
+                }
+            } else {
+                // 常规视图
+                if (card.coverImage) {
+                    inner += `<img class="card-cover" src="/aether-cards-images/${esc(card.coverImage)}" alt="" style="height:${Math.round(card.size.h * 0.45)}px;" loading="lazy">`;
+                }
+                const preview = card.content ? card.content.slice(0, 500) : '';
+                if (preview || !card.coverImage) {
+                    const bodyStyle = card.type === 'code' ? ' style="font-family:var(--font-code);font-size:10px;line-height:1.5;background:var(--bg-deep);border-left:2px solid var(--accent-dim);"' : '';
+                    if (card.type === 'progress') {
+                        const lines = (card.content || '').split('\n').filter(l => l.trim());
+                        const done = lines.filter(l => /^\s*\[x\]/i.test(l)).length;
+                        const total = lines.filter(l => /^\s*\[[ x]\]/i.test(l)).length;
+                        if (total > 0) {
+                            const pct = Math.round(done / total * 100);
+                            const barColor = pct === 100 ? '#4caf50' : pct >= 50 ? 'var(--accent)' : 'var(--accent-dim)';
+                            inner += `<div style="padding:6px 10px;border-bottom:1px solid var(--border);background:var(--bg-deep);">
+                                <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:var(--font-mono);color:var(--text-muted);margin-bottom:4px;">
+                                    <span style="color:var(--text-secondary);">${done}/${total}</span>
+                                    <div style="flex:1;height:3px;background:var(--bg-elevated);border-radius:2px;overflow:hidden;">
+                                        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width 0.4s var(--ease-out);box-shadow:0 0 8px ${barColor};"></div>
+                                    </div>
+                                    <span style="color:var(--text-secondary);min-width:28px;text-align:right;">${pct}%</span>
+                                </div>
+                            </div>`;
+                        }
+                    }
+                    inner += `<div class="card-body"${bodyStyle}>${markdownToHtml(preview) || '<span style="color:var(--text-muted)">(空卡片)</span>'}</div>`;
+                }
             }
 
             const otherImgs = card.images.filter(i => i !== card.coverImage);
@@ -2635,8 +2887,8 @@ registerApp('aether-cards', {
                 const canvasData = JSON.stringify({ offsetX: canvasOffset.x, offsetY: canvasOffset.y, zoom: canvasZoom });
                 await dbExec(`UPDATE boards SET canvas_data = ?, updated_at = ? WHERE id = ?`, [canvasData, Date.now(), currentBoardId]);
                 for (const card of cards) {
-                    await dbExec(`INSERT OR REPLACE INTO cards (id, board_id, title, content, cover_image, images, ratio, position, size, windowed, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-                        [card.id, currentBoardId, card.title || '', card.content || '', card.coverImage || '', JSON.stringify(card.images || []), JSON.stringify(card.ratio || [2,3]), JSON.stringify(card.position), JSON.stringify(card.size), card.windowed ? 1 : 0, card.created || Date.now(), card.updated || Date.now()]);
+                    await dbExec(`INSERT OR REPLACE INTO cards (id, board_id, title, content, cover_image, images, ratio, position, size, windowed, created_at, updated_at, type, metadata, metadata_version, metadata_disabled) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                        [card.id, currentBoardId, card.title || '', card.content || '', card.coverImage || '', JSON.stringify(card.images || []), JSON.stringify(card.ratio || [2,3]), JSON.stringify(card.position), JSON.stringify(card.size), card.windowed ? 1 : 0, card.created || Date.now(), card.updated || Date.now(), card.type || 'default', card.metadata || '', card.metadataVersion || '', card.metadataDisabled ? 1 : 0]);
                 }
                 const ids = cards.map(c => c.id);
                 if (ids.length > 0) {
@@ -2676,7 +2928,7 @@ registerApp('aether-cards', {
                             ratio = [ratio[0] / g, ratio[1] / g];
                         }
                     }
-                    return { id: row.id, title: row.title || '', content: row.content || '', coverImage: row.cover_image || '', images: JSON.parse(row.images || '[]'), ratio, position: JSON.parse(row.position || '{"x":0,"y":0}'), size, windowed: !!row.windowed, created: row.created_at, updated: row.updated_at };
+                    return { id: row.id, title: row.title || '', content: row.content || '', coverImage: row.cover_image || '', images: JSON.parse(row.images || '[]'), ratio, position: JSON.parse(row.position || '{"x":0,"y":0}'), size, windowed: !!row.windowed, created: row.created_at, updated: row.updated_at, type: row.type || 'default', metadata: row.metadata || '', metadataVersion: row.metadata_version || '', metadataDisabled: !!row.metadata_disabled };
                 });
                 CardsData.cards = cards;
             } catch (e) { console.warn('Load failed, trying JSON:', e); await loadJSON(); }

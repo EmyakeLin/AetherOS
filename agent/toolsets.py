@@ -22,10 +22,16 @@ TOOLSETS = {
         "tools": ["eos_read_file", "eos_write_file", "eos_edit_file"],
     },
 
+    # ── Aether Cards 工具集 ──
+    "aether-cards": {
+        "description": "Aether Cards 工作板操作",
+        "tools": ["aether_cards"],
+    },
+
     # ── 组合工具集 ──
     "default": {
-        "description": "默认工具集（文件 + 终端 + Eos-Tools）",
-        "includes": ["file", "terminal", "eos-tools-file-management"],
+        "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards）",
+        "includes": ["file", "terminal", "eos-tools-file-management", "aether-cards"],
     },
 
     # ── 预留工具集（待实现） ──
