@@ -11,6 +11,7 @@ import signal
 import uuid
 import time
 import subprocess
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,15 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Body, File, 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 import uvicorn
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+    ]
+)
 
 # ── App setup ──
 
