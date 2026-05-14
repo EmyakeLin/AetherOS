@@ -161,12 +161,15 @@ class CustomAgentEngine:
         storage = get_storage()
         messages = await storage.get_messages_as_conversation(self.session_id)
 
-        logger.debug(f"Loaded {len(messages)} messages from storage")
+        logger.info(f"Loaded {len(messages)} messages from storage")
 
         # 应用上下文管理（EosContextManager处理，如果启用）
         if self.eos_context_enabled:
+            logger.info(f"EosContextManager enabled, processing messages...")
             messages = self.eos_context.process_messages(messages)
-            logger.debug(f"After EosContextManager: {len(messages)} messages")
+            logger.info(f"After EosContextManager: {len(messages)} messages")
+        else:
+            logger.info(f"EosContextManager disabled")
 
         # 应用压缩策略（滑动窗口、摘要压缩等）
         messages = self.context.compress(messages)
