@@ -71,7 +71,11 @@
       "Bash(curl -s http://localhost:8411/apps/agent/agent.js)",
       "Bash(curl -sI http://localhost:8411/apps/agent/agent.js)",
       "Read(//home/emyake/.npm-global/lib/node_modules/openclaw/**)",
-      "Bash(curl -s http://localhost:8411/api/agent/skills)"
+      "Bash(curl -s http://localhost:8411/api/agent/skills)",
+      "Bash(pip show *)",
+      "Bash(curl -s \"https://pypi.org/pypi/anthropic/0.49.0/json\")",
+      "Bash(curl -s \"https://pypi.org/pypi/anthropic/0.39.0/json\")",
+      "Bash(curl -s \"https://pypi.org/pypi/openai/1.12.0/json\")"
     ]
   }
 }
