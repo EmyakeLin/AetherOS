@@ -125,26 +125,42 @@ registerApp('agent', {
                             </div>
 
                             <aside id="agent-panel" class="agent-panel">
-                                <div class="panel-section">
-                                    <div class="panel-section-header">
-                                        <span class="panel-section-icon">
-                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                                        </span>
-                                        <span>工具调用</span>
+                                <div class="panel-tabs">
+                                    <button class="panel-tab active" data-tab="thinking">
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        <span>思维链</span>
+                                        <span id="thinking-indicator" class="thinking-badge" style="display:none">●</span>
+                                    </button>
+                                    <button class="panel-tab" data-tab="tools">
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                        <span>工具与终端</span>
                                         <span id="tool-count" class="panel-count">0</span>
-                                    </div>
-                                    <div id="agent-tools" class="panel-body tools-body"></div>
+                                    </button>
                                 </div>
-                                <div class="panel-divider"></div>
-                                <div class="panel-section" style="flex:1;min-height:0">
-                                    <div class="panel-section-header">
-                                        <span class="panel-section-icon">
-                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.5L6 7.5L4 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 9.5H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-                                        </span>
-                                        <span>终端</span>
-                                        <button id="terminal-clear" class="panel-action-btn" title="清空">清空</button>
+                                <div class="panel-content">
+                                    <div id="thinking-panel" class="panel-section thinking-section">
+                                        <div id="agent-thinking" class="panel-body thinking-body">
+                                            <div class="thinking-placeholder">等待模型思考...</div>
+                                        </div>
                                     </div>
-                                    <div id="agent-terminal" class="panel-body terminal-body"></div>
+                                    <div id="tools-panel" class="panel-section tools-section" style="display:none">
+                                        <div class="panel-section-header">
+                                            <span class="panel-section-icon">
+                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                            </span>
+                                            <span>工具调用</span>
+                                        </div>
+                                        <div id="agent-tools" class="panel-body tools-body"></div>
+                                        <div class="panel-divider"></div>
+                                        <div class="panel-section-header">
+                                            <span class="panel-section-icon">
+                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.5L6 7.5L4 9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 9.5H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                            </span>
+                                            <span>终端</span>
+                                            <button id="terminal-clear" class="panel-action-btn" title="清空">清空</button>
+                                        </div>
+                                        <div id="agent-terminal" class="panel-body terminal-body"></div>
+                                    </div>
                                 </div>
                             </aside>
                         </div>
@@ -186,13 +202,46 @@ registerApp('agent', {
                                 </div>
                             </div>
                             <div class="settings-section">
+                                <div class="settings-section-title">辅助模型（用于自动命名对话）</div>
+                                <div class="settings-field">
+                                    <label class="settings-label">辅助模型来源</label>
+                                    <select id="settings-helper-source" class="settings-select">
+                                        <option value="">不使用辅助模型</option>
+                                        <option value="os">使用系统模型</option>
+                                        <option value="custom">自定义配置</option>
+                                    </select>
+                                </div>
+                                <div id="helper-os-config" style="display:none">
+                                    <div class="settings-field">
+                                        <label class="settings-label">模型</label>
+                                        <select id="settings-helper-model" class="settings-select">
+                                            <option value="">加载中...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="helper-custom-config" style="display:none">
+                                    <div class="settings-field">
+                                        <label class="settings-label">API Key</label>
+                                        <input id="settings-helper-key" class="settings-input" type="password" placeholder="sk-...">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label class="settings-label">API Base URL</label>
+                                        <input id="settings-helper-url" class="settings-input" type="text" placeholder="https://api.openai.com/v1">
+                                    </div>
+                                    <div class="settings-field">
+                                        <label class="settings-label">模型名称</label>
+                                        <input id="settings-helper-name" class="settings-input" type="text" placeholder="gpt-4o-mini">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-section">
                                 <div class="settings-section-title">Agent 行为</div>
                                 <div class="settings-field">
                                     <label class="settings-label">System Prompt</label>
                                     <textarea id="settings-system-prompt" class="settings-textarea" rows="5" placeholder="你是 Eos Agent..."></textarea>
                                 </div>
                                 <div class="settings-field">
-                                    <label class="settings-label">最大迭代次数</label>
+                                    <label class="settings-label">最大模型请求次数</label>
                                     <input id="settings-max-iter" class="settings-input" type="number" min="1" max="200" value="50">
                                 </div>
                                 <div class="settings-field">
@@ -1023,12 +1072,75 @@ registerApp('agent', {
                 opacity: 0;
                 border-left: none;
             }
+            .panel-tabs {
+                display: flex;
+                border-bottom: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+            .panel-tab {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 10px 0;
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                font-family: var(--font-display);
+                font-size: 11px;
+                letter-spacing: 0.5px;
+                cursor: pointer;
+                transition: all 0.2s;
+                position: relative;
+            }
+            .panel-tab:hover {
+                color: var(--text-secondary);
+                background: var(--bg-elevated);
+            }
+            .panel-tab.active {
+                color: var(--accent);
+            }
+            .panel-tab.active::after {
+                content: '';
+                position: absolute;
+                bottom: -1px;
+                left: 20%;
+                right: 20%;
+                height: 2px;
+                background: var(--accent);
+                border-radius: 1px;
+            }
+            .panel-tab svg {
+                opacity: 0.7;
+            }
+            .panel-tab.active svg {
+                opacity: 1;
+            }
+            .thinking-badge {
+                color: var(--accent);
+                font-size: 8px;
+                animation: pulse 1.5s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+            }
+            .panel-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
             .panel-section {
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
             }
-            .panel-section:first-child {
+            .thinking-section {
+                flex: 1;
+            }
+            .tools-section {
                 flex: 1;
             }
             .panel-section-header {
@@ -1077,6 +1189,58 @@ registerApp('agent', {
                 flex: 1;
                 overflow-y: auto;
                 padding: 8px;
+            }
+            .thinking-body {
+                font-family: var(--font-mono);
+                font-size: 12px;
+                line-height: 1.6;
+                color: var(--text-secondary);
+            }
+            .thinking-placeholder {
+                color: var(--text-muted);
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+            .thinking-content {
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            .thinking-content p {
+                margin: 0 0 8px 0;
+            }
+            .thinking-content code {
+                background: var(--bg-elevated);
+                padding: 1px 4px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+            .thinking-content pre {
+                background: var(--bg-elevated);
+                padding: 8px;
+                border-radius: var(--radius-sm);
+                overflow-x: auto;
+                margin: 8px 0;
+            }
+            .thinking-content pre code {
+                background: none;
+                padding: 0;
+            }
+            .thinking-block {
+                margin-bottom: 8px;
+            }
+            .thinking-separator {
+                height: 1px;
+                margin: 12px 0;
+            }
+            .thinking-separator.light {
+                background: linear-gradient(90deg, transparent, var(--border), transparent);
+                opacity: 0.5;
+            }
+            .thinking-separator.deep {
+                background: var(--border);
+                opacity: 1;
+                margin: 16px 0;
             }
             .panel-divider {
                 height: 1px;
@@ -1148,6 +1312,51 @@ registerApp('agent', {
                 color: var(--text-muted);
                 margin-top: 2px;
                 word-break: break-all;
+            }
+
+            /* ── Agent Tool 子 Agent 特殊样式 ── */
+            .tool-entry.agent-tool {
+                border-color: rgba(179, 136, 255, 0.3);
+                background: rgba(179, 136, 255, 0.06);
+            }
+            .tool-entry.agent-tool.pending {
+                border-color: rgba(179, 136, 255, 0.5);
+                background: rgba(179, 136, 255, 0.1);
+                animation: tool-slide-in 0.4s var(--ease-out), agent-pulse 2s ease-in-out infinite;
+            }
+            .tool-entry.agent-tool .tool-icon {
+                font-size: 14px;
+            }
+            .tool-entry.agent-tool .tool-name {
+                color: #b388ff;
+            }
+            .tool-entry.agent-tool .tool-status {
+                color: #b388ff;
+            }
+            .tool-entry.agent-tool .agent-type-badge {
+                display: inline-block;
+                padding: 1px 6px;
+                border-radius: 8px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-left: 6px;
+                vertical-align: middle;
+            }
+            .agent-type-badge.explore { background: rgba(0, 229, 255, 0.15); color: #00e5ff; }
+            .agent-type-badge.plan { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+            .agent-type-badge.general_purpose { background: rgba(179, 136, 255, 0.15); color: #b388ff; }
+            .tool-entry.agent-tool .agent-result-summary {
+                font-size: 10px;
+                color: var(--text-muted);
+                margin-top: 2px;
+                max-height: 60px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            @keyframes agent-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
             }
 
             /* ── Settings page ── */
@@ -1736,11 +1945,12 @@ registerApp('agent', {
 
             /* ── Tool complete effect ── */
             .tool-complete-effect {
-                position: fixed;
+                position: absolute;
+                inset: 0;
                 pointer-events: none;
-                z-index: 999;
+                z-index: 10;
                 overflow: hidden;
-                border-radius: 6px;
+                border-radius: var(--radius-md);
             }
             .tool-complete-scan {
                 position: absolute;
@@ -1749,9 +1959,9 @@ registerApp('agent', {
                 width: 100%;
                 height: 100%;
                 background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.3) 50%, transparent 100%);
-                animation: toolScan 0.6s ease-out forwards;
+                animation: toolCompleteScan 0.6s ease-out forwards;
             }
-            @keyframes toolScan {
+            @keyframes toolCompleteScan {
                 to { left: 100%; }
             }
             .tool-complete-check {
@@ -1766,10 +1976,14 @@ registerApp('agent', {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                animation: checkPop 0.3s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                animation: checkPop 0.3s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                           checkFade 0.4s 1.2s ease-out forwards;
             }
             @keyframes checkPop {
                 to { transform: translateY(-50%) scale(1); }
+            }
+            @keyframes checkFade {
+                to { opacity: 0; }
             }
             .tool-complete-check svg {
                 width: 14px;
@@ -1783,14 +1997,15 @@ registerApp('agent', {
             .tool-complete-border {
                 position: absolute;
                 inset: 0;
-                border-radius: 6px;
+                border-radius: var(--radius-md);
                 border: 2px solid transparent;
-                animation: borderGlow 1.4s 0.3s ease-out forwards;
+                animation: borderGlow 1.2s 0.3s ease-in-out forwards;
             }
             @keyframes borderGlow {
                 0% { border-color: var(--accent); }
-                30% { border-color: #00e676; }
-                70% { border-color: rgba(0, 230, 118, 0.4); }
+                20% { border-color: #00e676; }
+                50% { border-color: rgba(0, 230, 118, 0.6); }
+                80% { border-color: rgba(0, 230, 118, 0.2); }
                 100% { border-color: rgba(0, 230, 118, 0); }
             }
 
@@ -1823,6 +2038,11 @@ registerApp('agent', {
         const toolsEl = container.querySelector('#agent-tools');
         const toolCountEl = container.querySelector('#tool-count');
         const terminalEl = container.querySelector('#agent-terminal');
+        const thinkingEl = container.querySelector('#agent-thinking');
+        const thinkingIndicator = container.querySelector('#thinking-indicator');
+        const thinkingPanel = container.querySelector('#thinking-panel');
+        const toolsPanel = container.querySelector('#tools-panel');
+        const panelTabs = container.querySelectorAll('.panel-tab');
         const sessionSidebar = container.querySelector('#session-sidebar');
         const sessionListEl = container.querySelector('#session-list');
         const sessionNewBtn = container.querySelector('#session-new-btn');
@@ -1859,13 +2079,19 @@ registerApp('agent', {
 
         // Tool call indicator state
         let _conversationRound = 0;  // 对话轮次，会话内累加
-        let _iterationInRound = 0;   // 当前轮次中的迭代次数
+        let _iterationInRound = 0;   // 当前轮次中的迭代次数（模型请求次数）
         let _iterationCount = 0;     // 当前位置累积的工具调用次数
         let _segmentToolCount = 0;   // 当前连续工具调用段的计数
         let _toolCallHistory = [];   // 工具调用历史
         let _toolIndicatorEl = null; // 消息区域的工具调用指示器元素
         let _toolStartTime = 0;      // 工具调用开始时间
         let _toolTimerInterval = null; // 工具调用计时器
+        let _currentIteration = 0;   // 当前模型请求迭代次数（从后端获取）
+
+        // Thinking panel state
+        let _thinkingContent = '';   // 思维链内容累积
+        let _isThinkingActive = false; // 是否正在思考
+        let _currentThinkingTab = 'thinking'; // 当前选项卡：'thinking' 或 'tools'
 
         // Mode state
         let agentMode = 'assistant'; // 'assistant' or 'coder'
@@ -2013,6 +2239,10 @@ registerApp('agent', {
             toolCountEl.textContent = '0';
             toolsEl.innerHTML = '';
             terminalEl.innerHTML = '';
+            // 清除思维链内容
+            thinkingEl.innerHTML = '<div class="thinking-placeholder">等待模型思考...</div>';
+            _currentThinkingBlock = null;
+            _conversationRound = 0;
 
             // 通知后端切换 session 并加载历史消息
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -2265,6 +2495,8 @@ registerApp('agent', {
             }
         }
 
+        let _lastUserMessage = '';  // 记录最后一条用户消息，用于生成标题
+
         async function persistMessage(role, content) {
             if (!currentSessionId) return;
             try {
@@ -2273,11 +2505,16 @@ registerApp('agent', {
                 if (session) {
                     session.message_count = (session.message_count || 0) + 1;
                     session.updated_at = Date.now();
-                    if (role === 'user' && session.title === '新会话') {
-                        const title = generateTitle(content);
-                        await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title });
-                        session.title = title;
-                        updateSessionTitle(title);
+                    if (role === 'user') {
+                        _lastUserMessage = content;
+                        // 如果没有配置辅助模型，立即生成标题
+                        const settings = loadSettings();
+                        if (!settings.helperSource && session.title === '新会话') {
+                            const title = generateTitleLocal(content);
+                            await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title });
+                            session.title = title;
+                            updateSessionTitle(title);
+                        }
                     }
                     sessionCache.sort((a, b) => b.updated_at - a.updated_at);
                     renderSessionList();
@@ -2287,11 +2524,63 @@ registerApp('agent', {
             }
         }
 
+        async function generateSessionTitle(assistantContent) {
+            console.log('[Title] generateSessionTitle called, sessionId:', currentSessionId, 'lastUser:', JSON.stringify(_lastUserMessage)?.slice(0,50), 'assistant:', JSON.stringify(assistantContent)?.slice(0,50));
+            if (!currentSessionId || !_lastUserMessage) { console.log('[Title] early exit: no session or no user msg'); return; }
+            const session = sessionCache.find(s => s.id === currentSessionId);
+            if (!session) { console.log('[Title] early exit: session not found in cache'); return; }
+            if (session.title !== '新会话') { console.log('[Title] early exit: title already set:', session.title); return; }
+
+            const settings = loadSettings();
+            console.log('[Title] settings.helperSource:', settings.helperSource, 'helperModel:', settings.helperModel);
+
+            try {
+                const title = await generateTitle(_lastUserMessage, _lastUserMessage, assistantContent);
+                console.log('[Title] generateTitle returned:', JSON.stringify(title)?.slice(0,80));
+                if (title) {
+                    await os.api('PUT', `/api/agent/sessions/${currentSessionId}`, { title });
+                    session.title = title;
+                    updateSessionTitle(title);
+                    renderSessionList();
+                }
+            } catch (e) {
+                console.warn('Failed to generate session title:', e);
+            }
+        }
+
         function updateSessionTitle(title) {
             sessionTitleDisplay.textContent = title || 'Eos Agent';
         }
 
-        function generateTitle(content) {
+        async function generateTitle(content, userMessage, assistantMessage) {
+            const settings = loadSettings();
+            console.log('[Title] generateTitle, content:', JSON.stringify(content)?.slice(0,50), 'helperSource:', settings.helperSource);
+
+            // 如果配置了辅助模型，使用它生成标题
+            if (settings.helperSource) {
+                console.log('[Title] trying helper model:', settings.helperSource, settings.helperModel || settings.helperName);
+                try {
+                    let title = await generateTitleWithHelperModel(settings, userMessage, assistantMessage);
+                    console.log('[Title] helper model returned:', JSON.stringify(title)?.slice(0,80));
+                    if (title) {
+                        // 清理标题：去除引号、多余空白
+                        title = title.replace(/^["']|["']$/g, '').trim();
+                        if (title.length > 0 && title.length <= 50) {
+                            return title;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Title] Helper model failed:', e);
+                }
+            }
+
+            // 降级到本地生成
+            const localTitle = generateTitleLocal(content);
+            console.log('[Title] local fallback:', JSON.stringify(localTitle)?.slice(0,80));
+            return localTitle;
+        }
+
+        function generateTitleLocal(content) {
             // 清理内容：去除多余空白、换行、markdown标记
             let text = content
                 .replace(/```[\s\S]*?```/g, '[代码]')  // 代码块
@@ -2315,6 +2604,45 @@ registerApp('agent', {
             }
 
             return text.slice(0, cutPos).trim() + (text.length > cutPos ? '...' : '');
+        }
+
+        async function generateTitleWithHelperModel(settings, userMessage, assistantMessage) {
+            const prompt = `请为以下对话生成一个简短的标题（不超过20个字，不要包含引号或其他标点符号）：
+
+用户：${userMessage}
+助手：${assistantMessage}
+
+标题：`;
+
+            if (settings.helperSource === 'os') {
+                // 使用系统模型（流式 API，需要 onText 回调累积内容）
+                if (!settings.helperModel) return null;
+                let text = '';
+                await os.llm.chat({
+                    model: settings.helperModel,
+                    messages: [{ role: 'user', content: prompt }],
+                    maxTokens: 100,
+                    onText: (t) => { text += t; },
+                    onDone: () => {},
+                    onError: (msg) => { console.warn('[Title] helper model error:', msg); },
+                });
+                console.log('[Title] helper model text:', JSON.stringify(text)?.slice(0,80));
+                return text.trim() || null;
+            } else if (settings.helperSource === 'custom') {
+                // 使用自定义配置（非流式 inline-chat）
+                if (!settings.helperKey || !settings.helperUrl || !settings.helperName) return null;
+                const response = await os.api('POST', '/api/llm/inline-chat', {
+                    api_key: settings.helperKey,
+                    api_base: settings.helperUrl,
+                    model: settings.helperName,
+                    messages: [{ role: 'user', content: prompt }],
+                    max_tokens: 100,
+                });
+                if (response && response.content) {
+                    return response.content.trim();
+                }
+            }
+            return null;
         }
 
         function enableTitleEdit() {
@@ -2474,6 +2802,17 @@ registerApp('agent', {
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'thinking' });
                     showThinkingIndicator();
+                    // 思维链内容处理
+                    if (data.content) {
+                        if (!_isThinkingActive) {
+                            setThinkingActive(true);
+                        }
+                        appendThinkingContent(data.content);
+                    }
+                    // 保存后端发送的迭代次数（模型请求次数）
+                    if (data.iteration) {
+                        _currentIteration = data.iteration;
+                    }
                     if (data.call_id && data.model) {
                         _activeCallId = data.call_id;
                         os.registerModelCall({
@@ -2488,6 +2827,11 @@ registerApp('agent', {
                     break;
                 case 'text':
                     removeThinkingIndicator();
+                    // 思维链区域添加浅分隔线（文本输出打断思维链）
+                    if (_isThinkingActive) {
+                        setThinkingActive(false);
+                        addThinkingSeparator('light');
+                    }
                     // 模型输出文本，重置迭代计数
                     _iterationCount = 0;
                     _segmentToolCount = 0;  // 文本打断连续工具调用段
@@ -2503,21 +2847,22 @@ registerApp('agent', {
                 case 'tool_call':
                     removeThinkingIndicator();
                     _iterationCount++;
-                    _iterationInRound++;
                     _segmentToolCount++;
                     _toolStartTime = Date.now();
+                    // 使用后端发送的迭代次数（模型请求次数）
+                    const roundLabel = `R${_currentIteration}-${_segmentToolCount}`;
                     _toolCallHistory.push({
                         name: data.name,
                         args: data.arguments,
                         result: null,
                         error: null,
                         time: _toolStartTime,
-                        iterationCount: _iterationCount,
-                        roundLabel: `R${_conversationRound}-${_iterationInRound}`,
+                        iterationCount: _currentIteration,
+                        roundLabel: roundLabel,
                     });
-                    showToolIndicator(data.name, _iterationCount);
+                    showToolIndicator(data.name, _currentIteration);
                     startToolTimer();
-                    addToolEntry(data.name, data.arguments, 'pending', `R${_conversationRound}-${_iterationInRound}`);
+                    addToolEntry(data.name, data.arguments, 'pending', roundLabel);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
@@ -2545,6 +2890,8 @@ registerApp('agent', {
                         playCompleteEffect(_toolIndicatorEl);
                         _toolIndicatorEl = null;
                     }
+                    const finalContent = _assistantContent;  // 在清空前保存
+                    console.log('[Title] done event, finalContent:', JSON.stringify(finalContent)?.slice(0,80));
                     finishAssistantMessage();
                     _finishActiveCall('done');
                     os.updateAgentPanel(agentId, { status: 'idle' });
@@ -2552,6 +2899,8 @@ registerApp('agent', {
                     _sending = false;
                     if (data.tokens) os.updateAgentPanel(agentId, { contextTokens: data.tokens });
                     if (data.queued) addSystemMessage(`队列中还有 ${data.queued} 条消息等待处理`);
+                    // 生成会话标题（如果需要）
+                    generateSessionTitle(finalContent || '');
                     break;
                 case 'error':
                     removeThinkingIndicator();
@@ -2595,10 +2944,10 @@ registerApp('agent', {
             if (_toolIndicatorEl) {
                 _toolIndicatorEl.querySelector('.tool-call-name').textContent = `[${escapeHtml(toolName)}]`;
                 const countEl = _toolIndicatorEl.querySelector('.tool-call-count');
-                countEl.textContent = `Round ${_segmentToolCount}`;
-                countEl.dataset.fullRound = `Round ${_segmentToolCount}`;
+                countEl.textContent = `Iteration ${iterationCount}`;
+                countEl.dataset.fullRound = `Iteration ${iterationCount}`;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = _segmentToolCount;
+                _toolIndicatorEl.dataset.iterationCount = iterationCount;
             } else {
                 // 先渲染缓冲区的文本
                 flushPendingText();
@@ -2618,12 +2967,12 @@ registerApp('agent', {
                         <span class="tool-call-text">Function Calling — 正在调用工具</span>
                         <span class="tool-call-name">[${escapeHtml(toolName)}]</span>
                         <span class="tool-call-time"></span>
-                        <span class="tool-call-count" data-full-round="Round ${_segmentToolCount}">Round ${_segmentToolCount}</span>
+                        <span class="tool-call-count" data-full-round="Iteration ${iterationCount}">Iteration ${iterationCount}</span>
                     </div>
                     <div class="tool-call-scan"></div>
                 `;
                 _toolIndicatorEl.dataset.toolName = toolName;
-                _toolIndicatorEl.dataset.iterationCount = _segmentToolCount;
+                _toolIndicatorEl.dataset.iterationCount = iterationCount;
 
                 // 创建或复用 assistant 消息块
                 if (!_currentAssistantEl) {
@@ -2732,9 +3081,9 @@ registerApp('agent', {
         function openToolModal() {
             if (!_toolIndicatorEl) return;
 
-            // 获取当前 round 的所有工具调用
-            const currentRound = _conversationRound;
-            const roundCalls = _toolCallHistory.filter(call => call.roundLabel.startsWith(`R${currentRound}-`));
+            // 获取当前迭代的所有工具调用
+            const currentIteration = _currentIteration;
+            const roundCalls = _toolCallHistory.filter(call => call.roundLabel.startsWith(`R${currentIteration}-`));
             if (roundCalls.length === 0) return;
 
             // 当前显示的索引
@@ -2811,14 +3160,7 @@ registerApp('agent', {
 
             const effect = document.createElement('div');
             effect.className = 'tool-complete-effect';
-            document.body.appendChild(effect);
-
-            // 一次性定位
-            const rect = indicatorEl.getBoundingClientRect();
-            effect.style.left = rect.left + 'px';
-            effect.style.top = rect.top + 'px';
-            effect.style.width = rect.width + 'px';
-            effect.style.height = rect.height + 'px';
+            indicatorEl.appendChild(effect);
 
             effect.innerHTML = `
                 <div class="tool-complete-scan"></div>
@@ -2830,8 +3172,8 @@ registerApp('agent', {
                 </div>
             `;
 
-            // 1.5s 后清理
-            setTimeout(() => effect.remove(), 1500);
+            // 1.8s 后清理
+            setTimeout(() => effect.remove(), 1800);
         }
 
         /* ══════════════════════════════════════════
@@ -3113,22 +3455,55 @@ registerApp('agent', {
             _toolCount++;
             toolCountEl.textContent = _toolCount;
             const el = document.createElement('div');
-            el.className = `tool-entry ${status}`;
+            const isAgentTool = name === 'agent_tool';
+            el.className = `tool-entry ${status}${isAgentTool ? ' agent-tool' : ''}`;
             el.dataset.toolName = name;
             const argsStr = typeof args === 'string' ? args : JSON.stringify(args || {});
-            el.innerHTML = `
-                <span class="tool-entry-count">${escapeHtml(iterationLabel || '')}</span>
-                <span class="tool-icon">${status === 'pending' ? '⏳' : '✅'}</span>
-                <div class="tool-info">
-                    <div class="tool-name">${escapeHtml(name)}</div>
-                    <div class="tool-status">${escapeHtml(argsStr.slice(0, 60))}</div>
-                </div>
-            `;
+            if (isAgentTool) {
+                const agentType = args?.agent_type || 'general_purpose';
+                const typeLabels = { explore: '搜索', plan: '规划', general_purpose: '通用' };
+                el.innerHTML = `
+                    <span class="tool-entry-count">${escapeHtml(iterationLabel || '')}</span>
+                    <span class="tool-icon">${status === 'pending' ? '🤖' : '✅'}</span>
+                    <div class="tool-info">
+                        <div class="tool-name">子 Agent <span class="agent-type-badge ${agentType}">${escapeHtml(typeLabels[agentType] || agentType)}</span></div>
+                        <div class="tool-status">${escapeHtml((args?.prompt || '').slice(0, 80))}</div>
+                    </div>
+                `;
+            } else {
+                el.innerHTML = `
+                    <span class="tool-entry-count">${escapeHtml(iterationLabel || '')}</span>
+                    <span class="tool-icon">${status === 'pending' ? '⏳' : '✅'}</span>
+                    <div class="tool-info">
+                        <div class="tool-name">${escapeHtml(name)}</div>
+                        <div class="tool-status">${escapeHtml(argsStr.slice(0, 60))}</div>
+                    </div>
+                `;
+            }
             // 智能滚动：仅当用户在底部时才自动滚动
             const isAtBottom = toolsEl.scrollHeight - toolsEl.scrollTop <= toolsEl.clientHeight + 50;
             toolsEl.appendChild(el);
             if (isAtBottom) {
                 toolsEl.scrollTop = toolsEl.scrollHeight;
+            }
+        }
+
+        function _formatAgentToolResult(result) {
+            try {
+                const data = typeof result === 'string' ? JSON.parse(result) : result;
+                const parts = [];
+                if (data.error) {
+                    parts.push(`❌ ${data.error}`);
+                } else if (data.result) {
+                    parts.push(data.result.slice(0, 200));
+                }
+                const meta = [];
+                if (data.iterations !== undefined) meta.push(`${data.iterations} 次工具调用`);
+                if (data.agent_type) meta.push(data.agent_type);
+                if (meta.length) parts.push(`📊 ${meta.join(' · ')}`);
+                return parts.join('\n');
+            } catch {
+                return typeof result === 'string' ? result.slice(0, 200) : JSON.stringify(result).slice(0, 200);
             }
         }
 
@@ -3138,13 +3513,24 @@ registerApp('agent', {
                 if (el.dataset.toolName === name && el.classList.contains('pending')) {
                     el.classList.remove('pending');
                     el.classList.add(error ? 'error' : 'done');
-                    el.querySelector('.tool-icon').textContent = error ? '❌' : '✅';
-                    if (error) el.querySelector('.tool-status').textContent = error.slice(0, 60);
+                    const iconEl = el.querySelector('.tool-icon');
+                    if (name === 'agent_tool') {
+                        iconEl.textContent = error ? '❌' : '🧠';
+                        const statusEl = el.querySelector('.tool-status');
+                        if (result && !error) {
+                            statusEl.textContent = _formatAgentToolResult(result).split('\n')[0];
+                        } else if (error) {
+                            statusEl.textContent = error.slice(0, 80);
+                        }
+                    } else {
+                        iconEl.textContent = error ? '❌' : '✅';
+                        if (error) el.querySelector('.tool-status').textContent = error.slice(0, 60);
+                    }
                     break;
                 }
             }
             if (result) {
-                const r = typeof result === 'string' ? result : JSON.stringify(result);
+                const r = name === 'agent_tool' ? _formatAgentToolResult(result) : (typeof result === 'string' ? result : JSON.stringify(result));
                 terminalEl.innerHTML += `<div style="color:var(--accent)">$ ${escapeHtml(name)}</div><div>${escapeHtml(r).slice(0, 500)}</div>`;
                 terminalEl.scrollTop = terminalEl.scrollHeight;
             }
@@ -3190,8 +3576,15 @@ registerApp('agent', {
             _iterationCount = 0;
             _segmentToolCount = 0;
             _toolCallHistory = [];
+            _currentIteration = 0;
+
+            // 新对话轮次，添加深分隔线
+            if (_conversationRound > 1) {
+                addThinkingSeparator('deep');
+            }
 
             addMessage('user', text, true);  // skipPersist=true，后端会持久化
+            _lastUserMessage = text;  // 保存用户消息，用于生成标题
             inputEl.value = '';
             inputEl.style.height = '44px';
             sendBtn.disabled = true;
@@ -3384,6 +3777,70 @@ registerApp('agent', {
             terminalEl.innerHTML = '';
         });
 
+        // ── Panel tab switching ──
+        function switchPanelTab(tabName) {
+            _currentThinkingTab = tabName;
+            panelTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+            thinkingPanel.style.display = tabName === 'thinking' ? 'flex' : 'none';
+            toolsPanel.style.display = tabName === 'tools' ? 'flex' : 'none';
+        }
+
+        panelTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                switchPanelTab(tab.dataset.tab);
+            });
+        });
+
+        // ── Thinking content management ──
+        let _currentThinkingBlock = null; // 当前思维链块
+
+        function appendThinkingContent(content) {
+            if (!content) return;
+
+            // 清空占位符
+            const placeholder = thinkingEl.querySelector('.thinking-placeholder');
+            if (placeholder) {
+                placeholder.remove();
+            }
+
+            // 如果没有当前块，创建一个
+            if (!_currentThinkingBlock) {
+                _currentThinkingBlock = document.createElement('div');
+                _currentThinkingBlock.className = 'thinking-block';
+                _currentThinkingBlock.innerHTML = '<div class="thinking-content"></div>';
+                thinkingEl.appendChild(_currentThinkingBlock);
+            }
+
+            // 追加内容到当前块
+            const contentEl = _currentThinkingBlock.querySelector('.thinking-content');
+            contentEl.innerHTML = formatContent(contentEl.textContent + content);
+
+            // 自动滚动到底部
+            thinkingEl.scrollTop = thinkingEl.scrollHeight;
+        }
+
+        function addThinkingSeparator(type = 'light') {
+            // type: 'light' (文本输出分隔) 或 'deep' (新对话轮次分隔)
+            _currentThinkingBlock = null; // 重置当前块
+            const sep = document.createElement('div');
+            sep.className = `thinking-separator ${type}`;
+            thinkingEl.appendChild(sep);
+        }
+
+        function setThinkingActive(active) {
+            _isThinkingActive = active;
+            thinkingIndicator.style.display = active ? 'inline' : 'none';
+            if (active && _currentThinkingTab === 'tools') {
+                // 自动切换到思维链选项卡
+                switchPanelTab('thinking');
+            }
+            if (!active) {
+                _currentThinkingBlock = null; // 流式结束，重置当前块
+            }
+        }
+
         /* ══════════════════════════════════════════
            Settings drawer
            ══════════════════════════════════════════ */
@@ -3410,6 +3867,11 @@ registerApp('agent', {
             toolScanSpeed: 1.0,  // 工具调用扫描动画速度（秒）
             toolset: '',  // 工具集（空字符串表示所有工具）
             agentMode: 'assistant',  // 模式：assistant 或 coder
+            helperSource: '',  // 辅助模型来源：'' | 'os' | 'custom'
+            helperModel: '',  // 系统模型引用
+            helperKey: '',  // 自定义 API Key
+            helperUrl: '',  // 自定义 API Base URL
+            helperName: '',  // 自定义模型名称
         };
 
         function loadSettings() {
@@ -3471,26 +3933,82 @@ registerApp('agent', {
             }
         }
 
+        async function populateHelperModelSelect() {
+            try {
+                const models = await os.llm.getModels();
+                const select = container.querySelector('#settings-helper-model');
+                if (!select) return;
+                select.innerHTML = '';
+                if (!models || models.length === 0) {
+                    select.innerHTML = '<option value="">未配置模型</option>';
+                    return;
+                }
+                const grouped = {};
+                models.forEach(m => {
+                    if (!grouped[m.provider_name]) grouped[m.provider_name] = [];
+                    grouped[m.provider_name].push(m);
+                });
+                Object.entries(grouped).forEach(([provider, ms]) => {
+                    const group = document.createElement('optgroup');
+                    group.label = provider;
+                    ms.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.ref;
+                        opt.textContent = m.name;
+                        group.appendChild(opt);
+                    });
+                    select.appendChild(group);
+                });
+            } catch (e) {
+                console.warn('Failed to populate helper model select:', e);
+            }
+        }
+
         function fillSettingsForm(s) {
             settingsModel.value = s.model || '';
             settingsSystemPrompt.value = s.systemPrompt || '';
             settingsMaxIter.value = s.maxIterations || 50;
             settingsScanSpeed.value = s.toolScanSpeed || 1.0;
             settingsToolset.value = s.toolset || '';
+            // 辅助模型配置
+            const helperSource = container.querySelector('#settings-helper-source');
+            const helperModel = container.querySelector('#settings-helper-model');
+            const helperKey = container.querySelector('#settings-helper-key');
+            const helperUrl = container.querySelector('#settings-helper-url');
+            const helperName = container.querySelector('#settings-helper-name');
+            helperSource.value = s.helperSource || '';
+            helperModel.value = s.helperModel || '';
+            helperKey.value = s.helperKey || '';
+            helperUrl.value = s.helperUrl || '';
+            helperName.value = s.helperName || '';
+            updateHelperConfigVisibility(s.helperSource || '');
         }
 
         function readSettingsForm() {
+            const helperSource = container.querySelector('#settings-helper-source').value;
             return {
                 model: settingsModel.value,
                 systemPrompt: settingsSystemPrompt.value,
                 maxIterations: parseInt(settingsMaxIter.value, 10) || 50,
                 toolScanSpeed: parseFloat(settingsScanSpeed.value) || 1.0,
                 toolset: settingsToolset.value,
+                helperSource: helperSource,
+                helperModel: container.querySelector('#settings-helper-model').value,
+                helperKey: container.querySelector('#settings-helper-key').value,
+                helperUrl: container.querySelector('#settings-helper-url').value,
+                helperName: container.querySelector('#settings-helper-name').value,
             };
         }
 
+        function updateHelperConfigVisibility(source) {
+            const osConfig = container.querySelector('#helper-os-config');
+            const customConfig = container.querySelector('#helper-custom-config');
+            osConfig.style.display = source === 'os' ? 'block' : 'none';
+            customConfig.style.display = source === 'custom' ? 'block' : 'none';
+        }
+
         async function openSettings() {
-            await populateModelSelect();
+            await Promise.all([populateModelSelect(), populateHelperModelSelect()]);
             fillSettingsForm(loadSettings());
             navigateTo('settings');
         }
@@ -3596,6 +4114,17 @@ registerApp('agent', {
             }
         });
 
+        // 辅助模型来源变化时更新配置界面
+        const helperSourceSelect = container.querySelector('#settings-helper-source');
+        if (helperSourceSelect) {
+            helperSourceSelect.addEventListener('change', (e) => {
+                updateHelperConfigVisibility(e.target.value);
+                if (e.target.value === 'os') {
+                    populateHelperModelSelect();
+                }
+            });
+        }
+
         settingsResetBtn.addEventListener('click', () => {
             fillSettingsForm(DEFAULT_SETTINGS);
             saveSettings(DEFAULT_SETTINGS);
@@ -3645,7 +4174,7 @@ registerApp('agent', {
                 const fullText = isCompleted ? 'Function Calling — 工具调用结束' : 'Function Calling — 正在调用工具';
                 const shortText = isCompleted ? '已完成' : '调用中';
                 const fullRound = countEl.dataset.fullRound || countEl.textContent;
-                const shortRound = fullRound.replace('Round ', '');
+                const shortRound = fullRound.replace('Round ', '').replace('Iteration ', '');
 
                 if (width > 600) {
                     textEl.textContent = fullText;
