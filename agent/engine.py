@@ -8,23 +8,22 @@ LLM 调用统一通过 llm_service（全局 LLM 配置），引擎自身不管�
 
 import json
 import time
+import asyncio
 import logging
 import sys
 from pathlib import Path
 from typing import AsyncGenerator
 
-from context import ContextManager
-from prompt_builder import build_system_prompt, clear_section_cache, reload_prompts
-from model_tools import get_tool_definitions, handle_function_call
-from storage import get_storage
-from skills.registry import skill_registry, Skill
-
-# 添加 Eos-Context 目录到路径
-eos_context_dir = Path(__file__).parent.parent / "Eos-Context"
-sys.path.insert(0, str(eos_context_dir))
-from eos_context_manager import FileContextManager as EosContextManager
+from agent.context import ContextManager
+from agent.prompt_builder import build_system_prompt, clear_section_cache, reload_prompts
+from agent.model_tools import get_tool_definitions, handle_function_call
+from agent.storage import get_storage
+from agent.skills.registry import skill_registry, Skill
 
 logger = logging.getLogger(__name__)
+
+# 静默 httpx 的 HTTP 请求日志（正常 200 无需显示）
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class CustomAgentEngine:
@@ -36,9 +35,6 @@ class CustomAgentEngine:
         self.session_id = None  # 当前 session ID，由外部设置
         # 中断信号
         self._interrupted = False
-
-        # Eos-Context 配置（默认启用）
-        self.eos_context_enabled = config.get("eos_context_enabled", True)
 
         # 工具集配置
         self.toolset = config.get("toolset", None)  # None 表示加载所有工具
@@ -65,7 +61,6 @@ class CustomAgentEngine:
         # 初始化上下文管理器（传入构建好的 system_prompt）
         ctx_config = {**config, "system_prompt": system_prompt}
         self.context = ContextManager(ctx_config)
-        self.eos_context = EosContextManager()
 
     def interrupt(self):
         """请求中断当前运行"""
@@ -161,19 +156,11 @@ class CustomAgentEngine:
         storage = get_storage()
         messages = await storage.get_messages_as_conversation(self.session_id)
 
-        logger.info(f"Loaded {len(messages)} messages from storage")
+        logger.debug(f"Loaded {len(messages)} messages from storage")
 
-        # 应用上下文管理（EosContextManager处理，如果启用）
-        if self.eos_context_enabled:
-            logger.info(f"EosContextManager enabled, processing messages...")
-            messages = self.eos_context.process_messages(messages)
-            logger.info(f"After EosContextManager: {len(messages)} messages")
-        else:
-            logger.info(f"EosContextManager disabled")
-
-        # 应用压缩策略（滑动窗口、摘要压缩等）
-        messages = self.context.compress(messages)
-        logger.debug(f"After compress: {len(messages)} messages")
+        # 应用上下文管理（管道式处理）
+        messages = self.context.process_messages(messages)
+        logger.debug(f"After context processing: {len(messages)} messages")
 
         # 验证消息配对
         for i, msg in enumerate(messages):
@@ -218,10 +205,10 @@ class CustomAgentEngine:
 
             try:
                 call_id = f"agent-{int(time.time()*1000)}-{iteration}"
-                yield {"type": "thinking", "call_id": call_id, "model": self.model}
+                yield {"type": "thinking", "call_id": call_id, "model": self.model, "iteration": iteration + 1}
 
-                # 处理消息（缩减参数、清理失败调用、注入通知）
-                processed_messages = self.eos_context.process_messages(messages)
+                # 处理消息（管道式处理）
+                processed_messages = self.context.process_messages(messages)
 
                 # 调用 LLM（流式传输，统一通过 llm_service.chat_stream）
                 start_time = time.time()
@@ -233,6 +220,11 @@ class CustomAgentEngine:
                 async for event in self.llm_service.chat_stream(
                     messages=processed_messages, model=self.model, tools=tools_schema,
                 ):
+                    # ── 流式中断检查 ──
+                    if self._interrupted:
+                        self.llm_service.cancel()
+                        yield {"type": "interrupted"}
+                        return
                     if event["type"] == "text":
                         text_content += event["content"]
                         yield {"type": "text", "content": event["content"]}
@@ -276,12 +268,14 @@ class CustomAgentEngine:
 
                     tool_result_msgs = []
 
-                    for tc in normalized_tool_calls:
-                        # ── 中断检查点（工具执行前） ──
-                        if self._interrupted:
-                            yield {"type": "interrupted"}
-                            return
+                    # ── 中断检查点（工具执行前） ──
+                    if self._interrupted:
+                        yield {"type": "interrupted"}
+                        return
 
+                    # 预处理所有工具调用参数
+                    parsed_calls = []
+                    for tc in normalized_tool_calls:
                         tool_name = tc["function"]["name"]
                         tool_args = tc["function"].get("arguments", {})
                         if isinstance(tool_args, str):
@@ -289,36 +283,38 @@ class CustomAgentEngine:
                                 tool_args = json.loads(tool_args)
                             except (json.JSONDecodeError, TypeError):
                                 tool_args = {}
-                        tc_id = tc.get("id", "")
+                        parsed_calls.append((tc, tool_name, tool_args))
 
+                    # yield 所有 tool_call 事件（前端立即看到所有工具启动）
+                    for tc, tool_name, tool_args in parsed_calls:
                         yield {
                             "type": "tool_call",
                             "name": tool_name,
                             "arguments": tool_args,
-                            "call_id": tc_id,
+                            "call_id": tc.get("id", ""),
                             "model": self.model,
                             "latency": latency,
                         }
 
-                        # 执行工具
+                    # 并行执行所有工具调用
+                    async def _exec_tool(tc, tool_name, tool_args):
                         try:
                             result_str = await handle_function_call(tool_name, tool_args)
-                            yield {
-                                "type": "tool_result",
-                                "name": tool_name,
-                                "result": result_str[:2000],
-                            }
-                            tool_result_msgs.append({
-                                "role": "tool",
-                                "tool_call_id": tc_id,
-                                "content": result_str,
-                            })
-                            # 记录成功的工具调用
-                            self.eos_context.record_tool_call(
-                                tc_id, tool_name, tool_args, result_str, True
-                            )
+                            return (tc, tool_name, result_str, None)
                         except Exception as e:
-                            error_str = str(e)
+                            return (tc, tool_name, None, str(e))
+
+                    if len(parsed_calls) == 1:
+                        exec_results = [await _exec_tool(*parsed_calls[0])]
+                    else:
+                        exec_results = await asyncio.gather(
+                            *[_exec_tool(tc, name, args) for tc, name, args in parsed_calls]
+                        )
+
+                    # yield 所有 tool_result 事件
+                    for tc, tool_name, result_str, error_str in exec_results:
+                        tc_id = tc.get("id", "")
+                        if error_str:
                             yield {
                                 "type": "tool_result",
                                 "name": tool_name,
@@ -329,10 +325,17 @@ class CustomAgentEngine:
                                 "tool_call_id": tc_id,
                                 "content": f"错误: {error_str}",
                             })
-                            # 记录失败的工具调用
-                            self.eos_context.record_tool_call(
-                                tc_id, tool_name, tool_args, error_str, False
-                            )
+                        else:
+                            yield {
+                                "type": "tool_result",
+                                "name": tool_name,
+                                "result": result_str[:2000],
+                            }
+                            tool_result_msgs.append({
+                                "role": "tool",
+                                "tool_call_id": tc_id,
+                                "content": result_str,
+                            })
 
                     # 所有工具执行完毕后，一次性持久化 assistant 消息和所有工具结果
                     # 这样可以确保不会出现 assistant 有 tool_calls 但没有对应 tool 消息的情况
