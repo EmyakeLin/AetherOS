@@ -28,6 +28,12 @@ TOOLSETS = {
         "tools": ["aether_cards"],
     },
 
+    # ── Agent 只读工具集 ──
+    "agent-readonly": {
+        "description": "Agent 只读工具集（Explore/Plan 子 Agent 使用）",
+        "tools": ["search_files", "read_file", "list_dir", "eos_read_file"],
+    },
+
     # ── 组合工具集 ──
     "default": {
         "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards）",
