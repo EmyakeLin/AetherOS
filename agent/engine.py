@@ -319,6 +319,7 @@ class CustomAgentEngine:
                                 "type": "tool_result",
                                 "name": tool_name,
                                 "error": error_str,
+                                "call_id": tc_id,
                             }
                             tool_result_msgs.append({
                                 "role": "tool",
@@ -330,6 +331,7 @@ class CustomAgentEngine:
                                 "type": "tool_result",
                                 "name": tool_name,
                                 "result": result_str[:2000],
+                                "call_id": tc_id,
                             }
                             tool_result_msgs.append({
                                 "role": "tool",

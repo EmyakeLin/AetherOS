@@ -2862,14 +2862,14 @@ registerApp('agent', {
                     });
                     showToolIndicator(data.name, _currentIteration);
                     startToolTimer();
-                    addToolEntry(data.name, data.arguments, 'pending', roundLabel);
+                    addToolEntry(data.name, data.arguments, 'pending', roundLabel, data.call_id);
                     os.updateAgentPanel(agentId, { status: 'tool', toolName: data.name });
                     _finishActiveCall('done', { tokens: data.tokens || 0, latency: data.latency || 0 });
                     break;
                 case 'tool_result':
                     const elapsed = ((Date.now() - _toolStartTime) / 1000).toFixed(1);
                     updateToolIndicator(data.name, elapsed);
-                    updateToolEntry(data.name, data.result, data.error);
+                    updateToolEntry(data.name, data.result, data.error, data.call_id);
                     // 更新历史记录
                     const lastCall = _toolCallHistory[_toolCallHistory.length - 1];
                     if (lastCall && lastCall.name === data.name) {
@@ -3451,13 +3451,14 @@ registerApp('agent', {
            Tool entries
            ══════════════════════════════════════════ */
 
-        function addToolEntry(name, args, status, iterationLabel) {
+        function addToolEntry(name, args, status, iterationLabel, callId) {
             _toolCount++;
             toolCountEl.textContent = _toolCount;
             const el = document.createElement('div');
             const isAgentTool = name === 'agent_tool';
             el.className = `tool-entry ${status}${isAgentTool ? ' agent-tool' : ''}`;
             el.dataset.toolName = name;
+            if (callId) el.dataset.callId = callId;
             const argsStr = typeof args === 'string' ? args : JSON.stringify(args || {});
             if (isAgentTool) {
                 const agentType = args?.agent_type || 'general_purpose';
@@ -3507,10 +3508,13 @@ registerApp('agent', {
             }
         }
 
-        function updateToolEntry(name, result, error) {
+        function updateToolEntry(name, result, error, callId) {
             const entries = toolsEl.querySelectorAll('.tool-entry');
             for (const el of entries) {
-                if (el.dataset.toolName === name && el.classList.contains('pending')) {
+                // 优先按 call_id 精确匹配，回退到 name + pending 匹配
+                const matchById = callId && el.dataset.callId === callId && el.classList.contains('pending');
+                const matchByName = !callId && el.dataset.toolName === name && el.classList.contains('pending');
+                if (matchById || matchByName) {
                     el.classList.remove('pending');
                     el.classList.add(error ? 'error' : 'done');
                     const iconEl = el.querySelector('.tool-icon');
