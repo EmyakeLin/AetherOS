@@ -13,7 +13,6 @@ registerApp('settings', {
                 <div style="width:180px;border-right:1px solid var(--border);padding:12px 8px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;">
                     <div style="font-family:var(--font-display);font-size:10px;letter-spacing:2px;color:var(--text-muted);padding:8px;margin-bottom:4px;">设置</div>
                     <div class="settings-nav active" data-section="general">通用</div>
-                    <div class="settings-nav" data-section="agent">Agent 引擎</div>
                     <div class="settings-nav" data-section="tools">工具管理</div>
                     <div class="settings-nav" data-section="mcp">MCP 服务器</div>
                     <div class="settings-nav" data-section="context">上下文管理</div>
@@ -77,36 +76,6 @@ registerApp('settings', {
                         <div><div class="settings-label">连接状态</div></div>
                         <span style="color:var(--accent);font-size:12px;">● 已连接</span>
                     </div>
-                </div>
-            `,
-
-            agent: () => `
-                <div class="settings-group">
-                    <div class="settings-group-title">Agent 引擎配置</div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">模型</div><div class="settings-desc">Agent 使用的 LLM 模型</div></div>
-                        <input class="settings-input" placeholder="例如: gpt-4, claude-3-opus" />
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">API Key</div><div class="settings-desc">模型 API 密钥</div></div>
-                        <input class="settings-input" type="password" placeholder="sk-..." />
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">API Base URL</div><div class="settings-desc">自定义 API 端点</div></div>
-                        <input class="settings-input" placeholder="https://api.openai.com/v1" />
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">最大迭代次数</div><div class="settings-desc">Agent 工具调用循环上限</div></div>
-                        <input class="settings-input" type="number" value="50" style="max-width:100px;" />
-                    </div>
-                    <div class="settings-row">
-                        <div><div class="settings-label">系统提示词</div><div class="settings-desc">Agent 的系统级指令</div></div>
-                        <textarea class="settings-input" rows="4" placeholder="你是一个有帮助的 AI 助手..." style="resize:vertical;max-width:360px;"></textarea>
-                    </div>
-                </div>
-                <div style="margin-top:12px;">
-                    <button class="settings-btn">保存配置</button>
-                    <button class="settings-btn settings-btn-danger" style="margin-left:8px;">重置</button>
                 </div>
             `,
 
@@ -195,6 +164,7 @@ registerApp('settings', {
                         <select class="settings-select" id="settings-theme-select">
                             <option value="light">浅色 · 米色 (Light)</option>
                             <option value="dark">深色 (Dark)</option>
+                            <option value="kinetic">物理极简 (Kinetic)</option>
                         </select>
                     </div>
                     <div class="settings-row">

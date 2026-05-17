@@ -79,8 +79,8 @@ class AetherOS {
         // Agent panels
         this.agentPanels = new Map();
 
-        // Theme (default: light for better performance)
-        this.theme = localStorage.getItem('aether-theme') || 'light';
+        // Theme (default: kinetic)
+        this.theme = localStorage.getItem('aether-theme') || 'kinetic';
 
         // Unified LLM client
         this.llm = new LLMClient(this);
@@ -166,11 +166,7 @@ class AetherOS {
     setTheme(theme) {
         this.theme = theme;
         localStorage.setItem('aether-theme', theme);
-        if (theme === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
-        } else {
-            document.documentElement.removeAttribute('data-theme');
-        }
+        document.documentElement.setAttribute('data-theme', theme);
     }
 
     // ═══════════════════════════════════════

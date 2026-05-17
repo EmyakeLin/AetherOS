@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>N.O.V.A Aether OS</title>
     <!-- Apply saved theme before paint to avoid flash. Default: light -->
-    <script>try{if(localStorage.getItem('aether-theme')!=='dark')document.documentElement.setAttribute('data-theme','light')}catch(e){document.documentElement.setAttribute('data-theme','light')}</script>
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('aether-theme') || 'kinetic')</script>
     <!-- Fonts loaded locally from /fonts/ -->
     <link rel="stylesheet" href="core/os.css">
 </head>
 <body>
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-ring" id="cursor-ring"></div>
     <!-- Boot screen -->
     <div id="boot-screen">
         <div class="boot-logo">
@@ -136,5 +138,6 @@
     <script src="core/window.js"></script>
     <script src="core/llm.js"></script>
     <script src="core/os.js"></script>
+    <script src="core/kinetic.js"></script>
 </body>
 </html>
