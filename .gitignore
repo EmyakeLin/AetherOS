@@ -67,8 +67,7 @@ yarn-error.log*
 *.sqlite3
 
 # Claude Code / AI 工具
-.claude/settings.local.json
-.claude/worktrees/
+.claude/
 .code-graph/
 .superpowers/
 CLAUDE.md
