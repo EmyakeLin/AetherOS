@@ -34,10 +34,22 @@ TOOLSETS = {
         "tools": ["search_files", "read_file", "list_dir", "eos_read_file"],
     },
 
+    # ── 代码知识图谱工具集 ──
+    "graph": {
+        "description": "代码知识图谱（构建、查询、更新）",
+        "tools": ["code_graph_build", "code_graph_query", "code_graph_update"],
+    },
+
+    # ── Web 工具集 ──
+    "web": {
+        "description": "Web 搜索与内容获取",
+        "tools": ["web_search", "web_fetch"],
+    },
+
     # ── 组合工具集 ──
     "default": {
-        "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards）",
-        "includes": ["file", "terminal", "eos-tools-file-management", "aether-cards"],
+        "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards + Graph + Web）",
+        "includes": ["file", "terminal", "eos-tools-file-management", "aether-cards", "graph", "web"],
     },
 
     # ── 预留工具集（待实现） ──

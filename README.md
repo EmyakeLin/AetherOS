@@ -292,7 +292,16 @@ class AgentStorage:
 
 ### Agent 工具系统
 
-**agent/tools/** — 内置工具集：文件操作工具、代码搜索工具、终端执行工具。
+**agent/tools/** — 内置工具集：
+
+| 工具集 | 工具 | 说明 |
+|--------|------|------|
+| file | read_file, write_file, edit_file, search_files, glob_files | 文件操作 |
+| terminal | terminal, get_process_output, list_processes, kill_process | 终端执行 |
+| eos-tools-file-management | eos_read_file, eos_write_file, eos_edit_file | Eos 文件工具（支持上下文管理） |
+| web | web_search, web_fetch | Web 搜索（DuckDuckGo）与网页内容获取 |
+| graph | code_graph_build, code_graph_query, code_graph_update | 代码知识图谱 |
+| aether-cards | aether_cards_* | 卡片笔记 |
 
 **agent/skills/** — Skill 系统，允许动态注入专业能力到系统提示词中。
 
@@ -336,7 +345,7 @@ LLMService 通过自定义 `httpx.HTTPTransport(proxy=None)` 强制直连，完�
 | 工具 | 文件 | 说明 |
 |------|------|------|
 | read_file | read_file.py | 读取文件，支持 offset/limit/trace |
-| write_file | write_file.py | 覆盖写入文件 |
+| write_file | write_file.py | 覆盖写入文件，返回 unified diff |
 | edit_file | edit_file.py | 局部编辑（replace/patch 模式） |
 | trace_file | trace_file.py | 控制文件 trace 状态 |
 
@@ -347,6 +356,15 @@ LLMService 通过自定义 `httpx.HTTPTransport(proxy=None)` 强制直连，完�
 - **错误处理** — 统一返回 `{"status": "error", "error": "..."}`
 - **error_fix_id** — 支持标记修正之前的失败调用
 - **trace 模式** — 可追踪文件的所有读/写/改操作
+
+## Web 工具集
+
+位于 `agent/tools/builtin/web_tools.py`，基于 httpx 直接请求，无需额外依赖和 API Key：
+
+| 工具 | 说明 |
+|------|------|
+| web_search | DuckDuckGo 搜索，返回标题/链接/摘要，支持 1-20 条结果 |
+| web_fetch | 获取网页纯文本内容，自动去除 script/style 标签，支持 1-50K 字符截断 |
 
 
 ---
