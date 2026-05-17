@@ -66,8 +66,13 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
-# Claude Code
+# Claude Code / AI 工具
 .claude/settings.local.json
+.claude/worktrees/
+.code-graph/
+.superpowers/
+CLAUDE.md
+GEMINI.md
 
 # Temporary
 *.tmp
@@ -97,7 +102,7 @@ coverage.xml
 *.tar.gz
 *.whl
 
-# Development files
+# Development / 临时文件
 dev_*.md
 webos-dev-doc.md
 APP_DEV.md
@@ -106,7 +111,16 @@ hermes-agent-架构分析.md
 Eos Agent System Prompt Manage.md
 Eos Agent Development/
 development_files/
-docs/
+eos-agent-prompt/
+source_code/
+UIdesign/
+AetherOS-for-win7/
+README_o1.md
+theme_kinetics.md
+theme-demo*.html
+temp_*.*
+proxy_server.py
+server.log
 
 # Fonts (download separately via fonts/download.sh)
 fonts/*.ttf
@@ -116,3 +130,7 @@ fonts/iosevka-charon/
 # Graphify
 .graphifyignore
 graphify-out/
+
+# Eos Agent (已退役，保留源码但不提交)
+eos_agent/
+eos_context_pkg/
