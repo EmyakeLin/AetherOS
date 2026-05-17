@@ -7,6 +7,7 @@ import json
 import asyncio
 import queue
 import re
+import threading
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
@@ -20,7 +21,16 @@ class LLMService:
         self._config: dict = {"providers": [], "default_chat_model": "", "default_image_model": ""}
         self._clients: dict = {}  # provider_id -> client
         self._inline_clients: dict = {}  # (api_key, api_base) -> client
+        self._cancel_event = threading.Event()
         self._load_config()
+
+    def cancel(self):
+        """取消当前流式请求"""
+        self._cancel_event.set()
+
+    def _reset_cancel(self):
+        """重置取消信号（每次新请求开始时调用）"""
+        self._cancel_event.clear()
 
     # ── 配置管理 ──────────────────────────────────────────────
 
@@ -36,14 +46,9 @@ class LLMService:
         self.CONFIG_PATH.write_text(json.dumps(self._config, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def get_config(self) -> dict:
-        """返回配置，API key 脱敏。"""
+        """返回配置。"""
         import copy
-        cfg = copy.deepcopy(self._config)
-        for p in cfg.get("providers", []):
-            k = p.get("api_key", "")
-            if len(k) > 8:
-                p["api_key"] = k[:4] + "****" + k[-4:]
-        return cfg
+        return copy.deepcopy(self._config)
 
     def update_config(self, config: dict):
         """更新并持久化配置，清除失效的客户端缓存。"""
@@ -65,7 +70,7 @@ class LLMService:
         return providers
 
     def list_models(self) -> list:
-        """返回扁平模型列表，每项含 provider_id, model_id, name, capabilities, provider_name。"""
+        """返回扁平模型列表，每项含 provider_id, model_id, name, capabilities, provider_name, context_limit。"""
         models = []
         for p in self._config.get("providers", []):
             for m in p.get("models", []):
@@ -77,8 +82,18 @@ class LLMService:
                     "name": m.get("name", m["id"]),
                     "capabilities": m.get("capabilities", ["text"]),
                     "type": p.get("type", "openai"),
+                    "context_limit": m.get("context_limit", 0),
                 })
         return models
+
+    def get_model_context_limit(self, model_ref: str) -> int:
+        """获取模型上下文限制。优先从配置读取，未配置返回 0。"""
+        for p in self._config.get("providers", []):
+            for m in p.get("models", []):
+                ref = f"{p['id']}/{m['id']}"
+                if ref == model_ref or m["id"] == model_ref:
+                    return m.get("context_limit", 0)
+        return 0
 
     # ── 客户端创建（唯一的代理绕过点）────────────────────────
 
@@ -175,6 +190,7 @@ class LLMService:
         {'type': 'done', 'usage': {...}}
         {'type': 'error', 'message': '...'}
         """
+        self._reset_cancel()
         try:
             client, model_id, provider_type = self._resolve_provider(model, api_key, api_base)
         except Exception as e:
@@ -213,6 +229,8 @@ class LLMService:
                     current_tool_idx = None
 
                     for event in stream.events():
+                        if self._cancel_event.is_set():
+                            break
                         if event.type == "content_block_start":
                             block = event.content_block
                             if block.type == "tool_use":
@@ -291,6 +309,8 @@ class LLMService:
                 tool_calls = {}  # index -> {"id", "name", "arguments"}
 
                 for chunk in response:
+                    if self._cancel_event.is_set():
+                        break
                     if hasattr(chunk, 'usage') and chunk.usage:
                         usage = {
                             "input_tokens": getattr(chunk.usage, 'prompt_tokens', 0),

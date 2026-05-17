@@ -2205,6 +2205,23 @@ registerApp('agent', {
             }
         }
 
+        function resetToHome() {
+            currentSessionId = null;
+            win._agentSessionId = null;
+            messagesEl.innerHTML = '';
+            messages = [];
+            _toolCount = 0;
+            toolCountEl.textContent = '0';
+            toolsEl.innerHTML = '';
+            terminalEl.innerHTML = '';
+            thinkingEl.innerHTML = '<div class="thinking-placeholder">等待模型思考...</div>';
+            _currentThinkingBlock = null;
+            showWelcome(true);
+            updateSessionTitle('新会话');
+            navigateTo('home');
+            renderSessionList();
+        }
+
         async function createNewSession() {
             try {
                 const session = await os.api('POST', '/api/agent/sessions', { title: '新会话' });
@@ -2485,7 +2502,7 @@ registerApp('agent', {
                     if (sessionCache.length > 0) {
                         await switchSession(sessionCache[0].id);
                     } else {
-                        await createNewSession();
+                        resetToHome();
                     }
                 } else {
                     renderSessionList();
@@ -2882,6 +2899,9 @@ registerApp('agent', {
                     addSystemMessage(`Skill "${data.skill}" 已激活`);
                     if (data.args) addSystemMessage(`参数: ${data.args}`);
                     break;
+                case 'token_stats':
+                    updateTokenDisplay(data);
+                    break;
                 case 'done':
                     removeThinkingIndicator();
                     // 如果有正在进行的工具调用，标记完成
@@ -2897,6 +2917,7 @@ registerApp('agent', {
                     os.updateAgentPanel(agentId, { status: 'idle' });
                     _setStreaming(false);
                     _sending = false;
+                    if (data.total_tokens) updateTokenDisplay(data);
                     if (data.tokens) os.updateAgentPanel(agentId, { contextTokens: data.tokens });
                     if (data.queued) addSystemMessage(`队列中还有 ${data.queued} 条消息等待处理`);
                     // 生成会话标题（如果需要）
@@ -3769,8 +3790,7 @@ registerApp('agent', {
         });
 
         sessionNewBtn.addEventListener('click', () => {
-            createNewSession();
-            navigateTo('home');
+            resetToHome();
         });
 
         sessionFilter.addEventListener('input', () => {
@@ -4202,6 +4222,48 @@ registerApp('agent', {
         _resizeObserver.observe(container);
 
         /* ══════════════════════════════════════════
+           Token Stats Display
+           ══════════════════════════════════════════ */
+
+        const headerEl = container.querySelector('.agent-header');
+        if (headerEl) {
+            const tokenBar = document.createElement('div');
+            tokenBar.id = 'agent-token-bar';
+            tokenBar.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:8px;font-size:11px;color:var(--text-secondary,#888);white-space:nowrap;';
+            tokenBar.innerHTML = `
+                <span>In: <span id="agent-tok-in">0</span></span>
+                <span>Out: <span id="agent-tok-out">0</span></span>
+                <span style="font-weight:600">Total: <span id="agent-tok-total" style="color:var(--accent,#00e5ff)">0</span></span>
+                <span>Ctx: <span id="agent-tok-ctx" style="font-weight:600">0%</span></span>
+            `;
+            const panelToggle = headerEl.querySelector('#panel-toggle-btn');
+            if (panelToggle) {
+                headerEl.insertBefore(tokenBar, panelToggle);
+            } else {
+                headerEl.appendChild(tokenBar);
+            }
+        }
+
+        function updateTokenDisplay(stats) {
+            if (!stats) return;
+            const fmt = (n) => {
+                if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+                if (n >= 1000) return (n/1000).toFixed(1)+'K';
+                return String(n||0);
+            };
+            const setEl = (id, val) => { const el = container.querySelector('#'+id); if(el) el.textContent = val; };
+            setEl('agent-tok-in', fmt(stats.total_input_tokens));
+            setEl('agent-tok-out', fmt(stats.total_output_tokens));
+            setEl('agent-tok-total', fmt(stats.total_tokens));
+            const ctxPct = stats.context_limit > 0 ? Math.round((stats.context_tokens / stats.context_limit) * 100) : 0;
+            const ctxEl = container.querySelector('#agent-tok-ctx');
+            if (ctxEl) {
+                ctxEl.textContent = ctxPct + '%';
+                ctxEl.style.color = ctxPct > 85 ? '#ef5350' : ctxPct > 65 ? '#ffa726' : 'var(--accent,#00e5ff)';
+            }
+        }
+
+        /* ══════════════════════════════════════════
            Cleanup & init
            ══════════════════════════════════════════ */
 
@@ -4223,8 +4285,7 @@ registerApp('agent', {
                 switchSession(sessionCache[0].id);
                 navigateTo('chat');
             } else {
-                createNewSession();
-                navigateTo('home');
+                resetToHome();
             }
         });
     }

@@ -11,7 +11,6 @@ import signal
 import uuid
 import time
 import subprocess
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -19,15 +18,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Body, File, 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 import uvicorn
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
-)
 
 # ── App setup ──
 
@@ -37,9 +27,19 @@ STATIC_DIR = BASE_DIR / "static"
 app = FastAPI(title="N.O.V.A Aether OS")
 
 # ── LLM 统一服务 ──
-sys.path.insert(0, str(BASE_DIR / "llm"))
 from llm.service import LLMService
 llm_service = LLMService()
+
+# ── Agent 模块 ──
+from agent.engine import CustomAgentEngine
+from agent.context import ContextManager
+from agent.storage import get_storage
+from agent.model_tools import handle_function_call
+from agent.tools.registry import registry as agent_tool_registry
+from agent.skills.registry import skill_registry
+
+# ── Eos Context (用于 agent/context/process 调试端点) ──
+from eos_context_pkg.eos_context_manager import FileContextManager as EosContextManager
 
 # ── Terminal sessions ──
 
@@ -189,11 +189,10 @@ async def fs_upload(path: str = Query(...), file: UploadFile = File(...)):
 # 区域 1.5: 工具执行 API (Eos-Tools)
 # ═══════════════════════════════════════════════
 
-sys.path.insert(0, str(BASE_DIR / "Eos-Tools"))
-from read_file import read_file as tool_read_file
-from write_file import write_file as tool_write_file
-from edit_file import edit_file as tool_edit_file
-from trace_file import trace_file as tool_trace_file
+from eos_tools.read_file import read_file as tool_read_file
+from eos_tools.write_file import write_file as tool_write_file
+from eos_tools.edit_file import edit_file as tool_edit_file
+from eos_tools.trace_file import trace_file as tool_trace_file
 
 @app.post("/api/tools/execute")
 async def tools_execute(body: dict = Body(...)):
@@ -628,12 +627,7 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
     await websocket.accept()
 
     try:
-        sys.path.insert(0, str(BASE_DIR / "agent"))
         import logging
-        from engine import CustomAgentEngine
-        from context import ContextManager
-        from eos_context_manager import FileContextManager as EosContextManager
-
         logger = logging.getLogger(__name__)
 
         config_path = BASE_DIR / "agent" / "config.yaml"
@@ -767,13 +761,17 @@ async def ws_custom_agent(websocket: WebSocket, agent_id: str):
             pass
 
 
+# ═══════════════════════════════════════════════
+# 区域 6b: Eos Agent (独立 Agent 引擎)
+# ═══════════════════════════════════════════════
+
+
+
 @app.get("/api/agent/tools")
 async def agent_tools():
     """列出已注册工具"""
     try:
-        sys.path.insert(0, str(BASE_DIR / "agent"))
-        from tools.registry import registry
-        return {"tools": registry.list_tools()}
+        return {"tools": agent_tool_registry.list_tools()}
     except ImportError:
         return {"tools": [
             {"name": "read_file", "description": "读取文件内容"},
@@ -798,8 +796,6 @@ async def agent_tool_call(body: dict = Body(...)):
         return JSONResponse(status_code=400, content={"error": "未指定工具名称"})
 
     try:
-        sys.path.insert(0, str(BASE_DIR / "agent"))
-        from model_tools import handle_function_call
         result = await handle_function_call(tool_name, tool_params)
         return {"result": result}
     except Exception as e:
@@ -813,10 +809,7 @@ async def agent_context_process(body: dict = Body(...)):
     options = body.get("options", {})
 
     try:
-        sys.path.insert(0, str(BASE_DIR / "agent"))
-        from eos_context_manager import FileContextManager
-
-        cm = FileContextManager()
+        cm = EosContextManager()
 
         # 记录所有工具调用
         for msg in messages:
@@ -901,6 +894,8 @@ async def init_agent_storage():
 async def close_agent_storage():
     """关闭时释放 Agent 存储连接"""
     await get_storage().close()
+
+
 
 
 @app.get("/api/agent/sessions")

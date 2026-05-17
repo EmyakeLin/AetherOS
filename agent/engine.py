@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import AsyncGenerator
 
-from agent.context import ContextManager
+from agent.context import ContextManager, get_context_limit
 from agent.prompt_builder import build_system_prompt, clear_section_cache, reload_prompts
 from agent.model_tools import get_tool_definitions, handle_function_call
 from agent.storage import get_storage
@@ -234,13 +234,27 @@ class CustomAgentEngine:
                     elif event["type"] == "tool_call":
                         raw_tool_calls.append(event)
                     elif event["type"] == "done":
-                        tokens = event.get("usage", {}).get("total_tokens", 0)
+                        usage = event.get("usage", {})
+                        tokens = usage.get("total_tokens", 0)
+                        input_tokens = usage.get("input_tokens", 0)
+                        output_tokens = usage.get("output_tokens", 0)
                     elif event["type"] == "error":
                         yield {"type": "error", "message": event["message"]}
                         yield {"type": "done"}
                         return
 
                 latency = round(time.time() - start_time, 2)
+
+                # 更新 token 统计
+                self.context.update_token_usage(input_tokens, output_tokens)
+                token_stats = self.context.get_token_stats()
+                token_stats["context_tokens"] = self.context.estimate_current_context_tokens(messages)
+                # 优先从 LLM 配置读取 context_limit，未配置则智能推断
+                ctx_limit = self.llm_service.get_model_context_limit(self.model) if self.llm_service else 0
+                if not ctx_limit:
+                    ctx_limit = get_context_limit(self.model)
+                token_stats["context_limit"] = ctx_limit
+                yield {"type": "token_stats", **token_stats}
 
                 # 处理工具调用
                 if raw_tool_calls:
@@ -376,6 +390,9 @@ class CustomAgentEngine:
                         "type": "done",
                         "tokens": tokens,
                         "call_id": call_id,
+                        **self.context.get_token_stats(),
+                        "context_tokens": token_stats["context_tokens"],
+                        "context_limit": ctx_limit,
                     }
                     return
 
