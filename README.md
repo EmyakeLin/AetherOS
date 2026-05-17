@@ -8,7 +8,7 @@
 - **文件管理器** - 服务器端文件系统浏览和编辑
 - **终端模拟器** - 完整的 PTY 终端支持
 - **代码编辑器** - 基于 Monaco Editor 的 IDE
-- **AI Agent** - 支持 Anthropic/OpenAI API 的智能助手
+- **AI Agent** - 支持 Anthropic/OpenAI API 的智能助手，实时 token 统计，上下文自动管理
 - **应用商店** - 可扩展的应用架构
 - **主题系统** - 暗色/亮色主题切换
 - **低性能模式** - 禁用毛玻璃和动画，提升老旧设备流畅度
@@ -155,19 +155,14 @@ python server.py --port 8411
 
 ### AI Agent
 
-Agent 配置文件位于 `agent/config.yaml`，需要配置 API 密钥：
+Agent 支持流式传输、工具调用、会话持久化、实时 token 统计。配置文件位于 `agent/config.yaml`。
 
-```yaml
-providers:
-  anthropic:
-    api_key: "your-api-key"
-  openai:
-    api_key: "your-api-key"
-```
-
-### 主题
-
-在系统设置中切换暗色/亮色主题，或通过 CSS 自定义变量修改。默认主题为亮色。
+功能：
+- **流式传输** - 实时显示模型输出和思维链
+- **工具调用** - 文件读写、代码搜索、终端执行（含安全黑名单）
+- **会话持久化** - SQLite + JSON 存储，支持多会话切换
+- **Token 统计** - header 栏实时显示 input/output/total tokens 和上下文占用百分比
+- **上下文管理** - 自动推断模型上下文限制，智能压缩过期文件内容
 
 ### LLM 模型
 
@@ -175,6 +170,12 @@ providers:
 - OpenAI 兼容 API
 - Anthropic API
 - 自定义 API 端点
+
+模型配置支持可选的 `context_limit` 字段，未配置时自动从模型名称推断。
+
+### 主题
+
+在系统设置中切换暗色/亮色主题，或通过 CSS 自定义变量修改。默认主题为亮色。
 
 ## 项目结构
 
@@ -199,11 +200,14 @@ AetherOS/
 │   ├── apps/           # 内置应用
 │   └── lib/            # 第三方库（Monaco Editor）
 ├── agent/              # AI Agent 引擎
-│   ├── engine.py       # Agent 循环
-│   ├── context.py      # 上下文管理
-│   ├── storage.py      # 会话持久化存储
-│   └── tools/          # 工具注册表
-└── docs/               # 文档
+│   ├── engine.py       # Agent 循环（流式、中断、并行工具）
+│   ├── context.py      # 上下文管理（token 统计、智能压缩）
+│   ├── storage.py      # 会话持久化（JSON + SQLite）
+│   ├── tools/          # 内置工具（文件、搜索、终端）
+│   └── skills/         # Skill 系统
+├── llm/                # 统一 LLM 服务
+│   └── service.py      # Provider 管理、流式调用、图像生成
+└── eos_tools/          # 文件操作工具集
 ```
 
 ## 内置应用
@@ -228,7 +232,21 @@ AetherOS/
 
 详见 `CLAUDE.md` 开发指南。
 
+## 安全说明
+
+服务器默认绑定 `127.0.0.1`，仅本机可访问。如需局域网访问，使用 `--host 0.0.0.0` 显式开启。
+
+Agent 终端工具内置命令安全黑名单，拦截 `rm -rf /`、fork bomb、`curl|sh` 等危险模式。
+
 ## 更新日志
+
+### v1.3.0a (2026-05-18)
+
+- **Token 统计** - Agent header 栏实时显示 input/output/total tokens 和上下文占用百分比
+- **上下文限制自动推断** - 从模型名称智能推断上下文窗口大小，支持手动配置覆盖
+- **安全加固** - 默认绑定 127.0.0.1，终端命令黑名单，bare except 修复，临时文件安全
+- **新对话优化** - 点击"新对话"跳转首页，首次发消息才创建 session
+- **Eos Agent 退役** - 独立后端移至废案目录，功能已合并至主 Agent
 
 ### v1.2.1 (2026-05-13)
 
