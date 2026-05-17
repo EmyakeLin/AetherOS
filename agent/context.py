@@ -109,7 +109,7 @@ class EosContextProcessor(ContextProcessor):
 
                 try:
                     args = json.loads(func.get("arguments", "{}"))
-                except:
+                except Exception:
                     args = {}
 
                 path = args.get("path", "")
@@ -133,7 +133,7 @@ class EosContextProcessor(ContextProcessor):
                 try:
                     result_json = json.loads(result_content)
                     is_success = result_json.get("status") == "ok"
-                except:
+                except Exception:
                     pass
 
                 # 处理 error_fix_id
@@ -183,7 +183,7 @@ class EosContextProcessor(ContextProcessor):
                                         if tc2.get("id") == tc_id:
                                             try:
                                                 args2 = json.loads(tc2.get("function", {}).get("arguments", "{}"))
-                                            except:
+                                            except Exception:
                                                 args2 = {}
                                             if args2.get("path") == path and tc2.get("function", {}).get("name") in ["eos_read_file", "eos_write_file", "eos_edit_file"]:
                                                 expired_results[tc_id] = "文件内容已过期，请关注最新的文件内容"

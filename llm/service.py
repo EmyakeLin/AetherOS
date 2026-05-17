@@ -492,8 +492,12 @@ class LLMService:
                 import urllib.request
                 import io
                 buf = io.BytesIO()
-                urllib.request.urlretrieve(img_data.url, "/tmp/_aether_img_tmp")
-                image_bytes = Path("/tmp/_aether_img_tmp").read_bytes()
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_path = tmp.name
+                urllib.request.urlretrieve(img_data.url, tmp_path)
+                image_bytes = Path(tmp_path).read_bytes()
+                Path(tmp_path).unlink(missing_ok=True)
             else:
                 return {"error": "生成的图片无数据"}
 

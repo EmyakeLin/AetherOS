@@ -15,6 +15,29 @@ from typing import Optional
 _background_processes = {}
 
 
+# 危险命令黑名单（正则模式）
+import re as _re
+_BLOCKED_PATTERNS = [
+    r"rm\s+(-[a-zA-Z]*f|--force)\s+/\s*$",       # rm -rf /
+    r"rm\s+(-[a-zA-Z]*f|--force)\s+/\s",          # rm -rf /something
+    r"mkfs\.",                                      # mkfs.ext4 etc
+    r"dd\s+.*of=/dev/",                             # dd to device
+    r">\s*/dev/sd",                                 # write to disk device
+    r"chmod\s+-R\s+777\s+/",                        # chmod -R 777 /
+    r":(){ :\|:& };:",                              # fork bomb
+    r"curl.*\|\s*(ba)?sh",                          # curl | sh
+    r"wget.*\|\s*(ba)?sh",                          # wget | sh
+]
+
+
+def _check_command_safety(command: str) -> str | None:
+    """检查命令安全性，返回错误信息或 None"""
+    for pattern in _BLOCKED_PATTERNS:
+        if _re.search(pattern, command):
+            return f"命令被安全策略拦截: 匹配危险模式 '{pattern}'"
+    return None
+
+
 async def _run_command(params: dict) -> str:
     command = params.get("command", "")
     cwd = params.get("cwd", None)
@@ -24,6 +47,11 @@ async def _run_command(params: dict) -> str:
 
     if not command:
         return "错误: 未指定命令"
+
+    # 安全检查
+    block_reason = _check_command_safety(command)
+    if block_reason:
+        return f"错误: {block_reason}"
 
     # 合并环境变量
     env = os.environ.copy()
