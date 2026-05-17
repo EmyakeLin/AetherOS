@@ -171,11 +171,18 @@ class EosContextProcessor(ContextProcessor):
 
                 # 处理 eos_write_file
                 if tool_name == "eos_write_file":
-                    func["arguments"] = json.dumps({
-                        "path": path,
-                        "content_omitted": True
-                    })
+                    # 保留 write content（LLM 需要知道写了什么）
+                    # 只省略超长内容（>2000字符），保留摘要
+                    try:
+                        write_args = json.loads(func.get("arguments", "{}"))
+                        content = write_args.get("content", "")
+                        if len(content) > 2000:
+                            write_args["content"] = content[:500] + f"\n... [{len(content)} 字符，已截断] ...\n" + content[-500:]
+                            func["arguments"] = json.dumps(write_args, ensure_ascii=False)
+                    except Exception:
+                        pass
 
+                    # 只过期在此 write 之前的操作（基于 msg_index）
                     for k, msg2 in enumerate(transformed):
                         if msg2.get("role") == "tool":
                             tc_id = msg2.get("tool_call_id", "")
@@ -189,7 +196,9 @@ class EosContextProcessor(ContextProcessor):
                                                 args2 = json.loads(tc2.get("function", {}).get("arguments", "{}"))
                                             except Exception:
                                                 args2 = {}
-                                            if args2.get("path") == path and tc2.get("function", {}).get("name") in ["eos_read_file", "eos_write_file", "eos_edit_file"]:
+                                            if args2.get("path") == path and \
+                                               tc2.get("function", {}).get("name") in ["eos_read_file", "eos_write_file", "eos_edit_file"] \
+                                               and l < i:
                                                 expired_results[tc_id] = "文件内容已过期，请关注最新的文件内容"
                                                 expired_or_merged_ids.add(tc_id)
                                             break
@@ -227,34 +236,8 @@ class EosContextProcessor(ContextProcessor):
                                 expired_results[seg["tool_call_id"]] = "文件内容已过期，请关注最新的文件内容"
                                 expired_or_merged_ids.add(seg["tool_call_id"])
 
-                    valid_segments = [
-                        seg for seg in state["read_segments"]
-                        if seg["tool_call_id"] not in expired_or_merged_ids
-                    ]
-
-                    current_token_pos = message_tokens[result_idx] if result_idx < len(message_tokens) else cumulative_tokens
-
-                    can_merge = False
-                    if valid_segments:
-                        oldest_token_pos = valid_segments[0]["token_pos"]
-                        span_tokens = current_token_pos - oldest_token_pos
-                        read_count = len(valid_segments) + 1
-                        merge_threshold = read_count * 300 + 200
-
-                        if span_tokens < merge_threshold:
-                            for seg in valid_segments:
-                                gap_tokens = abs(current_token_pos - seg["token_pos"])
-                                if gap_tokens < 500:
-                                    can_merge = True
-                                    break
-
-                    if can_merge:
-                        for seg in valid_segments:
-                            expired_results[seg["tool_call_id"]] = "已合并到后续 eos_read_file 输出"
-                            expired_or_merged_ids.add(seg["tool_call_id"])
-
                     state["read_segments"].append({
-                        "token_pos": current_token_pos,
+                        "token_pos": message_tokens[result_idx] if result_idx < len(message_tokens) else cumulative_tokens,
                         "tool_call_id": tool_call_id,
                         "result_idx": result_idx,
                         "msg_index": i,
