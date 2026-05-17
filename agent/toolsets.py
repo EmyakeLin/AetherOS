@@ -46,10 +46,16 @@ TOOLSETS = {
         "tools": ["web_search", "web_fetch"],
     },
 
+    # ── Agent 工具集 ──
+    "agent": {
+        "description": "子 Agent 工具",
+        "tools": ["agent_tool"],
+    },
+
     # ── 组合工具集 ──
     "default": {
-        "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards + Graph + Web）",
-        "includes": ["file", "terminal", "eos-tools-file-management", "aether-cards", "graph", "web"],
+        "description": "默认工具集（文件 + 终端 + Eos-Tools + Cards + Graph + Web + Agent）",
+        "includes": ["file", "terminal", "eos-tools-file-management", "aether-cards", "graph", "web", "agent"],
     },
 
     # ── 预留工具集（待实现） ──
