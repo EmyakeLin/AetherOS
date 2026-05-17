@@ -128,13 +128,15 @@ class EosContextProcessor(ContextProcessor):
                 if result_idx is None:
                     continue
 
-                # 检查是否失败
+                # 检查是否失败（JSON 解析 + 错误前缀检测）
                 is_success = True
                 try:
                     result_json = json.loads(result_content)
                     is_success = result_json.get("status") == "ok"
                 except Exception:
-                    pass
+                    # 非 JSON 响应：检查是否为错误消息
+                    if result_content.startswith("错误") or result_content.startswith("Error"):
+                        is_success = False
 
                 # 处理 error_fix_id
                 error_fix_id = args.get("error_fix_id")
@@ -159,7 +161,9 @@ class EosContextProcessor(ContextProcessor):
                     file_states[path] = {
                         "version": 0,
                         "last_write_index": -1,
+                        "last_write_msg_index": -1,
                         "last_edit_index": -1,
+                        "last_edit_msg_index": -1,
                         "read_segments": []
                     }
 
@@ -193,6 +197,7 @@ class EosContextProcessor(ContextProcessor):
 
                     state["version"] += 1
                     state["last_write_index"] = result_idx
+                    state["last_write_msg_index"] = i
                     state["read_segments"] = []
 
                 # 处理 eos_edit_file
@@ -210,12 +215,15 @@ class EosContextProcessor(ContextProcessor):
 
                     state["version"] += 1
                     state["last_edit_index"] = result_idx
+                    state["last_edit_msg_index"] = i
 
                 # 处理 eos_read_file
                 elif tool_name == "eos_read_file":
-                    if state["last_write_index"] > 0 or state["last_edit_index"] > 0:
-                        for seg in state["read_segments"]:
-                            if seg["tool_call_id"] not in expired_or_merged_ids:
+                    # 只过期在 write/edit 之前发生的 read
+                    for seg in state["read_segments"]:
+                        if seg["tool_call_id"] not in expired_or_merged_ids:
+                            if seg["msg_index"] < state.get("last_write_msg_index", -1) or \
+                               seg["msg_index"] < state.get("last_edit_msg_index", -1):
                                 expired_results[seg["tool_call_id"]] = "文件内容已过期，请关注最新的文件内容"
                                 expired_or_merged_ids.add(seg["tool_call_id"])
 
@@ -248,7 +256,8 @@ class EosContextProcessor(ContextProcessor):
                     state["read_segments"].append({
                         "token_pos": current_token_pos,
                         "tool_call_id": tool_call_id,
-                        "result_idx": result_idx
+                        "result_idx": result_idx,
+                        "msg_index": i,
                     })
 
         # 第二遍：应用过期标记

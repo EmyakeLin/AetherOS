@@ -4,16 +4,9 @@ eos_read_file, eos_write_file, eos_edit_file
 支持上下文管理
 """
 
-import sys
-from pathlib import Path
-
-# 添加 Eos-Tools 目录到路径
-eos_tools_dir = Path(__file__).parent.parent.parent.parent / "Eos-Tools"
-sys.path.insert(0, str(eos_tools_dir))
-
-from read_file import read_file as _read_file_impl
-from write_file import write_file as _write_file_impl
-from edit_file import edit_file as _edit_file_impl
+from eos_tools.read_file import read_file as _read_file_impl
+from eos_tools.write_file import write_file as _write_file_impl
+from eos_tools.edit_file import edit_file as _edit_file_impl
 
 
 async def _eos_read_file(params: dict) -> str:
@@ -39,9 +32,20 @@ async def _eos_read_file(params: dict) -> str:
 
 
 async def _eos_write_file(params: dict) -> str:
+    import difflib
     path = params.get("path", "")
     content = params.get("content", "")
     error_fix_id = params.get("error_fix_id")
+
+    # 读取旧内容用于 diff
+    old_content = ""
+    try:
+        from pathlib import Path
+        p = Path(path)
+        if p.exists():
+            old_content = p.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
     result = _write_file_impl(
         path=path,
@@ -52,7 +56,17 @@ async def _eos_write_file(params: dict) -> str:
     if result.get("status") == "error":
         return f"错误: {result.get('error', '未知错误')}"
 
-    return f"已写入: {path} ({result.get('bytes_written', 0)} 字符, {result.get('total_lines', 0)} 行)"
+    # 生成 diff
+    diff_lines = list(difflib.unified_diff(
+        old_content.splitlines(keepends=True),
+        content.splitlines(keepends=True),
+        fromfile=f"a/{path}",
+        tofile=f"b/{path}",
+        n=3,
+    ))
+    diff = "".join(diff_lines) if diff_lines else "(无变化)"
+
+    return f"已写入: {path} ({result.get('bytes_written', 0)} 字符, {result.get('total_lines', 0)} 行)\n\n```diff\n{diff}\n```"
 
 
 async def _eos_edit_file(params: dict) -> str:
